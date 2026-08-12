@@ -1,0 +1,24 @@
+{
+  "name": "rentpayez-platform",
+  "version": "0.1.0",
+  "description": "Rent Pay Easy — multi-organization backend (Phase 1: hierarchy, roles, org isolation)",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/smoke.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "connect-pg-simple": "^9.0.1",
+    "pg": "^8.11.5",
+    "bcryptjs": "^2.4.3",
+    "multer": "^1.4.5-lts.1",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "pg-mem": "^2.8.1"
+  }
+}

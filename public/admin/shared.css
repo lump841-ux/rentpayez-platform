@@ -1,0 +1,35 @@
+:root{
+  --brick:#8b2424; --brick-2:#a32d2d;
+  --green:#2d7d2d; --green-2:#3a9c3a; --green-3:#5bc05b;
+  --gold:#d4a247;
+  --navy-0:#06101c; --navy-1:#0b1a2a; --navy-2:#102540; --navy-3:#16334f;
+  --ink:#e9eef5; --ink-2:#b8c4d4; --ink-3:#7c8a9d;
+  --line:rgba(255,255,255,0.08); --line-2:rgba(255,255,255,0.14);
+  --card:rgba(255,255,255,0.04); --card-2:rgba(255,255,255,0.06);
+  --good:#3a9c3a; --bad:#a32d2d; --warn:#d4a247;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--navy-0);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+body{background:linear-gradient(180deg,#07121f 0%,#0a1a2c 35%,#07121f 100%);min-height:100vh}
+a{color:inherit}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+.btn{font-family:inherit;cursor:pointer;border:none;border-radius:10px;padding:11px 18px;font-weight:700;font-size:14px}
+.btn-primary{background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff}
+.btn-outline{background:transparent;border:1.5px solid var(--line-2);color:var(--ink)}
+.btn-outline:hover{border-color:var(--gold)}
+.btn-danger{background:var(--brick);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+input,select{font-family:inherit;background:rgba(0,0,0,.25);border:1px solid var(--line-2);border-radius:8px;color:#fff;padding:10px 12px;font-size:14px;width:100%}
+input::placeholder{color:var(--ink-3)}
+label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-3);font-weight:700;margin-bottom:6px}
+.field{margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.pill{display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700}
+.pill.active{background:#3a9c3a20;color:var(--green-3)}
+.pill.invited{background:#d4a24720;color:var(--gold)}
+.err{color:#ff8080;font-size:13px;margin-top:8px}
+.ok{color:var(--green-3);font-size:13px;margin-top:8px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy-2);border:1px solid var(--line-2);border-radius:10px;padding:12px 18px;font-size:14px;z-index:99}

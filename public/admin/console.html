@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rent Pay Easy — Organization Console</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--line);margin-bottom:24px}
+  .brand{font-weight:800}
+  .who{font-size:13px;color:var(--ink-3)}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+  .tabs button{padding:9px 16px;border-radius:99px;background:transparent;border:1px solid var(--line-2);color:var(--ink-2);font-weight:700;font-size:13px;cursor:pointer}
+  .tabs button.active{background:var(--green);color:#fff;border-color:var(--green)}
+  .panel{display:none}
+  .panel.active{display:block}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px}
+  .stat{padding:16px}
+  .stat .num{font-size:28px;font-weight:800}
+  .stat .lbl{font-size:12px;color:var(--ink-3);margin-top:4px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .section-title{font-weight:800;margin-bottom:14px;font-size:15px}
+  .mt{margin-top:20px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">🏠 rentpayez — <span id="orgName">Organization Console</span></div>
+    <div class="who"><span id="whoami"></span> · <a href="#" onclick="logout();return false" style="color:var(--gold)">Sign out</a></div>
+  </div>
+
+  <div class="tabs">
+    <button class="active" onclick="switchTab('overview')">Overview</button>
+    <button onclick="switchTab('branches')">Branches</button>
+    <button onclick="switchTab('properties')">Properties</button>
+    <button onclick="switchTab('buildings')">Buildings</button>
+    <button onclick="switchTab('units')">Units</button>
+    <button onclick="switchTab('staff')">Staff</button>
+    <button onclick="switchTab('tenants')">Tenants</button>
+  </div>
+
+  <div class="panel active" id="panel-overview">
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="card">
+      <div class="section-title">Data isolation</div>
+      <p style="color:var(--ink-2);font-size:13.5px;line-height:1.6">Everything shown here is scoped to your organization on the server — every API request resolves your organization from your session, never from anything the browser sends. Staff below Organization Admin only see the branches/properties they've been assigned to.</p>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-branches">
+    <div class="card mt">
+      <div class="section-title">Add a Branch / Division</div>
+      <div class="field"><label>Name</label><input id="br-name" placeholder="Vine West Division" /></div>
+      <button class="btn btn-primary" onclick="createBranch()">Add Branch</button>
+      <div id="br-msg"></div>
+    </div>
+    <div class="card mt"><div class="section-title">Branches</div><table id="br-table"><thead><tr><th>Name</th><th>Created</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" id="panel-properties">
+    <div class="card mt">
+      <div class="section-title">Add a Property / Development</div>
+      <div class="form-row">
+        <div class="field"><label>Name</label><input id="pr-name" placeholder="Vine West Development" /></div>
+        <div class="field"><label>Branch (optional)</label><select id="pr-branch"><option value="">— No branch —</option></select></div>
+      </div>
+      <div class="field"><label>Address</label><input id="pr-address" placeholder="123 Main St, Scranton PA" /></div>
+      <button class="btn btn-primary" onclick="createProperty()">Add Property</button>
+      <div id="pr-msg"></div>
+    </div>
+    <div class="card mt"><div class="section-title">Properties</div><table id="pr-table"><thead><tr><th>Name</th><th>Branch</th><th>Address</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" id="panel-buildings">
+    <div class="card mt">
+      <div class="section-title">Add a Building</div>
+      <div class="form-row">
+        <div class="field"><label>Property</label><select id="bl-property"></select></div>
+        <div class="field"><label>Name</label><input id="bl-name" placeholder="Building A" /></div>
+      </div>
+      <button class="btn btn-primary" onclick="createBuilding()">Add Building</button>
+      <div id="bl-msg"></div>
+    </div>
+    <div class="card mt"><div class="section-title">Buildings</div><table id="bl-table"><thead><tr><th>Name</th><th>Property</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" id="panel-units">
+    <div class="card mt">
+      <div class="section-title">Add a Unit</div>
+      <div class="form-row">
+        <div class="field"><label>Property</label><select id="un-property"></select></div>
+        <div class="field"><label>Building (optional)</label><select id="un-building"><option value="">— No building —</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Unit Number</label><input id="un-number" placeholder="101" /></div>
+        <div class="field"><label>Monthly Rent</label><input id="un-rent" type="number" placeholder="1450" /></div>
+      </div>
+      <button class="btn btn-primary" onclick="createUnit()">Add Unit</button>
+      <div id="un-msg"></div>
+    </div>
+    <div class="card mt"><div class="section-title">Units</div><table id="un-table"><thead><tr><th>Unit #</th><th>Property</th><th>Rent</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" id="panel-staff">
+    <div class="card mt">
+      <div class="section-title">Invite Staff</div>
+      <div class="form-row">
+        <div class="field"><label>Name</label><input id="st-name" placeholder="Marcus Reilly" /></div>
+        <div class="field"><label>Email</label><input id="st-email" type="email" placeholder="marcus@company.com" /></div>
+      </div>
+      <div class="field"><label>Role</label>
+        <select id="st-role">
+          <option value="branch_manager">Branch / Division Manager</option>
+          <option value="property_manager">Property Manager</option>
+          <option value="maintenance_supervisor">Maintenance Supervisor</option>
+          <option value="maintenance_tech">Maintenance Technician</option>
+          <option value="inspector">Inspector</option>
+          <option value="office_staff">Office Staff</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="inviteStaff()">Send Invite</button>
+      <div id="st-msg"></div>
+    </div>
+    <div class="card mt"><div class="section-title">Staff</div><table id="st-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Assign</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" id="panel-tenants">
+    <div class="card mt">
+      <div class="section-title">Add a Tenant</div>
+      <div class="form-row">
+        <div class="field"><label>Name</label><input id="tn-name" placeholder="Sara Kim" /></div>
+        <div class="field"><label>Email</label><input id="tn-email" type="email" placeholder="sara.kim@email.com" /></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Phone (optional)</label><input id="tn-phone" placeholder="(555) 555-1234" /></div>
+        <div class="field"><label>Unit (optional)</label><select id="tn-unit"><option value="">— Unassigned —</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="createTenant()">Add Tenant</button>
+      <div id="tn-msg"></div>
+    </div>
+    <div class="card mt">
+      <div class="section-title">Import Tenants via CSV</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Columns: <code>name,email,phone,unit_number</code> — unit_number is matched against existing units in this organization.</p>
+      <input type="file" id="csv-file" accept=".csv" style="margin-bottom:10px" />
+      <button class="btn btn-outline" onclick="importCsv()">Upload &amp; Import</button>
+      <div id="csv-msg"></div>
+    </div>
+    <div class="card mt"><div class="section-title">Tenants</div><table id="tn-table"><thead><tr><th>Name</th><th>Email</th><th>Unit</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script>
+let ME = null;
+let BRANCHES = [], PROPERTIES = [], BUILDINGS = [], UNITS = [];
+
+async function api(path, opts){
+  const res = await fetch('/api' + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || ('Request failed: ' + res.status));
+  return data;
+}
+
+async function boot(){
+  try{
+    const meRes = await fetch('/api/auth/me');
+    if(!meRes.ok){ window.location.href = 'login.html'; return; }
+    const me = (await meRes.json()).user;
+    ME = me;
+    document.getElementById('whoami').textContent = me.name + ' (' + me.role.replace('_',' ') + ')';
+    await refreshAll();
+  }catch(err){ window.location.href = 'login.html'; }
+}
+
+async function logout(){
+  await fetch('/api/auth/logout', { method:'POST' });
+  window.location.href = 'login.html';
+}
+
+function switchTab(t){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-' + t).classList.add('active');
+}
+
+async function refreshAll(){
+  const [summary, branches, properties, buildings, units, staff, tenants] = await Promise.all([
+    api('/summary'), api('/branches'), api('/properties'), api('/buildings'), api('/units'),
+    api('/staff').catch(()=>[]), api('/tenants'),
+  ]);
+  BRANCHES = branches; PROPERTIES = properties; BUILDINGS = buildings; UNITS = units;
+
+  document.getElementById('statGrid').innerHTML = [
+    ['Branches', summary.branches], ['Properties', summary.properties], ['Buildings', summary.buildings],
+    ['Units', summary.units], ['Tenants', summary.tenants], ['Staff', summary.staff],
+  ].map(([lbl,num])=>`<div class="card stat"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join('');
+
+  document.getElementById('br-table').querySelector('tbody').innerHTML = branches.map(b=>
+    `<tr><td>${esc(b.name)}</td><td>${new Date(b.created_at).toLocaleDateString()}</td></tr>`).join('') || emptyRow(2);
+
+  document.getElementById('pr-table').querySelector('tbody').innerHTML = properties.map(p=>
+    `<tr><td>${esc(p.name)}</td><td>${branchName(p.branch_id)}</td><td>${esc(p.address||'—')}</td></tr>`).join('') || emptyRow(3);
+
+  document.getElementById('bl-table').querySelector('tbody').innerHTML = buildings.map(b=>
+    `<tr><td>${esc(b.name)}</td><td>${propName(b.property_id)}</td></tr>`).join('') || emptyRow(2);
+
+  document.getElementById('un-table').querySelector('tbody').innerHTML = units.map(u=>
+    `<tr><td>${esc(u.unit_number)}</td><td>${propName(u.property_id)}</td><td>${u.monthly_rent ? '$'+Number(u.monthly_rent).toLocaleString() : '—'}</td></tr>`).join('') || emptyRow(3);
+
+  document.getElementById('st-table').querySelector('tbody').innerHTML = staff.map(s=>
+    `<tr><td>${esc(s.name)}</td><td>${esc(s.email)}</td><td>${s.role.replace('_',' ')}</td><td><span class="pill ${s.status}">${s.status}</span></td>
+     <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="assignStaff('${s.id}')">Assign</button></td></tr>`).join('') || emptyRow(5);
+
+  document.getElementById('tn-table').querySelector('tbody').innerHTML = tenants.map(t=>
+    `<tr><td>${esc(t.name)}</td><td>${esc(t.email)}</td><td>${unitLabel(t.unit_id)}</td><td><span class="pill ${t.status==='active'?'active':'invited'}">${t.status}</span></td></tr>`).join('') || emptyRow(4);
+
+  // populate selects
+  fillSelect('pr-branch', branches, b=>b.id, b=>b.name, true);
+  fillSelect('bl-property', properties, p=>p.id, p=>p.name);
+  fillSelect('un-property', properties, p=>p.id, p=>p.name);
+  fillSelect('un-building', buildings, b=>b.id, b=>b.name, true);
+  fillSelect('tn-unit', units, u=>u.id, u=>u.unit_number, true);
+}
+
+function fillSelect(id, list, valFn, labelFn, keepFirst){
+  const el = document.getElementById(id);
+  const head = keepFirst ? el.querySelector('option') : null;
+  el.innerHTML = '';
+  if(head) el.appendChild(head);
+  list.forEach(item=>{
+    const opt = document.createElement('option');
+    opt.value = valFn(item); opt.textContent = labelFn(item);
+    el.appendChild(opt);
+  });
+}
+function branchName(id){ const b = BRANCHES.find(x=>x.id===id); return b ? esc(b.name) : '—'; }
+function propName(id){ const p = PROPERTIES.find(x=>x.id===id); return p ? esc(p.name) : '—'; }
+function unitLabel(id){ const u = UNITS.find(x=>x.id===id); return u ? esc(u.unit_number) : '— Unassigned —'; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function emptyRow(cols){ return `<tr><td colspan="${cols}" style="color:var(--ink-3);text-align:center;padding:20px">Nothing here yet.</td></tr>`; }
+
+async function createBranch(){
+  const name = document.getElementById('br-name').value.trim();
+  const msg = document.getElementById('br-msg');
+  try{ if(!name) throw new Error('Name is required'); await api('/branches', { method:'POST', body: JSON.stringify({name}) });
+    document.getElementById('br-name').value=''; msg.className='ok'; msg.textContent='Branch added.'; await refreshAll();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+async function createProperty(){
+  const name = document.getElementById('pr-name').value.trim();
+  const address = document.getElementById('pr-address').value.trim();
+  const branchId = document.getElementById('pr-branch').value || null;
+  const msg = document.getElementById('pr-msg');
+  try{ if(!name) throw new Error('Name is required'); await api('/properties', { method:'POST', body: JSON.stringify({name,address,branchId}) });
+    document.getElementById('pr-name').value=''; document.getElementById('pr-address').value='';
+    msg.className='ok'; msg.textContent='Property added.'; await refreshAll();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+async function createBuilding(){
+  const propertyId = document.getElementById('bl-property').value;
+  const name = document.getElementById('bl-name').value.trim();
+  const msg = document.getElementById('bl-msg');
+  try{ if(!propertyId || !name) throw new Error('Property and name are required'); await api('/buildings', { method:'POST', body: JSON.stringify({name,propertyId}) });
+    document.getElementById('bl-name').value=''; msg.className='ok'; msg.textContent='Building added.'; await refreshAll();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+async function createUnit(){
+  const propertyId = document.getElementById('un-property').value;
+  const buildingId = document.getElementById('un-building').value || null;
+  const unitNumber = document.getElementById('un-number').value.trim();
+  const monthlyRent = document.getElementById('un-rent').value || null;
+  const msg = document.getElementById('un-msg');
+  try{ if(!propertyId || !unitNumber) throw new Error('Property and unit number are required');
+    await api('/units', { method:'POST', body: JSON.stringify({propertyId,buildingId,unitNumber,monthlyRent}) });
+    document.getElementById('un-number').value=''; document.getElementById('un-rent').value='';
+    msg.className='ok'; msg.textContent='Unit added.'; await refreshAll();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+async function inviteStaff(){
+  const name = document.getElementById('st-name').value.trim();
+  const email = document.getElementById('st-email').value.trim();
+  const role = document.getElementById('st-role').value;
+  const msg = document.getElementById('st-msg');
+  try{
+    if(!name || !email) throw new Error('Name and email are required');
+    const result = await api('/staff/invite', { method:'POST', body: JSON.stringify({name,email,role}) });
+    document.getElementById('st-name').value=''; document.getElementById('st-email').value='';
+    msg.className='ok';
+    msg.textContent = `Invited. Temporary password (no email service configured yet — share this manually): ${result.tempPassword}`;
+    await refreshAll();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+async function assignStaff(staffId){
+  const propertyId = window.prompt('Property ID to assign this staff member to (leave blank to use a branch instead):');
+  let branchId = null;
+  if(!propertyId) branchId = window.prompt('Branch ID to assign this staff member to:');
+  if(!propertyId && !branchId) return;
+  try{
+    await api(`/staff/${staffId}/assign`, { method:'POST', body: JSON.stringify({ propertyId: propertyId || null, branchId: branchId || null }) });
+    alert('Assigned.');
+  }catch(err){ alert(err.message); }
+}
+async function createTenant(){
+  const name = document.getElementById('tn-name').value.trim();
+  const email = document.getElementById('tn-email').value.trim();
+  const phone = document.getElementById('tn-phone').value.trim();
+  const unitId = document.getElementById('tn-unit').value || null;
+  const msg = document.getElementById('tn-msg');
+  try{
+    if(!name || !email) throw new Error('Name and email are required');
+    await api('/tenants', { method:'POST', body: JSON.stringify({name,email,phone,unitId}) });
+    document.getElementById('tn-name').value=''; document.getElementById('tn-email').value=''; document.getElementById('tn-phone').value='';
+    msg.className='ok'; msg.textContent='Tenant added.'; await refreshAll();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+async function importCsv(){
+  const fileInput = document.getElementById('csv-file');
+  const msg = document.getElementById('csv-msg');
+  if(!fileInput.files.length){ msg.className='err'; msg.textContent='Choose a CSV file first.'; return; }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  try{
+    const res = await fetch('/api/tenants/import-csv', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Import failed');
+    msg.className='ok';
+    msg.textContent = `Imported ${data.created} tenant(s).` + (data.skipped.length ? ` ${data.skipped.length} without a unit match.` : '') + (data.errors.length ? ` ${data.errors.length} row error(s).` : '');
+    await refreshAll();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+
+boot();
+</script>
+</body>
+</html>

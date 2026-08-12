@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rent Pay Easy — Organization Admin</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  .wrap{max-width:420px;margin:80px auto;padding:0 20px}
+  .brand{font-weight:800;font-size:20px;margin-bottom:6px;text-align:center}
+  .sub{color:var(--ink-3);font-size:13.5px;text-align:center;margin-bottom:28px}
+  .tabs{display:flex;gap:8px;margin-bottom:20px}
+  .tabs button{flex:1;padding:9px;border-radius:8px;background:transparent;border:1px solid var(--line-2);color:var(--ink-2);font-weight:700;font-size:13px;cursor:pointer}
+  .tabs button.active{background:var(--green);color:#fff;border-color:var(--green)}
+  .panel{display:none}
+  .panel.active{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">🏠 rentpayez — Organization Admin</div>
+  <div class="sub">Platform for landlords, property managers &amp; housing authorities</div>
+
+  <div class="tabs">
+    <button class="active" id="tabLogin" onclick="showTab('login')">Sign In</button>
+    <button id="tabSignup" onclick="showTab('signup')">New Organization</button>
+  </div>
+
+  <div class="card panel active" id="panelLogin">
+    <div class="field"><label>Email</label><input id="li-email" type="email" placeholder="you@yourcompany.com" /></div>
+    <div class="field"><label>Password</label><input id="li-password" type="password" placeholder="••••••••" /></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign In</button>
+    <div id="li-msg"></div>
+  </div>
+
+  <div class="card panel" id="panelSignup">
+    <div class="field"><label>Organization Name</label><input id="su-org" placeholder="County Housing Authority" /></div>
+    <div class="field"><label>Your Name</label><input id="su-name" placeholder="Jane Smith" /></div>
+    <div class="field"><label>Your Email</label><input id="su-email" type="email" placeholder="jane@county.gov" /></div>
+    <div class="field"><label>Password</label><input id="su-password" type="password" placeholder="At least 8 characters" /></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doSignup()">Create Organization</button>
+    <div id="su-msg"></div>
+  </div>
+</div>
+
+<script>
+function showTab(t){
+  document.getElementById('tabLogin').classList.toggle('active', t==='login');
+  document.getElementById('tabSignup').classList.toggle('active', t==='signup');
+  document.getElementById('panelLogin').classList.toggle('active', t==='login');
+  document.getElementById('panelSignup').classList.toggle('active', t==='signup');
+}
+async function doLogin(){
+  const email = document.getElementById('li-email').value.trim();
+  const password = document.getElementById('li-password').value;
+  const msg = document.getElementById('li-msg');
+  msg.className=''; msg.textContent='';
+  try{
+    const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password}) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Login failed');
+    window.location.href = 'console.html';
+  }catch(err){ msg.className='err'; msg.textContent = err.message; }
+}
+async function doSignup(){
+  const orgName = document.getElementById('su-org').value.trim();
+  const adminName = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const password = document.getElementById('su-password').value;
+  const msg = document.getElementById('su-msg');
+  msg.className=''; msg.textContent='';
+  try{
+    const res = await fetch('/api/auth/signup-organization', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({orgName,adminName,email,password}) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Could not create organization');
+    window.location.href = 'console.html';
+  }catch(err){ msg.className='err'; msg.textContent = err.message; }
+}
+</script>
+</body>
+</html>
