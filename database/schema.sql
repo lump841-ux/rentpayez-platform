@@ -105,6 +105,13 @@ CREATE TABLE IF NOT EXISTS tenants (
 );
 
 -- Now that branches/properties exist, wire up staff_assignments FKs.
+-- NOTE: not idempotent (no "ADD CONSTRAINT IF NOT EXISTS" in Postgres) —
+-- initDB() in services/db.js runs this whole file on every server boot,
+-- so it specifically tolerates a 42710 "already exists" error from these
+-- two statements on restarts after the very first successful boot. Kept
+-- as plain SQL (rather than a DO $$ plpgsql block) so it stays compatible
+-- with the pg-mem adapter used by test/smoke.js, which doesn't support
+-- plpgsql script blocks.
 ALTER TABLE staff_assignments
   ADD CONSTRAINT fk_staff_branch   FOREIGN KEY (branch_id)   REFERENCES branches(id)   ON DELETE CASCADE,
   ADD CONSTRAINT fk_staff_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE;

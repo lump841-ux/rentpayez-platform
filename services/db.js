@@ -22,7 +22,23 @@ async function query(text, params) {
 
 async function initDB() {
   const schema = fs.readFileSync(path.join(__dirname, '..', 'database', 'schema.sql'), 'utf8');
-  await pool.query(schema);
+  try {
+    await pool.query(schema);
+  } catch (err) {
+    // 42710 = duplicate_object (Postgres). schema.sql is re-run in full on
+    // every server boot, and every statement in it is idempotent (CREATE
+    // TABLE/INDEX ... IF NOT EXISTS) except the two ADD CONSTRAINT
+    // statements wiring up staff_assignments' foreign keys — Postgres has
+    // no "ADD CONSTRAINT IF NOT EXISTS". On the very first boot those
+    // constraints don't exist yet and get created fine; on every restart
+    // after that they already exist and this specific error is expected,
+    // not a real failure, so it must not crash the process.
+    if (err.code === '42710') {
+      console.warn('[DB] Schema already applied (constraints exist) — continuing.');
+    } else {
+      throw err;
+    }
+  }
 }
 
 module.exports = { pool, query, initDB };
