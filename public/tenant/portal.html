@@ -65,7 +65,13 @@ input,select,textarea{font-family:inherit}
   body{flex-direction:column}
   .sidebar{position:relative;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:12px}
   .sb-nav{flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
-  .sb-nav button{flex-shrink:0;padding:7px 10px;font-size:12px}
+  /* Desktop's .sb-nav button rule sets width:100% so each item fills the
+     vertical sidebar column — without resetting it here, every nav button
+     still claims the full row width even in this horizontal pill-row
+     layout, so flex-wrap has nothing to wrap (each button is already
+     "100%") and every item stacks on its own line instead of forming a
+     compact row of pills. width:auto lets buttons size to their content. */
+  .sb-nav button{flex-shrink:0;padding:7px 10px;font-size:12px;width:auto}
   .sb-brand{padding-bottom:10px;margin-bottom:2px}
   .sb-foot{display:none}
 }
