@@ -3,191 +3,533 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Rent Pay Easy — Resident Portal</title>
-<link rel="stylesheet" href="/admin/shared.css" />
+<title>rentpayez — Resident Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--line);margin-bottom:24px}
-  .brand{font-weight:800}
-  .who{font-size:13px;color:var(--ink-3)}
-  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:20px}
-  @media (max-width:800px){.grid{grid-template-columns:1fr}}
-  .section-title{font-weight:800;margin-bottom:14px;font-size:15px}
-  .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
-  .row:last-child{border-bottom:none}
-  .row .lbl{color:var(--ink-3)}
-  .mt{margin-top:20px}
-  .rent{font-size:32px;font-weight:800}
+:root{
+  --brick:#8b2424; --brick-2:#a32d2d; --brick-3:#c93e3e;
+  --green:#2d7d2d; --green-2:#3a9c3a; --green-3:#5bc05b;
+  --gold:#d4a247; --gold-2:#e8c074;
+  --navy-0:#06101c; --navy-1:#0b1a2a; --navy-2:#102540; --navy-3:#16334f;
+  --ink:#e9eef5; --ink-2:#b8c4d4; --ink-3:#7c8a9d;
+  --line:rgba(255,255,255,0.08); --line-2:rgba(255,255,255,0.14);
+  --card:rgba(255,255,255,0.04); --card-2:rgba(255,255,255,0.06);
+  --good:#3a9c3a; --bad:#a32d2d; --warn:#d4a247; --pending:#3e8ab4;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;min-height:100vh}
+body{
+  background:
+    radial-gradient(1200px 800px at 12% -10%, rgba(139,36,36,0.14), transparent 60%),
+    radial-gradient(1200px 800px at 95% 5%, rgba(45,125,45,0.10), transparent 60%),
+    linear-gradient(180deg, #07121f 0%, #0a1a2c 35%, #07121f 100%);
+  color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;display:flex;min-height:100vh
+}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit}
+
+/* sidebar */
+.sidebar{width:250px;background:linear-gradient(180deg,#08131f,#06101a);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:20}
+.sb-brand{display:flex;align-items:center;gap:11px;padding:6px 6px 20px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.brand-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(140deg,#1a3552,#0b1a2a);display:flex;align-items:center;justify-content:center;border:1px solid var(--line-2);flex-shrink:0}
+.brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.4px}
+.brand-word .b1{color:#fff}
+.brand-word .b2{color:#0b0b0b;background:#fff;border-radius:5px;padding:0 4px;margin-right:1px}
+.brand-word .b3{color:var(--brick-3)}
+.brand-word .b4{color:var(--green-3)}
+.sb-nav{display:flex;flex-direction:column;gap:3px;margin-top:14px;flex:1}
+.sb-nav button{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:10px;color:var(--ink-2);font-size:13.5px;font-weight:500;text-align:left;width:100%;transition:all .15s}
+.sb-nav button:hover{background:rgba(255,255,255,0.04);color:#fff}
+.sb-nav button.active{background:linear-gradient(180deg, rgba(139,36,36,0.2), rgba(139,36,36,0.08));color:#fff;border:1px solid rgba(139,36,36,0.28)}
+.sb-nav button .ic{width:20px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}
+.sb-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--line)}
+.sb-user{display:flex;align-items:center;gap:9px;padding:8px}
+.sb-user-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a32d2d,#5c1818);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:12px;flex-shrink:0}
+.sb-user-info{flex:1;min-width:0}
+.sb-user-info .n{color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-user-info .r{color:var(--ink-3);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-logout{margin-top:6px;width:100%;padding:9px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid var(--line);color:var(--ink-2);font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px}
+.sb-logout:hover{background:rgba(255,255,255,0.06);color:#fff}
+
+@media (max-width:880px){
+  body{flex-direction:column}
+  .sidebar{position:relative;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:12px}
+  .sb-nav{flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
+  .sb-nav button{flex-shrink:0;padding:7px 10px;font-size:12px}
+  .sb-brand{padding-bottom:10px;margin-bottom:2px}
+  .sb-foot{display:none}
+}
+
+/* main */
+.app-main{flex:1;min-width:0;padding:26px 30px 60px;max-width:100%}
+@media (max-width:880px){.app-main{padding:18px}}
+.app-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;gap:16px;flex-wrap:wrap}
+.app-head h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:25px;font-weight:800;letter-spacing:-0.5px;color:#fff;margin:0}
+.app-head .sub{color:var(--ink-3);font-size:13.5px;margin-top:3px}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+@media (max-width:1050px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
+.kpi{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden}
+.kpi .label{color:var(--ink-3);font-size:11px;letter-spacing:0.7px;text-transform:uppercase;font-weight:700}
+.kpi .val{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.6px;color:#fff;margin:6px 0 3px;line-height:1}
+.kpi .trend{color:var(--green-3);font-size:11.5px;font-weight:600}
+.kpi .ic{position:absolute;top:13px;right:15px;width:32px;height:32px;border-radius:9px;background:rgba(139,36,36,0.15);color:var(--brick-3);display:flex;align-items:center;justify-content:center;font-size:15px}
+.kpi.green .ic{background:rgba(45,125,45,0.15);color:var(--green-3)}
+.kpi.gold .ic{background:rgba(212,162,71,0.15);color:var(--gold-2)}
+.kpi.blue .ic{background:rgba(62,138,180,0.15);color:#76b8e0}
+
+.dash-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+@media (max-width:1050px){.dash-grid{grid-template-columns:1fr}}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:18px;padding:20px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.panel-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;color:#fff;margin:0}
+.panel-sub{color:var(--ink-3);font-size:12px;margin-top:2px}
+
+.table{width:100%;border-collapse:collapse}
+.table th{text-align:left;color:var(--ink-3);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.table td{padding:12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink)}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:rgba(255,255,255,0.02)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px}
+.pill.paid,.pill.resolved,.pill.reported,.pill.done,.pill.signed{background:rgba(45,125,45,0.18);color:var(--green-3);border:1px solid rgba(45,125,45,0.28)}
+.pill.pending,.pill.pending_signature,.pill.open,.pill.active{background:rgba(62,138,180,0.18);color:#76b8e0;border:1px solid rgba(62,138,180,0.28)}
+.pill.processing,.pill.in_progress{background:rgba(212,162,71,0.18);color:var(--gold-2);border:1px solid rgba(212,162,71,0.28)}
+.pill.failed,.pill.overdue,.pill.emergency{background:rgba(139,36,36,0.18);color:#e76d6d;border:1px solid rgba(139,36,36,0.28)}
+.pill.closed{background:rgba(255,255,255,0.06);color:var(--ink-2);border:1px solid var(--line-2)}
+.pill.preview{background:rgba(212,162,71,0.22);color:var(--gold-2);border:1px solid rgba(212,162,71,0.4);letter-spacing:0.8px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 16px;border-radius:11px;font-weight:600;font-size:13.5px;transition:all .15s;border:1px solid transparent;white-space:nowrap}
+.btn-primary{background:linear-gradient(180deg, var(--brick-2), var(--brick));color:#fff;box-shadow:0 6px 18px rgba(139,36,36,0.38)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:rgba(255,255,255,0.04);border:1px solid var(--line-2);color:#fff}
+.btn-secondary:hover{background:rgba(255,255,255,0.08)}
+.btn-green{background:linear-gradient(180deg, var(--green-2), var(--green));color:#fff;box-shadow:0 6px 18px rgba(45,125,45,0.32)}
+.btn-lg{padding:13px 20px;font-size:14.5px;border-radius:13px}
+.btn-block{width:100%}
+.btn-sm{padding:7px 11px;font-size:12px;border-radius:9px}
+
+.field{margin-bottom:14px}
+.field label{display:block;color:var(--ink-3);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:rgba(0,0,0,0.22);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;color:#fff;font-size:13.5px;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brick-3)}
+.field input:disabled{color:var(--ink-2);opacity:0.75}
+
+.msg{margin-top:10px;font-size:13px}
+.msg.ok{color:var(--green-3)}
+.msg.err{color:#e76d6d}
+
+/* score preview card */
+.score-hero{background:
+  radial-gradient(400px 200px at 100% 0%, rgba(91,192,91,0.18), transparent 60%),
+  radial-gradient(300px 200px at 0% 100%, rgba(212,162,71,0.1), transparent 60%),
+  linear-gradient(160deg,#0f2922,#0a1726 60%);
+  border:1px solid rgba(91,192,91,0.22);position:relative
+}
+.preview-ribbon{position:absolute;top:14px;right:-32px;background:linear-gradient(180deg,var(--gold-2),var(--gold));color:#1a1200;font-size:10.5px;font-weight:800;letter-spacing:1px;padding:5px 40px;transform:rotate(35deg);box-shadow:0 4px 10px rgba(0,0,0,0.3)}
+
+/* streak */
+.streak{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.streak div{flex:1;min-width:22px;height:34px;border-radius:8px;background:rgba(45,125,45,0.18);border:1px solid rgba(45,125,45,0.3);color:var(--green-3);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700}
+.streak div.miss{background:rgba(139,36,36,0.18);border-color:rgba(139,36,36,0.3);color:#e76d6d}
+
+/* coach */
+.coach-panel{background:linear-gradient(160deg,#0e1f33,#0a1726);border:1px solid var(--line-2);border-radius:18px;padding:0;overflow:hidden}
+.coach-head-bar{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;background:rgba(45,125,45,0.04)}
+.chat-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3a9c3a,#1e5b1e);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.coach-feed{height:360px;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+.coach-foot{padding:14px 20px;border-top:1px solid var(--line)}
+.bubble{padding:11px 14px;border-radius:16px;font-size:14px;line-height:1.5;max-width:88%;margin-bottom:6px;white-space:pre-wrap}
+.bubble.user{background:linear-gradient(180deg,var(--brick-2),var(--brick));color:#fff;margin-left:auto;border-bottom-right-radius:5px}
+.bubble.ai{background:rgba(255,255,255,0.05);border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:5px}
+.bubble.sys{background:rgba(212,162,71,0.08);border:1px solid rgba(212,162,71,0.22);color:var(--ink-2);font-size:12.5px;text-align:center;max-width:100%;margin:0 auto 6px}
+.chat-input{display:flex;gap:8px;background:rgba(0,0,0,0.25);border:1px solid var(--line);border-radius:13px;padding:5px 5px 5px 12px;align-items:center}
+.chat-input input{flex:1;background:transparent;border:none;color:#fff;font-size:13.5px;outline:none;padding:8px 0}
+.chat-input button{width:36px;height:36px;border-radius:9px;background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.chat-input button:disabled{opacity:0.5}
+
+/* goals */
+.goal-card{padding:14px;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:13px;margin-bottom:10px}
+.goal-card.done{background:rgba(45,125,45,0.08);border-color:rgba(45,125,45,0.22)}
+.goal-bar{height:8px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;margin:8px 0}
+.goal-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--green-2));border-radius:99px}
+
+/* maintenance photo */
+.thumb{width:52px;height:52px;border-radius:9px;object-fit:cover;border:1px solid var(--line-2);cursor:pointer}
+.upload-box{border:1.5px dashed var(--line-2);border-radius:12px;padding:14px;text-align:center;color:var(--ink-3);font-size:12.5px;cursor:pointer}
+.upload-box:hover{border-color:var(--brick-3);color:var(--ink-2)}
+.upload-preview{margin-top:10px;display:flex;align-items:center;gap:10px}
+.upload-preview img{width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid var(--line-2)}
+
+.empty{color:var(--ink-3);text-align:center;padding:22px;font-size:13px}
+.loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--ink-3);width:100%}
 </style>
 </head>
 <body>
-<div class="container" style="max-width:900px">
-  <div class="topbar">
-    <div class="brand">🏠 rentpayez — <span id="orgName">Resident Portal</span></div>
-    <div class="who"><span id="whoami"></span> · <a href="#" onclick="logout();return false" style="color:var(--gold)">Sign out</a></div>
-  </div>
 
-  <div id="loading" style="color:var(--ink-3)">Loading your account…</div>
+<div id="loadingScreen" class="loading-screen">Loading your account…</div>
 
-  <div id="content" style="display:none">
-    <div class="grid">
-      <div class="card">
-        <div class="section-title">Your Home</div>
-        <div class="row"><span class="lbl">Property</span><span id="f-property">—</span></div>
-        <div class="row"><span class="lbl">Address</span><span id="f-address">—</span></div>
-        <div class="row"><span class="lbl">Building</span><span id="f-building">—</span></div>
-        <div class="row"><span class="lbl">Unit</span><span id="f-unit">—</span></div>
-        <div class="row"><span class="lbl">Status</span><span id="f-status">—</span></div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Monthly Rent</div>
-        <div class="rent" id="f-rent">—</div>
-        <button class="btn btn-primary mt" onclick="payRent()" id="pay-btn">Pay Rent Online</button>
-        <div id="pay-msg" class="mt"></div>
-      </div>
+<div id="appShell" style="display:none;width:100%">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 40 40" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c93e3e"/><stop offset="1" stop-color="#8b2424"/></linearGradient>
+            <linearGradient id="sg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5bc05b"/><stop offset="1" stop-color="#2d7d2d"/></linearGradient>
+          </defs>
+          <circle cx="26" cy="6" r="3" fill="url(#sg2)" opacity="0.85"/>
+          <circle cx="30" cy="10" r="2" fill="url(#sg2)" opacity="0.65"/>
+          <path d="M6 20 L20 8 L34 20 L34 33 Q34 35 32 35 L8 35 Q6 35 6 33 Z" fill="url(#sg1)"/>
+          <rect x="24" y="10" width="4" height="6" fill="url(#sg1)"/>
+          <rect x="17" y="24" width="6" height="11" rx="1" fill="#0b1a2a"/>
+          <rect x="9" y="22" width="6" height="6" rx="1" fill="#fff"/>
+        </svg>
+      </span>
+      <span class="brand-word"><span class="b2">R</span><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
     </div>
-
-    <div class="card mt">
-      <div class="section-title">Your Contact Info</div>
-      <div class="field"><label>Name</label><input id="f-name" disabled /></div>
-      <div class="field"><label>Email</label><input id="f-email" disabled /></div>
-      <div class="field"><label>Phone</label><input id="f-phone" placeholder="(555) 555-1234" /></div>
-      <button class="btn btn-primary" onclick="saveProfile()">Save Phone Number</button>
-      <div id="profile-msg"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-foot">
+      <div class="sb-user" id="sbUser"></div>
+      <button class="sb-logout" onclick="logout()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </button>
     </div>
-
-    <div class="card mt" id="emergency-card" style="display:none">
-      <div class="section-title">Emergency Contact</div>
-      <div class="row"><span class="lbl">Contact</span><span id="f-em-name">—</span></div>
-      <div class="row"><span class="lbl">Phone</span><span id="f-em-phone">—</span></div>
-      <p id="f-em-instructions" style="color:var(--ink-2);font-size:13.5px;margin-top:10px"></p>
-    </div>
-
-    <div class="card mt">
-      <div class="section-title">Payment History &amp; Receipts</div>
-      <table id="pay-table" style="width:100%"><thead><tr><th style="text-align:left">Receipt #</th><th style="text-align:left">Amount</th><th style="text-align:left">Method</th><th style="text-align:left">Date</th></tr></thead><tbody></tbody></table>
-    </div>
-
-    <div class="card mt">
-      <div class="section-title">Report a Maintenance Issue</div>
-      <div class="field"><label>Category</label>
-        <select id="mr-category">
-          <option value="plumbing">Plumbing</option>
-          <option value="electrical">Electrical</option>
-          <option value="appliance">Appliance</option>
-          <option value="hvac">Heating / Cooling</option>
-          <option value="pest">Pest</option>
-          <option value="structural">Structural</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div class="field"><label>Priority</label>
-        <select id="mr-priority">
-          <option value="low">Low</option>
-          <option value="normal" selected>Normal</option>
-          <option value="high">High</option>
-          <option value="emergency">Emergency</option>
-        </select>
-      </div>
-      <div class="field"><label>What's going on?</label><textarea id="mr-description" rows="3" placeholder="Kitchen sink is leaking under the cabinet…" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line-2);font-family:inherit"></textarea></div>
-      <button class="btn btn-primary" onclick="submitMaintenance()">Submit Request</button>
-      <div id="mr-msg"></div>
-      <table id="mr-table" class="mt" style="width:100%"><thead><tr><th style="text-align:left">Date</th><th style="text-align:left">Category</th><th style="text-align:left">Description</th><th style="text-align:left">Status</th></tr></thead><tbody></tbody></table>
-    </div>
-
-    <div class="card mt">
-      <div class="section-title">Documents</div>
-      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Your lease, renewals, and any paperwork your property manager sends land here — no need to visit the office or wait for mail.</p>
-      <table id="doc-table" style="width:100%"><thead><tr><th style="text-align:left">Title</th><th style="text-align:left">Type</th><th style="text-align:left">Status</th><th></th></tr></thead><tbody></tbody></table>
-    </div>
-  </div>
+  </aside>
+  <main class="app-main" id="appMain"></main>
 </div>
 
 <script>
-let ME = null;
+const NAV = [
+  {id:'dash', label:'Dashboard', ic:'🏠'},
+  {id:'pay', label:'Pay Rent', ic:'💳'},
+  {id:'history', label:'Payment History', ic:'📋'},
+  {id:'maintenance', label:'Maintenance', ic:'🔧'},
+  {id:'documents', label:'Documents', ic:'📄'},
+  {id:'coach', label:'AI Coach', ic:'🤖'},
+  {id:'goals', label:'My Goals', ic:'🎯'},
+  {id:'settings', label:'Settings', ic:'⚙️'}
+];
+let ME = null;      // { tenant: {...} } from /api/tenant-auth/me
+let T = null;       // full profile from /api/tenant/me
+let VIEW = 'dash';
+let COACH_HISTORY = [];
+let PENDING_PHOTO = null; // { base64, mime }
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function money(cents){ return '$' + (cents/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(d){ return new Date(d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
 
 async function boot(){
   try{
     const meRes = await fetch('/api/tenant-auth/me');
     if(!meRes.ok){ window.location.href = 'login.html'; return; }
     ME = (await meRes.json()).tenant;
-    document.getElementById('whoami').textContent = ME.name;
 
     const res = await fetch('/api/tenant/me');
     if(!res.ok) throw new Error('Could not load your account');
-    const t = await res.json();
+    T = await res.json();
 
-    document.getElementById('orgName').textContent = t.organization_name || 'Resident Portal';
-    document.getElementById('f-property').textContent = t.property_name || '— Not yet assigned to a unit —';
-    document.getElementById('f-address').textContent = t.property_address || '—';
-    document.getElementById('f-building').textContent = t.building_name || '—';
-    document.getElementById('f-unit').textContent = t.unit_number || '—';
-    document.getElementById('f-status').textContent = t.status;
-    document.getElementById('f-rent').textContent = t.monthly_rent ? '$' + Number(t.monthly_rent).toLocaleString() : '—';
-    document.getElementById('f-name').value = t.name;
-    document.getElementById('f-email').value = t.email;
-    document.getElementById('f-phone').value = t.phone || '';
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
 
-    if(t.emergency_contact_name || t.emergency_contact_phone || t.emergency_instructions){
-      document.getElementById('emergency-card').style.display = '';
-      document.getElementById('f-em-name').textContent = t.emergency_contact_name || '—';
-      document.getElementById('f-em-phone').textContent = t.emergency_contact_phone || '—';
-      document.getElementById('f-em-instructions').textContent = t.emergency_instructions || '';
-    }
-
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = '';
-
+    renderSidebar();
     await handleStripeReturn();
-    await refreshPayments();
-    await refreshMaintenance();
-    await refreshDocuments();
+    setView('dash');
   }catch(err){
-    document.getElementById('loading').textContent = err.message;
+    document.getElementById('loadingScreen').textContent = err.message;
   }
 }
 
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function emptyRow(cols){ return `<tr><td colspan="${cols}" style="color:var(--ink-3);text-align:center;padding:16px">Nothing here yet.</td></tr>`; }
+function renderSidebar(){
+  document.getElementById('sbNav').innerHTML = NAV.map(n =>
+    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}')"><span class="ic">${n.ic}</span><span>${esc(n.label)}</span></button>`
+  ).join('');
+  const initials = (T.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('sbUser').innerHTML = `
+    <div class="sb-user-av">${esc(initials)}</div>
+    <div class="sb-user-info"><div class="n">${esc(T.name)}</div><div class="r">${esc(T.unit_number ? 'Unit ' + T.unit_number : 'Resident')}</div></div>
+  `;
+}
 
-// ═══════════════════════════════ PAYMENTS (Stripe) ═══════════════════════════════
+async function setView(id){
+  VIEW = id;
+  renderSidebar();
+  const m = document.getElementById('appMain');
+  m.innerHTML = '<div class="empty">Loading…</div>';
+  const renderers = { dash: renderDash, pay: renderPay, history: renderHistory, maintenance: renderMaintenance, documents: renderDocuments, coach: renderCoach, goals: renderGoals, settings: renderSettings };
+  await renderers[id]();
+  m.scrollTo?.({top:0});
+}
+
+/* ═══════════════════════════ DASHBOARD ═══════════════════════════ */
+async function renderDash(){
+  const [payments, mrList] = await Promise.all([
+    fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]),
+    fetch('/api/tenant/maintenance-requests').then(r=>r.ok?r.json():[]),
+  ]);
+  const reportedTotal = payments.reduce((s,p)=>s+p.amount_cents,0);
+  const streak = computeStreak(payments);
+  const openRequests = mrList.filter(r=>r.status!=='resolved').length;
+
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head">
+      <div><h1>Welcome back, ${esc((T.name||'').split(' ')[0])} 👋</h1><div class="sub">${esc(T.property_name || 'Your resident portal')}${T.unit_number ? ' · Unit ' + esc(T.unit_number) : ''}</div></div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi gold"><div class="ic">📈</div><div class="label">Credit Score</div><div class="val">Preview</div><div class="trend" style="color:var(--gold-2)">Not connected yet</div></div>
+      <div class="kpi"><div class="ic">🔥</div><div class="label">Payment Streak</div><div class="val">${streak} mo</div><div class="trend">Based on your real payments</div></div>
+      <div class="kpi green"><div class="ic">💰</div><div class="label">Total Paid on Record</div><div class="val">${money(reportedTotal)}</div><div class="trend">${payments.length} payment${payments.length===1?'':'s'}</div></div>
+      <div class="kpi blue"><div class="ic">🔧</div><div class="label">Open Requests</div><div class="val">${openRequests}</div><div class="trend">${mrList.length} total filed</div></div>
+    </div>
+
+    <div class="dash-grid">
+      ${scoreCardHtml()}
+      <div class="panel" style="background:linear-gradient(180deg,rgba(139,36,36,0.08),rgba(139,36,36,0.02));border-color:rgba(139,36,36,0.2)">
+        <div class="panel-head"><div><h3 class="panel-title">Pay Rent</h3><div class="panel-sub">${T.monthly_rent ? 'Due monthly' : 'No rent amount on file yet'}</div></div></div>
+        ${T.monthly_rent ? `<div style="font-family:'Plus Jakarta Sans';font-size:42px;font-weight:800;letter-spacing:-1px;color:#fff;line-height:1;margin:4px 0 14px">$${Number(T.monthly_rent).toLocaleString()}<small style="font-size:16px;color:var(--ink-3);font-weight:600;margin-left:3px">/mo</small></div>` : ''}
+        <button class="btn btn-primary btn-block btn-lg" onclick="setView('pay')">Go to Pay Rent →</button>
+      </div>
+    </div>
+
+    <div class="dash-grid" style="margin-top:16px">
+      <div class="panel">
+        <div class="panel-head"><div><h3 class="panel-title">Last 12 months</h3><div class="panel-sub">Months with a recorded payment</div></div></div>
+        ${streakStripHtml(payments)}
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div><h3 class="panel-title">Recent maintenance</h3><div class="panel-sub">${mrList.length} request${mrList.length===1?'':'s'} filed</div></div>
+          <button class="btn btn-sm btn-secondary" onclick="setView('maintenance')">View All →</button>
+        </div>
+        ${mrList.length ? mrList.slice(0,3).map(r=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line)">
+            <div><div style="color:#fff;font-size:13px;font-weight:600">${esc(r.category)}</div><div style="color:var(--ink-3);font-size:11.5px">${fmtDate(r.created_at)}</div></div>
+            <span class="pill ${esc(r.status)}">${esc(r.status.replace('_',' '))}</span>
+          </div>`).join('') : '<div class="empty">No maintenance requests yet.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function scoreCardHtml(){
+  // Sample/demo numbers only — no real credit-bureau connection exists yet.
+  // Clearly labeled PREVIEW per explicit product decision, never presented as real.
+  return `
+    <div class="panel score-hero">
+      <div class="preview-ribbon">PREVIEW</div>
+      <div class="panel-head">
+        <div><h3 class="panel-title">Credit score</h3><div class="panel-sub">Sample data — rent-payment credit reporting isn't connected to your account yet</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:14px;margin:10px 0 8px">
+        <div style="font-family:'Plus Jakarta Sans';font-size:58px;line-height:0.95;font-weight:800;letter-spacing:-1.5px;color:#fff;opacity:0.55">689</div>
+        <div style="margin-bottom:8px">
+          <div style="font-size:12px;color:var(--gold-2);font-weight:700;margin-bottom:2px">Sample · Good range</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">This is what your score card will look like once your organization turns on rent-payment credit reporting.</div>
+        </div>
+      </div>
+      <div style="height:9px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;margin-top:6px;opacity:0.55">
+        <div style="height:100%;width:62%;border-radius:99px;background:linear-gradient(90deg, var(--brick-2) 0%, var(--gold) 35%, var(--green-2) 70%, var(--green-3) 100%)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.5px;text-transform:uppercase">
+        <span>Poor</span><span>Fair</span><span>Good</span><span>Very Good</span><span>Excellent</span>
+      </div>
+    </div>
+  `;
+}
+
+function computeStreak(payments){
+  if(!payments.length) return 0;
+  const months = new Set(payments.map(p => new Date(p.paid_at).toISOString().slice(0,7)));
+  let streak = 0;
+  let cursor = new Date();
+  for(let i=0;i<60;i++){
+    const key = cursor.toISOString().slice(0,7);
+    if(months.has(key)){ streak++; cursor.setMonth(cursor.getMonth()-1); }
+    else if(i===0){ cursor.setMonth(cursor.getMonth()-1); } // allow current month to still be open
+    else break;
+  }
+  return streak;
+}
+
+function streakStripHtml(payments){
+  const months = new Set(payments.map(p => new Date(p.paid_at).toISOString().slice(0,7)));
+  const cells = [];
+  const cursor = new Date();
+  cursor.setDate(1);
+  cursor.setMonth(cursor.getMonth()-11);
+  for(let i=0;i<12;i++){
+    const key = cursor.toISOString().slice(0,7);
+    const label = cursor.toLocaleDateString(undefined,{month:'narrow'});
+    cells.push(`<div class="${months.has(key)?'':'miss'}">${esc(label)}</div>`);
+    cursor.setMonth(cursor.getMonth()+1);
+  }
+  return `<div class="streak">${cells.join('')}</div><div style="color:var(--ink-3);font-size:11.5px;margin-top:10px">Green = a payment was recorded that month. Red = none on file.</div>`;
+}
+
+/* ═══════════════════════════ PAY RENT ═══════════════════════════ */
+async function renderPay(){
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>Pay Rent</h1><div class="sub">${esc(T.property_name||'')}${T.unit_number?' · Unit '+esc(T.unit_number):''}</div></div></div>
+    <div class="dash-grid">
+      <div class="panel" style="background:linear-gradient(180deg,rgba(139,36,36,0.1),rgba(139,36,36,0.02));border-color:rgba(139,36,36,0.22)">
+        <div class="panel-head"><h3 class="panel-title">Monthly Rent</h3><span class="pill pending">${esc(T.status||'')}</span></div>
+        <div style="font-family:'Plus Jakarta Sans';font-size:52px;font-weight:800;letter-spacing:-1.5px;color:#fff;line-height:1;margin:4px 0">${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}<small style="font-size:18px;color:var(--ink-3);font-weight:600;margin-left:4px">${T.monthly_rent?'.00':''}</small></div>
+        <div style="color:var(--ink-2);font-size:13.5px;margin-bottom:20px">${esc(T.property_address||'')}</div>
+        <button class="btn btn-primary btn-block btn-lg" id="payBtn" onclick="payRent()" ${T.monthly_rent?'':'disabled'}>Pay ${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : ''} Online</button>
+        <div id="pay-msg" class="msg"></div>
+        <div style="text-align:center;color:var(--ink-3);font-size:11.5px;margin-top:12px">🔒 Secured by Stripe</div>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title" style="margin-bottom:12px">Prefer another way to pay?</h3>
+        <p style="color:var(--ink-2);font-size:13.5px;line-height:1.6">Online payment goes through your property manager's Stripe account. If it isn't set up yet, or you'd rather pay another way, contact your property manager directly — payments they record manually will still show up in your Payment History.</p>
+      </div>
+    </div>
+  `;
+}
 async function handleStripeReturn(){
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get('session_id');
-  const payMsg = document.getElementById('pay-msg');
   if(params.get('payment') === 'success' && sessionId){
     try{
       const res = await fetch('/api/tenant/payments/confirm?session_id=' + encodeURIComponent(sessionId));
       const data = await res.json();
-      if(!res.ok) throw new Error(data.error || 'Could not confirm payment');
-      payMsg.className = data.status === 'paid' ? 'ok' : 'err';
-      payMsg.textContent = data.status === 'paid' ? 'Payment received — thank you!' : `Payment status: ${data.status}`;
-    }catch(err){ payMsg.className = 'err'; payMsg.textContent = err.message; }
+      window.__payReturnMsg = res.ok
+        ? (data.status === 'paid' ? {cls:'ok', text:'Payment received — thank you!'} : {cls:'err', text:`Payment status: ${data.status}`})
+        : {cls:'err', text: data.error || 'Could not confirm payment'};
+    }catch(err){ window.__payReturnMsg = {cls:'err', text: err.message}; }
   } else if(params.get('payment') === 'cancelled'){
-    payMsg.className = 'err'; payMsg.textContent = 'Payment was cancelled.';
+    window.__payReturnMsg = {cls:'err', text:'Payment was cancelled.'};
   }
   window.history.replaceState({}, '', window.location.pathname);
 }
-
 async function payRent(){
-  const payMsg = document.getElementById('pay-msg');
+  const btn = document.getElementById('payBtn');
+  const msg = document.getElementById('pay-msg');
+  btn.disabled = true;
   try{
     const res = await fetch('/api/tenant/payments/checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'Could not start checkout');
     window.location.href = data.url;
-  }catch(err){ payMsg.className = 'err'; payMsg.textContent = err.message; }
+  }catch(err){ msg.className='msg err'; msg.textContent=err.message; btn.disabled=false; }
 }
 
-async function refreshPayments(){
-  const res = await fetch('/api/tenant/payments');
-  const rows = res.ok ? await res.json() : [];
-  document.getElementById('pay-table').querySelector('tbody').innerHTML = rows.map(p=>
-    `<tr><td>${esc(p.receipt_number)}</td><td>$${(p.amount_cents/100).toFixed(2)}</td><td>${esc(p.method)}</td><td>${new Date(p.paid_at).toLocaleDateString()}</td></tr>`
-  ).join('') || emptyRow(4);
+/* ═══════════════════════════ PAYMENT HISTORY ═══════════════════════════ */
+async function renderHistory(){
+  const payments = await fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]);
+  const total = payments.reduce((s,p)=>s+p.amount_cents,0);
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>Payment History</h1><div class="sub">${payments.length} payment${payments.length===1?'':'s'} · ${money(total)} total on record</div></div></div>
+    <div class="panel" style="padding:0">
+      <table class="table">
+        <thead><tr><th>Receipt #</th><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
+        <tbody>
+          ${payments.length ? payments.map(p=>`
+            <tr>
+              <td style="color:#fff;font-weight:600">${esc(p.receipt_number)}</td>
+              <td>${fmtDate(p.paid_at)}</td>
+              <td style="font-weight:600;color:#fff">${money(p.amount_cents)}</td>
+              <td><span class="pill paid">${esc(p.method)}</span></td>
+            </tr>`).join('') : `<tr><td colspan="4"><div class="empty">No payments on record yet.</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+  if(window.__payReturnMsg){
+    const banner = document.createElement('div');
+    banner.className = 'msg ' + window.__payReturnMsg.cls;
+    banner.style.marginBottom = '14px';
+    banner.textContent = window.__payReturnMsg.text;
+    document.querySelector('.app-head').after(banner);
+    window.__payReturnMsg = null;
+  }
 }
 
-// ═══════════════════════════════ MAINTENANCE ═══════════════════════════════
+/* ═══════════════════════════ MAINTENANCE ═══════════════════════════ */
+async function renderMaintenance(){
+  const rows = await fetch('/api/tenant/maintenance-requests').then(r=>r.ok?r.json():[]);
+  PENDING_PHOTO = null;
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>Maintenance</h1><div class="sub">Report an issue — add a photo so your property manager can see exactly what's going on</div></div></div>
+    <div class="dash-grid">
+      <div class="panel">
+        <h3 class="panel-title" style="margin-bottom:14px">Report a new issue</h3>
+        <div class="field"><label>Category</label>
+          <select id="mr-category">
+            <option value="plumbing">Plumbing</option>
+            <option value="electrical">Electrical</option>
+            <option value="appliance">Appliance</option>
+            <option value="hvac">Heating / Cooling</option>
+            <option value="pest">Pest</option>
+            <option value="structural">Structural</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field"><label>Priority</label>
+          <select id="mr-priority">
+            <option value="low">Low</option>
+            <option value="normal" selected>Normal</option>
+            <option value="high">High</option>
+            <option value="emergency">Emergency</option>
+          </select>
+        </div>
+        <div class="field"><label>What's going on?</label>
+          <textarea id="mr-description" rows="3" placeholder="Kitchen sink is leaking under the cabinet…"></textarea>
+        </div>
+        <div class="field">
+          <label>Photo (optional)</label>
+          <label class="upload-box" for="mr-photo-input">📷 Tap to add a photo as proof</label>
+          <input type="file" id="mr-photo-input" accept="image/*" style="display:none" onchange="onPhotoSelected(event)"/>
+          <div id="mr-photo-preview"></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="submitMaintenance()">Submit Request</button>
+        <div id="mr-msg" class="msg"></div>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title" style="margin-bottom:14px">Your requests</h3>
+        <div id="mr-list">${renderMrList(rows)}</div>
+      </div>
+    </div>
+  `;
+}
+function renderMrList(rows){
+  if(!rows.length) return '<div class="empty">No maintenance requests yet.</div>';
+  return rows.map(r => `
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)">
+      ${r.has_photo ? `<img class="thumb" src="/api/tenant/maintenance-requests/${r.id}/photo" onclick="window.open(this.src,'_blank')"/>` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);color:var(--ink-3);font-size:18px">🔧</div>`}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+          <div style="color:#fff;font-weight:600;font-size:13.5px;text-transform:capitalize">${esc(r.category)} · <span style="color:var(--ink-3);font-weight:500;text-transform:none">${esc(r.priority)}</span></div>
+          <span class="pill ${esc(r.status)}">${esc(r.status.replace('_',' '))}</span>
+        </div>
+        <div style="color:var(--ink-2);font-size:12.5px;margin-top:3px">${esc(r.description)}</div>
+        ${r.staff_notes ? `<div style="color:var(--ink-3);font-size:12px;margin-top:4px">Property manager: ${esc(r.staff_notes)}</div>` : ''}
+        <div style="color:var(--ink-3);font-size:11px;margin-top:4px">${fmtDate(r.created_at)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+function onPhotoSelected(e){
+  const file = e.target.files[0];
+  const preview = document.getElementById('mr-photo-preview');
+  if(!file){ PENDING_PHOTO = null; preview.innerHTML=''; return; }
+  if(file.size > 4.5*1024*1024){ preview.innerHTML = '<div class="msg err">Photo is too large — please choose one under 4.5MB.</div>'; e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    PENDING_PHOTO = { base64, mime: file.type };
+    preview.innerHTML = `<div class="upload-preview"><img src="${reader.result}"/><span style="color:var(--ink-2);font-size:12.5px">${esc(file.name)}</span></div>`;
+  };
+  reader.readAsDataURL(file);
+}
 async function submitMaintenance(){
   const category = document.getElementById('mr-category').value;
   const priority = document.getElementById('mr-priority').value;
@@ -195,32 +537,42 @@ async function submitMaintenance(){
   const msg = document.getElementById('mr-msg');
   try{
     if(!description) throw new Error('Please describe the issue');
-    const res = await fetch('/api/tenant/maintenance-requests', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({category,priority,description}) });
+    const body = { category, priority, description };
+    if(PENDING_PHOTO){ body.photoBase64 = PENDING_PHOTO.base64; body.photoMime = PENDING_PHOTO.mime; }
+    const res = await fetch('/api/tenant/maintenance-requests', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'Could not submit request');
-    document.getElementById('mr-description').value='';
-    msg.className='ok'; msg.textContent='Submitted — your property manager has been notified.';
-    await refreshMaintenance();
-  }catch(err){ msg.className='err'; msg.textContent=err.message; }
-}
-async function refreshMaintenance(){
-  const res = await fetch('/api/tenant/maintenance-requests');
-  const rows = res.ok ? await res.json() : [];
-  document.getElementById('mr-table').querySelector('tbody').innerHTML = rows.map(r=>
-    `<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${esc(r.category)}</td><td>${esc(r.description)}</td><td>${esc(r.status.replace('_',' '))}</td></tr>`
-  ).join('') || emptyRow(4);
+    msg.className='msg ok'; msg.textContent='Submitted — your property manager has been notified.';
+    await renderMaintenance();
+    document.getElementById('mr-msg').className='msg ok';
+    document.getElementById('mr-msg').textContent='Submitted — your property manager has been notified.';
+  }catch(err){ msg.className='msg err'; msg.textContent=err.message; }
 }
 
-// ═══════════════════════════════ DOCUMENTS ═══════════════════════════════
-async function refreshDocuments(){
-  const res = await fetch('/api/tenant/documents');
-  const rows = res.ok ? await res.json() : [];
-  document.getElementById('doc-table').querySelector('tbody').innerHTML = rows.map(d=>{
-    const action = d.status === 'pending_signature'
-      ? `<button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="signDocument('${d.id}')">Sign</button>`
-      : `<a href="/api/tenant/documents/${d.id}/file" target="_blank" style="color:var(--gold)">View</a>`;
-    return `<tr><td>${esc(d.title)}</td><td>${esc(d.doc_type)}</td><td>${esc(d.status.replace('_',' '))}${d.signed_name?` — ${esc(d.signed_name)}`:''}</td><td>${action}</td></tr>`;
-  }).join('') || emptyRow(4);
+/* ═══════════════════════════ DOCUMENTS ═══════════════════════════ */
+async function renderDocuments(){
+  const rows = await fetch('/api/tenant/documents').then(r=>r.ok?r.json():[]);
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>Documents</h1><div class="sub">Your lease, renewals, and paperwork from your property manager — no office visit or mail needed</div></div></div>
+    <div class="panel" style="padding:0">
+      <table class="table">
+        <thead><tr><th>Title</th><th>Type</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(d=>{
+            const action = d.status === 'pending_signature'
+              ? `<button class="btn btn-sm btn-primary" onclick="signDocument('${d.id}')">Sign</button>`
+              : `<a class="btn btn-sm btn-secondary" href="/api/tenant/documents/${d.id}/file" target="_blank">View</a>`;
+            return `<tr>
+              <td style="color:#fff;font-weight:600">${esc(d.title)}</td>
+              <td style="text-transform:capitalize">${esc(d.doc_type)}</td>
+              <td><span class="pill ${esc(d.status)}">${esc(d.status.replace('_',' '))}</span>${d.signed_name?`<div style="color:var(--ink-3);font-size:11px;margin-top:2px">Signed by ${esc(d.signed_name)}</div>`:''}</td>
+              <td>${action}</td>
+            </tr>`;
+          }).join('') : `<tr><td colspan="4"><div class="empty">Nothing here yet.</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 async function signDocument(id){
   const name = window.prompt('Type your full legal name to sign this document:');
@@ -229,10 +581,161 @@ async function signDocument(id){
     const res = await fetch(`/api/tenant/documents/${id}/sign`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({signedName:name}) });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'Could not sign');
-    await refreshDocuments();
+    await renderDocuments();
   }catch(err){ alert(err.message); }
 }
 
+/* ═══════════════════════════ AI COACH ═══════════════════════════ */
+async function renderCoach(){
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>AI Coach</h1><div class="sub">Ask about your rent, payment history, or general credit and budgeting questions</div></div></div>
+    <div class="coach-panel">
+      <div class="coach-head-bar">
+        <div class="chat-avatar">🤖</div>
+        <div style="flex:1"><div style="color:#fff;font-weight:700;font-size:14.5px">Coach Ezra</div><div style="color:var(--ink-3);font-size:11.5px">Grounded in your real payment &amp; goal data</div></div>
+      </div>
+      <div class="coach-feed" id="coachFeed"></div>
+      <div class="coach-foot">
+        <div class="chat-input">
+          <input id="coachIn" placeholder="Ask Coach Ezra anything…" onkeydown="if(event.key==='Enter')sendCoach()"/>
+          <button id="coachSendBtn" onclick="sendCoach()">→</button>
+        </div>
+      </div>
+    </div>
+  `;
+  COACH_HISTORY = [];
+  renderCoachFeed();
+  appendCoachSystemGreeting();
+}
+function renderCoachFeed(){
+  const feed = document.getElementById('coachFeed');
+  if(!feed) return;
+  feed.innerHTML = COACH_HISTORY.map(m => m.role === 'sys'
+    ? `<div class="bubble sys">${esc(m.content)}</div>`
+    : `<div class="bubble ${m.role==='user'?'user':'ai'}">${esc(m.content)}</div>`
+  ).join('');
+  feed.scrollTop = feed.scrollHeight;
+}
+function appendCoachSystemGreeting(){
+  COACH_HISTORY.push({role:'sys', content: `Hi ${(T.name||'').split(' ')[0]}! Ask me anything about your rent, payment history, or general credit and budgeting questions.`});
+  renderCoachFeed();
+}
+async function sendCoach(){
+  const input = document.getElementById('coachIn');
+  const btn = document.getElementById('coachSendBtn');
+  const text = input.value.trim();
+  if(!text) return;
+  COACH_HISTORY.push({role:'user', content:text});
+  renderCoachFeed();
+  input.value = '';
+  btn.disabled = true;
+  try{
+    const historyForApi = COACH_HISTORY.filter(m=>m.role==='user'||m.role==='assistant').slice(-10);
+    const res = await fetch('/api/tenant/coach/message', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message:text, history: historyForApi.slice(0,-1) }) });
+    const data = await res.json();
+    if(!res.ok){
+      COACH_HISTORY.push({role:'sys', content: data.error || "Coach Ezra isn't available right now."});
+    } else {
+      COACH_HISTORY.push({role:'assistant', content: data.reply});
+    }
+  }catch(err){
+    COACH_HISTORY.push({role:'sys', content: 'Something went wrong reaching Coach Ezra. Try again in a moment.'});
+  }
+  btn.disabled = false;
+  renderCoachFeed();
+}
+
+/* ═══════════════════════════ MY GOALS ═══════════════════════════ */
+async function renderGoals(){
+  const goals = await fetch('/api/tenant/goals').then(r=>r.ok?r.json():[]);
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>My Goals</h1><div class="sub">Personal milestones you set for yourself</div></div></div>
+    <div class="dash-grid">
+      <div class="panel">
+        <h3 class="panel-title" style="margin-bottom:14px">Add a goal</h3>
+        <div class="field"><label>Title</label><input id="goal-title" placeholder="Save for a car"/></div>
+        <div class="field"><label>Notes (optional)</label><input id="goal-note" placeholder="$5,000 by December"/></div>
+        <button class="btn btn-primary btn-block" onclick="addGoal()">Add Goal</button>
+        <div id="goal-msg" class="msg"></div>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title" style="margin-bottom:14px">Your goals</h3>
+        <div id="goal-list">${renderGoalList(goals)}</div>
+      </div>
+    </div>
+  `;
+}
+function renderGoalList(goals){
+  if(!goals.length) return '<div class="empty">No goals yet — add one to start tracking.</div>';
+  return goals.map(g => `
+    <div class="goal-card ${g.status==='done'?'done':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div><div style="color:#fff;font-weight:600;font-size:14px">${esc(g.title)}</div>${g.target_note?`<div style="color:var(--ink-3);font-size:12px;margin-top:2px">${esc(g.target_note)}</div>`:''}</div>
+        <span class="pill ${g.status==='done'?'done':'in_progress'}">${g.status==='done'?'Done':g.progress_pct+'%'}</span>
+      </div>
+      <div class="goal-bar"><i style="width:${g.progress_pct}%"></i></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        ${g.status!=='done' ? `
+          <button class="btn btn-sm btn-secondary" onclick="bumpGoal('${g.id}', ${Math.min(100,g.progress_pct+10)})">+10%</button>
+          <button class="btn btn-sm btn-secondary" onclick="completeGoal('${g.id}')">Mark done</button>
+        ` : ''}
+        <button class="btn btn-sm btn-secondary" onclick="deleteGoal('${g.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+async function addGoal(){
+  const title = document.getElementById('goal-title').value.trim();
+  const targetNote = document.getElementById('goal-note').value.trim();
+  const msg = document.getElementById('goal-msg');
+  try{
+    if(!title) throw new Error('Give your goal a title');
+    const res = await fetch('/api/tenant/goals', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title, targetNote}) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Could not add goal');
+    await renderGoals();
+  }catch(err){ msg.className='msg err'; msg.textContent = err.message; }
+}
+async function bumpGoal(id, pct){
+  await fetch(`/api/tenant/goals/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({progressPct: pct}) });
+  await renderGoals();
+}
+async function completeGoal(id){
+  await fetch(`/api/tenant/goals/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({progressPct: 100, status: 'done'}) });
+  await renderGoals();
+}
+async function deleteGoal(id){
+  if(!confirm('Delete this goal?')) return;
+  await fetch(`/api/tenant/goals/${id}`, { method:'DELETE' });
+  await renderGoals();
+}
+
+/* ═══════════════════════════ SETTINGS ═══════════════════════════ */
+async function renderSettings(){
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>Settings</h1><div class="sub">Your contact info and home details</div></div></div>
+    <div class="dash-grid">
+      <div class="panel">
+        <h3 class="panel-title" style="margin-bottom:14px">Your Home</h3>
+        <div class="field"><label>Property</label><input disabled value="${esc(T.property_name || 'Not yet assigned')}"/></div>
+        <div class="field"><label>Address</label><input disabled value="${esc(T.property_address || '—')}"/></div>
+        <div class="field"><label>Unit</label><input disabled value="${esc(T.unit_number || '—')}"/></div>
+        <div class="field"><label>Monthly Rent</label><input disabled value="${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}"/></div>
+        ${(T.emergency_contact_name || T.emergency_contact_phone) ? `
+          <div class="field"><label>Emergency Contact</label><input disabled value="${esc(T.emergency_contact_name||'')}${T.emergency_contact_phone?' · '+esc(T.emergency_contact_phone):''}"/></div>
+        ` : ''}
+      </div>
+      <div class="panel">
+        <h3 class="panel-title" style="margin-bottom:14px">Your Contact Info</h3>
+        <div class="field"><label>Name</label><input disabled value="${esc(T.name)}"/></div>
+        <div class="field"><label>Email</label><input disabled value="${esc(T.email)}"/></div>
+        <div class="field"><label>Phone</label><input id="f-phone" value="${esc(T.phone||'')}" placeholder="(555) 555-1234"/></div>
+        <button class="btn btn-primary" onclick="saveProfile()">Save Phone Number</button>
+        <div id="profile-msg" class="msg"></div>
+      </div>
+    </div>
+  `;
+}
 async function saveProfile(){
   const phone = document.getElementById('f-phone').value.trim();
   const msg = document.getElementById('profile-msg');
@@ -240,8 +743,9 @@ async function saveProfile(){
     const res = await fetch('/api/tenant/me', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone}) });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'Could not save');
-    msg.className = 'ok'; msg.textContent = 'Saved.';
-  }catch(err){ msg.className = 'err'; msg.textContent = err.message; }
+    T.phone = phone;
+    msg.className = 'msg ok'; msg.textContent = 'Saved.';
+  }catch(err){ msg.className = 'msg err'; msg.textContent = err.message; }
 }
 
 async function logout(){

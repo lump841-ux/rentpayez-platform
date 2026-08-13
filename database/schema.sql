@@ -104,18 +104,6 @@ CREATE TABLE IF NOT EXISTS tenants (
   UNIQUE (organization_id, email)
 );
 
--- Now that branches/properties exist, wire up staff_assignments FKs.
--- NOTE: not idempotent (no "ADD CONSTRAINT IF NOT EXISTS" in Postgres) —
--- initDB() in services/db.js runs this whole file on every server boot,
--- so it specifically tolerates a 42710 "already exists" error from these
--- two statements on restarts after the very first successful boot. Kept
--- as plain SQL (rather than a DO $$ plpgsql block) so it stays compatible
--- with the pg-mem adapter used by test/smoke.js, which doesn't support
--- plpgsql script blocks.
-ALTER TABLE staff_assignments
-  ADD CONSTRAINT fk_staff_branch   FOREIGN KEY (branch_id)   REFERENCES branches(id)   ON DELETE CASCADE,
-  ADD CONSTRAINT fk_staff_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE;
-
 -- ── Audit log ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS audit_logs (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -144,6 +132,8 @@ CREATE TABLE IF NOT EXISTS maintenance_requests (
   description     TEXT NOT NULL,
   status          TEXT NOT NULL DEFAULT 'open',    -- open | in_progress | resolved | closed
   staff_notes     TEXT,
+  photo_data      TEXT,   -- base64-encoded proof photo, optional
+  photo_mime      TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved_at     TIMESTAMPTZ
@@ -193,6 +183,23 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ── Goals (tenant-set personal milestones) ───────────────────────────────
+-- Real, tenant-editable — not the demo "mortgage roadmap" numbers from the
+-- rentpayez.html mockup. A tenant creates their own goals and updates
+-- progress themselves; nothing here is auto-calculated from a credit score
+-- since no bureau is connected (see documents/README discussion in chat).
+CREATE TABLE IF NOT EXISTS goals (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  title           TEXT NOT NULL,
+  target_note     TEXT,             -- free-text target, e.g. "$25,000" or "Nov 2026"
+  progress_pct    INTEGER NOT NULL DEFAULT 0 CHECK (progress_pct BETWEEN 0 AND 100),
+  status          TEXT NOT NULL DEFAULT 'in_progress', -- in_progress | done
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ── Sessions (express-session store) ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS sessions (
   sid    TEXT PRIMARY KEY,
@@ -221,3 +228,21 @@ CREATE INDEX IF NOT EXISTS idx_documents_org        ON documents(organization_id
 CREATE INDEX IF NOT EXISTS idx_documents_tenant     ON documents(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_payments_org         ON payments(organization_id);
 CREATE INDEX IF NOT EXISTS idx_payments_tenant      ON payments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_goals_org            ON goals(organization_id);
+CREATE INDEX IF NOT EXISTS idx_goals_tenant         ON goals(tenant_id);
+
+-- ── staff_assignments FK constraints ─────────────────────────────────────
+-- MUST STAY THE LAST STATEMENTS IN THIS FILE. services/db.js runs this
+-- entire file as one multi-statement query on every server boot, and
+-- Postgres has no "ADD CONSTRAINT IF NOT EXISTS" — so on the first boot
+-- these succeed, and on every boot after that they fail with 42710
+-- (duplicate_object), which db.js specifically catches and treats as
+-- "schema already applied." But a multi-statement pool.query() STOPS at
+-- the first failing statement — anything placed after these ALTER TABLEs
+-- would silently never run on any boot past the first. (This is exactly
+-- what happened to maintenance_requests/documents/payments the first time
+-- they were added mid-file — see chat.) Keep this block last, and add any
+-- future CREATE TABLE/INDEX statements ABOVE it, never below.
+ALTER TABLE staff_assignments
+  ADD CONSTRAINT fk_staff_branch   FOREIGN KEY (branch_id)   REFERENCES branches(id)   ON DELETE CASCADE,
+  ADD CONSTRAINT fk_staff_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE;

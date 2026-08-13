@@ -54,9 +54,17 @@ router.patch('/me', async (req, res) => {
 });
 
 // ═══════════════════════════════ MAINTENANCE REQUESTS ═══════════════════════════════
+// Photos are optional proof-of-issue, sent as base64 in the JSON body
+// (small images only — the tenant portal downsizes before upload) rather
+// than multipart, so the existing single JSON POST route can handle both
+// with-photo and without-photo submissions the same way.
+const MAX_PHOTO_BASE64_CHARS = 6 * 1024 * 1024; // ~4.5MB decoded, generous for a downsized photo
+
 router.post('/maintenance-requests', async (req, res) => {
-  const { category, priority, description } = req.body || {};
+  const { category, priority, description, photoBase64, photoMime } = req.body || {};
   if (!description || !description.trim()) return res.status(400).json({ error: 'description is required' });
+  if (photoBase64 && photoBase64.length > MAX_PHOTO_BASE64_CHARS) return res.status(400).json({ error: 'Photo is too large' });
+  if (photoBase64 && !photoMime) return res.status(400).json({ error: 'photoMime is required when photoBase64 is provided' });
 
   const t = req.session.tenant;
   let propertyId = null;
@@ -66,19 +74,34 @@ router.post('/maintenance-requests', async (req, res) => {
   }
 
   const { rows } = await db.query(
-    `INSERT INTO maintenance_requests (organization_id, tenant_id, unit_id, property_id, category, priority, description)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [t.organizationId, t.id, t.unitId || null, propertyId, category || 'other', priority || 'normal', description.trim()]
+    `INSERT INTO maintenance_requests (organization_id, tenant_id, unit_id, property_id, category, priority, description, photo_data, photo_mime)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id, organization_id, tenant_id, unit_id, property_id, category, priority, description, status, staff_notes, created_at, updated_at, resolved_at,
+               (photo_data IS NOT NULL) AS has_photo`,
+    [t.organizationId, t.id, t.unitId || null, propertyId, category || 'other', priority || 'normal', description.trim(),
+     photoBase64 || null, photoBase64 ? photoMime : null]
   );
   res.json(rows[0]);
 });
 
 router.get('/maintenance-requests', async (req, res) => {
   const { rows } = await db.query(
-    `SELECT * FROM maintenance_requests WHERE tenant_id = $1 AND organization_id = $2 ORDER BY created_at DESC`,
+    `SELECT id, organization_id, tenant_id, unit_id, property_id, category, priority, description, status, staff_notes,
+            created_at, updated_at, resolved_at, (photo_data IS NOT NULL) AS has_photo
+     FROM maintenance_requests WHERE tenant_id = $1 AND organization_id = $2 ORDER BY created_at DESC`,
     [req.session.tenant.id, req.session.tenant.organizationId]
   );
   res.json(rows);
+});
+
+router.get('/maintenance-requests/:id/photo', async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT photo_data, photo_mime FROM maintenance_requests WHERE id = $1 AND tenant_id = $2 AND organization_id = $3`,
+    [req.params.id, req.session.tenant.id, req.session.tenant.organizationId]
+  );
+  if (!rows.length || !rows[0].photo_data) return res.status(404).json({ error: 'No photo on this request' });
+  res.setHeader('Content-Type', rows[0].photo_mime);
+  res.send(Buffer.from(rows[0].photo_data, 'base64'));
 });
 
 // ═══════════════════════════════ DOCUMENTS (digital lease / e-sign) ═══════════════════════════════
@@ -205,6 +228,139 @@ router.get('/payments/confirm', async (req, res) => {
     [t.organizationId, t.id, t.unitId || null, session.amount_total, session_id, receiptNumber]
   );
   res.json({ status: 'paid', payment: rows[0] });
+});
+
+// ═══════════════════════════════ MY GOALS ═══════════════════════════════
+// Real, tenant-editable goals — not the demo "mortgage roadmap" numbers
+// from the original rentpayez.html mockup. Nothing here is auto-derived
+// from a credit score, since no bureau integration exists yet.
+router.get('/goals', async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT * FROM goals WHERE tenant_id = $1 AND organization_id = $2 ORDER BY created_at ASC`,
+    [req.session.tenant.id, req.session.tenant.organizationId]
+  );
+  res.json(rows);
+});
+
+router.post('/goals', async (req, res) => {
+  const { title, targetNote } = req.body || {};
+  if (!title || !title.trim()) return res.status(400).json({ error: 'title is required' });
+  const { rows } = await db.query(
+    `INSERT INTO goals (organization_id, tenant_id, title, target_note) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [req.session.tenant.organizationId, req.session.tenant.id, title.trim(), targetNote ? targetNote.trim() : null]
+  );
+  res.json(rows[0]);
+});
+
+router.patch('/goals/:id', async (req, res) => {
+  const { progressPct, status, title, targetNote } = req.body || {};
+  if (progressPct != null && (progressPct < 0 || progressPct > 100)) return res.status(400).json({ error: 'progressPct must be between 0 and 100' });
+  if (status && !['in_progress', 'done'].includes(status)) return res.status(400).json({ error: 'status must be in_progress or done' });
+
+  const { rows } = await db.query(
+    `UPDATE goals SET
+       progress_pct = COALESCE($1, progress_pct),
+       status = COALESCE($2, status),
+       title = COALESCE($3, title),
+       target_note = COALESCE($4, target_note),
+       updated_at = now()
+     WHERE id = $5 AND tenant_id = $6 AND organization_id = $7 RETURNING *`,
+    [progressPct != null ? progressPct : null, status || null, title ? title.trim() : null,
+     targetNote != null ? targetNote.trim() : null, req.params.id, req.session.tenant.id, req.session.tenant.organizationId]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Goal not found' });
+  res.json(rows[0]);
+});
+
+router.delete('/goals/:id', async (req, res) => {
+  const { rows } = await db.query(
+    `DELETE FROM goals WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 RETURNING id`,
+    [req.params.id, req.session.tenant.id, req.session.tenant.organizationId]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Goal not found' });
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════ AI COACH ═══════════════════════════════
+// Real LLM-backed chat, grounded in the tenant's actual data (name, unit,
+// payment history, open goals) — never a fabricated credit score, since
+// no bureau integration exists. Supports either ANTHROPIC_API_KEY or
+// OPENAI_API_KEY (whichever the org sets); degrades to a clear 503,
+// matching the Stripe pattern, if neither is configured.
+async function callAnthropic(systemPrompt, history, message) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: process.env.ANTHROPIC_COACH_MODEL || 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: systemPrompt,
+      messages: [...history, { role: 'user', content: message }],
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error && data.error.message || 'Anthropic API error');
+  return data.content.map(b => b.text || '').join('').trim();
+}
+
+async function callOpenAI(systemPrompt, history, message) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({
+      model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
+      max_tokens: 500,
+      messages: [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: message }],
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error && data.error.message || 'OpenAI API error');
+  return (data.choices[0].message.content || '').trim();
+}
+
+router.post('/coach/message', async (req, res) => {
+  const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
+  const hasOpenAI = !!process.env.OPENAI_API_KEY;
+  if (!hasAnthropic && !hasOpenAI) {
+    return res.status(503).json({ error: "Coach isn't set up yet — the org needs to add an ANTHROPIC_API_KEY or OPENAI_API_KEY." });
+  }
+
+  const { message, history } = req.body || {};
+  if (!message || !message.trim()) return res.status(400).json({ error: 'message is required' });
+  const safeHistory = Array.isArray(history)
+    ? history.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-10)
+    : [];
+
+  const t = req.session.tenant;
+  const [{ rows: payRows }, { rows: goalRows }, { rows: unitRows }] = await Promise.all([
+    db.query(`SELECT amount_cents, paid_at FROM payments WHERE tenant_id = $1 ORDER BY paid_at DESC LIMIT 12`, [t.id]),
+    db.query(`SELECT title, target_note, progress_pct, status FROM goals WHERE tenant_id = $1 ORDER BY created_at ASC`, [t.id]),
+    db.query(`SELECT u.monthly_rent, u.unit_number, p.name AS property_name FROM tenants te LEFT JOIN units u ON u.id = te.unit_id LEFT JOIN properties p ON p.id = u.property_id WHERE te.id = $1`, [t.id]),
+  ]);
+  const unit = unitRows[0] || {};
+
+  const systemPrompt = `You are Coach Ezra, a friendly personal-finance and rent coach inside the rentpayez tenant portal. You're talking to ${t.name}.
+Real data you know about them:
+- Unit: ${unit.unit_number ? `#${unit.unit_number} at ${unit.property_name || 'their property'}` : 'not yet assigned to a unit'}
+- Monthly rent: ${unit.monthly_rent ? `$${unit.monthly_rent}` : 'not on file'}
+- Recent payments on file: ${payRows.length ? payRows.map(p => `$${(p.amount_cents / 100).toFixed(2)} on ${new Date(p.paid_at).toLocaleDateString()}`).join('; ') : 'none yet'}
+- Their goals: ${goalRows.length ? goalRows.map(g => `"${g.title}" (${g.progress_pct}% — ${g.status})`).join('; ') : 'none set yet'}
+
+IMPORTANT: rentpayez does not currently have a credit bureau integration connected for this tenant. You do NOT know their actual credit score, and must never invent one or state a specific score number. If asked about their credit score, say honestly that it isn't connected yet, and instead give general, accurate personal-finance guidance (on-time payment habits, utilization, budgeting). Be warm, concise, and practical. Keep replies to a few short paragraphs.`;
+
+  try {
+    const reply = hasAnthropic
+      ? await callAnthropic(systemPrompt, safeHistory, message.trim())
+      : await callOpenAI(systemPrompt, safeHistory, message.trim());
+    res.json({ reply });
+  } catch (err) {
+    console.error('coach/message error:', err.message);
+    res.status(502).json({ error: 'Coach Ezra is having trouble responding right now — try again in a moment.' });
+  }
 });
 
 module.exports = router;

@@ -619,12 +619,16 @@ router.get('/summary', async (req, res) => {
 // ═══════════════════════════════ MAINTENANCE REQUESTS ═══════════════════════════════
 // Tenants file these from the portal (routes/tenant.js); staff triage/work
 // them here, scoped the same way as tenants/units (via scopedPropertyIds).
+const MAINT_LIST_COLS = `mr.id, mr.organization_id, mr.tenant_id, mr.unit_id, mr.property_id, mr.category, mr.priority,
+  mr.description, mr.status, mr.staff_notes, mr.created_at, mr.updated_at, mr.resolved_at,
+  (mr.photo_data IS NOT NULL) AS has_photo`;
+
 router.get('/maintenance-requests', async (req, res) => {
   const scope = await scopedPropertyIds(req.session.user);
   if (scope !== null && scope.length === 0) return res.json([]);
   const { rows } = scope === null
     ? await db.query(
-        `SELECT mr.*, t.name AS tenant_name, t.email AS tenant_email, u.unit_number, p.name AS property_name
+        `SELECT ${MAINT_LIST_COLS}, t.name AS tenant_name, t.email AS tenant_email, u.unit_number, p.name AS property_name
          FROM maintenance_requests mr
          JOIN tenants t ON t.id = mr.tenant_id
          LEFT JOIN units u ON u.id = mr.unit_id
@@ -633,7 +637,7 @@ router.get('/maintenance-requests', async (req, res) => {
         [req.orgId]
       )
     : await db.query(
-        `SELECT mr.*, t.name AS tenant_name, t.email AS tenant_email, u.unit_number, p.name AS property_name
+        `SELECT ${MAINT_LIST_COLS}, t.name AS tenant_name, t.email AS tenant_email, u.unit_number, p.name AS property_name
          FROM maintenance_requests mr
          JOIN tenants t ON t.id = mr.tenant_id
          LEFT JOIN units u ON u.id = mr.unit_id
@@ -643,6 +647,18 @@ router.get('/maintenance-requests', async (req, res) => {
         [req.orgId, ...scope]
       );
   res.json(rows);
+});
+
+router.get('/maintenance-requests/:id/photo', async (req, res) => {
+  const scope = await scopedPropertyIds(req.session.user);
+  const { rows } = await db.query(
+    `SELECT photo_data, photo_mime, property_id FROM maintenance_requests WHERE id = $1 AND organization_id = $2`,
+    [req.params.id, req.orgId]
+  );
+  if (!rows.length || !rows[0].photo_data) return res.status(404).json({ error: 'No photo on this request' });
+  if (scope !== null && (!rows[0].property_id || !scope.includes(rows[0].property_id))) return res.status(403).json({ error: 'Outside your assigned properties' });
+  res.setHeader('Content-Type', rows[0].photo_mime);
+  res.send(Buffer.from(rows[0].photo_data, 'base64'));
 });
 
 const MAINT_ROLES = ['org_admin', 'branch_manager', 'property_manager', 'maintenance_supervisor', 'maintenance_tech', 'super_admin'];

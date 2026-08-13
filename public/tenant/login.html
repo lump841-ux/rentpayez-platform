@@ -3,29 +3,80 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Rent Pay Easy — Resident Login</title>
-<link rel="stylesheet" href="/admin/shared.css" />
+<title>rentpayez — Resident Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
 <style>
-  .wrap{max-width:420px;margin:80px auto;padding:0 20px}
-  .brand{font-weight:800;font-size:20px;margin-bottom:6px;text-align:center}
-  .sub{color:var(--ink-3);font-size:13.5px;text-align:center;margin-bottom:28px}
+:root{
+  --brick:#8b2424; --brick-2:#a32d2d; --brick-3:#c93e3e;
+  --green:#2d7d2d; --green-2:#3a9c3a; --green-3:#5bc05b;
+  --gold:#d4a247; --gold-2:#e8c074;
+  --ink:#e9eef5; --ink-2:#b8c4d4; --ink-3:#7c8a9d;
+  --line:rgba(255,255,255,0.08); --line-2:rgba(255,255,255,0.14);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100vh}
+body{
+  background:
+    radial-gradient(1200px 800px at 12% -10%, rgba(139,36,36,0.16), transparent 60%),
+    radial-gradient(1200px 800px at 95% 5%, rgba(45,125,45,0.12), transparent 60%),
+    linear-gradient(180deg, #07121f 0%, #0a1a2c 35%, #07121f 100%);
+  color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  display:flex;align-items:center;justify-content:center
+}
+a{color:inherit}
+.wrap{width:100%;max-width:400px;padding:24px}
+.brand-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:22px}
+.brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(140deg,#1a3552,#0b1a2a);display:flex;align-items:center;justify-content:center;border:1px solid var(--line-2)}
+.brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:21px;font-weight:800;letter-spacing:-0.4px}
+.brand-word .b1{color:#fff}
+.brand-word .b2{color:#0b0b0b;background:#fff;border-radius:5px;padding:0 4px;margin-right:1px}
+.brand-word .b3{color:var(--brick-3)}
+.brand-word .b4{color:var(--green-3)}
+.sub{color:var(--ink-3);font-size:13.5px;text-align:center;margin-bottom:26px;line-height:1.5}
+.card{background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border:1px solid var(--line);border-radius:18px;padding:22px}
+.field{margin-bottom:14px}
+.field label{display:block;color:var(--ink-3);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.field input{width:100%;background:rgba(0,0,0,0.25);border:1px solid var(--line-2);border-radius:10px;padding:11px 13px;color:#fff;font-size:14px;outline:none;font-family:inherit}
+.field input:focus{border-color:var(--brick-3)}
+.btn-primary{width:100%;padding:12px;border-radius:11px;font-weight:700;font-size:14.5px;background:linear-gradient(180deg,var(--brick-2),var(--brick));color:#fff;border:none;cursor:pointer;box-shadow:0 8px 22px rgba(139,36,36,0.4)}
+.btn-primary:hover{transform:translateY(-1px)}
+.msg{margin-top:12px;font-size:13px;text-align:center}
+.msg.err{color:#e76d6d}
+.foot{text-align:center;color:var(--ink-3);font-size:12.5px;margin-top:20px}
+.foot a{color:var(--gold-2)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="brand">🏠 rentpayez — Resident Portal</div>
+  <div class="brand-row">
+    <span class="brand-mark">
+      <svg viewBox="0 0 40 40" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c93e3e"/><stop offset="1" stop-color="#8b2424"/></linearGradient>
+          <linearGradient id="lg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5bc05b"/><stop offset="1" stop-color="#2d7d2d"/></linearGradient>
+        </defs>
+        <circle cx="26" cy="6" r="3" fill="url(#lg2)" opacity="0.85"/>
+        <circle cx="30" cy="10" r="2" fill="url(#lg2)" opacity="0.65"/>
+        <path d="M6 20 L20 8 L34 20 L34 33 Q34 35 32 35 L8 35 Q6 35 6 33 Z" fill="url(#lg1)"/>
+        <rect x="24" y="10" width="4" height="6" fill="url(#lg1)"/>
+        <rect x="17" y="24" width="6" height="11" rx="1" fill="#0b1a2a"/>
+        <rect x="9" y="22" width="6" height="6" rx="1" fill="#fff"/>
+      </svg>
+    </span>
+    <span class="brand-word"><span class="b2">R</span><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
+  </div>
   <div class="sub">Sign in with the email and temporary password your property manager gave you</div>
 
   <div class="card">
     <div class="field"><label>Email</label><input id="li-email" type="email" placeholder="you@email.com" /></div>
     <div class="field"><label>Password</label><input id="li-password" type="password" placeholder="••••••••" /></div>
-    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign In</button>
-    <div id="li-msg"></div>
+    <button class="btn-primary" onclick="doLogin()">Sign In</button>
+    <div id="li-msg" class="msg"></div>
   </div>
 
-  <p style="text-align:center;color:var(--ink-3);font-size:12.5px;margin-top:20px">
-    Property manager or staff? <a href="/admin/login.html" style="color:var(--gold)">Sign in here instead</a>
-  </p>
+  <p class="foot">Property manager or staff? <a href="/admin/login.html">Sign in here instead</a></p>
 </div>
 
 <script>
@@ -33,13 +84,13 @@ async function doLogin(){
   const email = document.getElementById('li-email').value.trim();
   const password = document.getElementById('li-password').value;
   const msg = document.getElementById('li-msg');
-  msg.className=''; msg.textContent='';
+  msg.className='msg'; msg.textContent='';
   try{
     const res = await fetch('/api/tenant-auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password}) });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'Login failed');
     window.location.href = 'portal.html';
-  }catch(err){ msg.className='err'; msg.textContent = err.message; }
+  }catch(err){ msg.className='msg err'; msg.textContent = err.message; }
 }
 document.getElementById('li-password').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 </script>

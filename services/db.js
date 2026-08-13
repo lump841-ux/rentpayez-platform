@@ -20,25 +20,60 @@ async function query(text, params) {
   return pool.query(text, params);
 }
 
-async function initDB() {
-  const schema = fs.readFileSync(path.join(__dirname, '..', 'database', 'schema.sql'), 'utf8');
-  try {
-    await pool.query(schema);
-  } catch (err) {
-    // 42710 = duplicate_object (Postgres). schema.sql is re-run in full on
-    // every server boot, and every statement in it is idempotent (CREATE
-    // TABLE/INDEX ... IF NOT EXISTS) except the two ADD CONSTRAINT
-    // statements wiring up staff_assignments' foreign keys — Postgres has
-    // no "ADD CONSTRAINT IF NOT EXISTS". On the very first boot those
-    // constraints don't exist yet and get created fine; on every restart
-    // after that they already exist and this specific error is expected,
-    // not a real failure, so it must not crash the process.
-    if (err.code === '42710') {
-      console.warn('[DB] Schema already applied (constraints exist) — continuing.');
-    } else {
-      throw err;
+// Runs a SQL script one statement at a time rather than as one
+// multi-statement pool.query(sql) call. This used to run schema.sql as a
+// single batch, wrapped in a try/catch that swallowed the expected 42710
+// (duplicate_object) error from the staff_assignments ADD CONSTRAINT
+// statements on every restart after the first. The problem: a
+// multi-statement query STOPS at the first failing statement, so anything
+// placed after those ALTER TABLEs in the file silently never ran again
+// after the first successful boot — which is exactly how the
+// maintenance_requests/documents/payments tables ended up missing in
+// production despite CREATE TABLE IF NOT EXISTS being idempotent on paper.
+// Running statements one at a time means a single expected "already
+// exists" error can never block any other statement, no matter where it's
+// positioned in the script. Exported separately from initDB() so it can
+// be exercised directly in tests against a synthetic script, without
+// depending on the real schema.sql file's current statement order.
+async function applySchema(sql) {
+  // Strip "-- comment" text before splitting on ';' — a couple of the
+  // comments in schema.sql contain literal semicolons in plain English
+  // (e.g. "for a tenant; if requires_signature is set"), which would
+  // otherwise create a false statement boundary mid-CREATE-TABLE.
+  const withoutComments = sql
+    .split('\n')
+    .map(line => {
+      const idx = line.indexOf('--');
+      return idx === -1 ? line : line.slice(0, idx);
+    })
+    .join('\n');
+
+  const statements = withoutComments
+    .split(';')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  for (const stmt of statements) {
+    try {
+      await pool.query(stmt);
+    } catch (err) {
+      // 42710 = duplicate_object — e.g. the staff_assignments FK
+      // constraints, which have no "ADD CONSTRAINT IF NOT EXISTS" form in
+      // Postgres and so always "fail" this way after the first boot. Not
+      // a real failure; every other statement still runs regardless.
+      if (err.code === '42710') {
+        console.warn('[DB] Already applied (duplicate_object), skipping:', stmt.slice(0, 70).replace(/\s+/g, ' '));
+      } else {
+        console.error('[DB] Schema statement failed:', stmt.slice(0, 200).replace(/\s+/g, ' '));
+        throw err;
+      }
     }
   }
 }
 
-module.exports = { pool, query, initDB };
+async function initDB() {
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'database', 'schema.sql'), 'utf8');
+  await applySchema(schema);
+}
+
+module.exports = { pool, query, initDB, applySchema };

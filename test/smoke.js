@@ -290,6 +290,50 @@ async function main() {
     `Re-uploading the same file finds everything already exists and skips all 3 units instead of duplicating (got ${JSON.stringify(commit2Data)})`
   );
 
+  console.log('\n── Schema statement-splitting regression (the exact production bug) ──');
+  // Regression test for a real bug caught in production: initDB() re-runs
+  // schema.sql on every server boot. The staff_assignments ADD CONSTRAINT
+  // statements have no idempotent form in Postgres, so they genuinely
+  // fail with 42710 (duplicate_object) on every boot after the very
+  // first. The OLD code ran the whole file as ONE multi-statement
+  // pool.query(), which stops dead at the first failing statement — so
+  // anything positioned after those ALTER TABLEs (which at the time
+  // included the entire maintenance_requests/documents/payments tables)
+  // silently never got (re-)created on any boot past the first, even
+  // though every CREATE TABLE was written as idempotent IF NOT EXISTS.
+  // Fixed by running each statement individually (services/db.js
+  // applySchema()) so one expected failure can't block the rest.
+  //
+  // Tested here against a synthetic script — independent of the real
+  // schema.sql's current statement order — using a table name ('a') that
+  // is guaranteed to already exist by the time this runs, so the ALTER
+  // TABLE genuinely throws 42710 for real, not a mock:
+  const db = require(path.join(__dirname, '..', 'services', 'db.js'));
+  const probeId = Date.now().toString(36);
+  const parent = 'regression_parent_' + probeId;
+  const child  = 'regression_child_' + probeId;
+  // Mirrors the real schema.sql shape exactly: a FOREIGN KEY constraint
+  // (not a CHECK) added via ALTER TABLE — this is what staff_assignments'
+  // fk_staff_branch/fk_staff_property actually are, and real Postgres
+  // reports 42710 for a duplicate FK constraint name the same way.
+  await db.applySchema(`
+    CREATE TABLE IF NOT EXISTS ${parent} (id UUID PRIMARY KEY DEFAULT gen_random_uuid());
+    CREATE TABLE IF NOT EXISTS ${child} (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), parent_id UUID);
+    ALTER TABLE ${child} ADD CONSTRAINT ${child}_fk FOREIGN KEY (parent_id) REFERENCES ${parent}(id);
+  `);
+  // Second pass: the ADD CONSTRAINT above will now genuinely fail with
+  // "already exists" (42710) — exactly the real restart scenario. A
+  // CREATE TABLE placed AFTER it must still run despite that failure.
+  const afterTable = 'regression_after_' + probeId;
+  await db.applySchema(`
+    ALTER TABLE ${child} ADD CONSTRAINT ${child}_fk FOREIGN KEY (parent_id) REFERENCES ${parent}(id);
+    CREATE TABLE IF NOT EXISTS ${afterTable} (id INT);
+  `);
+  const probeCheck = await db.query(
+    `SELECT table_name FROM information_schema.tables WHERE table_name = $1`, [afterTable]
+  ).catch(() => ({ rows: [] }));
+  ok(probeCheck.rows.length === 1, 'A CREATE TABLE positioned right after a genuinely-failing (42710) ALTER TABLE still runs — this is exactly the bug that silently dropped maintenance_requests/documents/payments in production');
+
   console.log('\n── Maintenance requests ──');
   const mrCreate = await residentSession('POST', '/api/tenant/maintenance-requests', { category: 'plumbing', priority: 'high', description: 'Kitchen sink leaking' });
   ok(mrCreate.status === 200 && mrCreate.data.status === 'open', 'Tenant files a maintenance request');
@@ -306,6 +350,56 @@ async function main() {
 
   const mrUpdate = await orgA('PATCH', `/api/maintenance-requests/${mrCreate.data.id}`, { status: 'resolved', staffNotes: 'Replaced the trap, fixed.' });
   ok(mrUpdate.status === 200 && mrUpdate.data.status === 'resolved' && mrUpdate.data.resolved_at, 'Staff resolves the request and resolved_at gets stamped');
+
+  console.log('\n── Maintenance request photo proof ──');
+  const tinyPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+  const mrWithPhoto = await residentSession('POST', '/api/tenant/maintenance-requests', {
+    category: 'electrical', priority: 'medium', description: 'Outlet sparking', photoBase64: tinyPngBase64, photoMime: 'image/png',
+  });
+  ok(mrWithPhoto.status === 200 && mrWithPhoto.data.has_photo === true, 'Tenant files a maintenance request with a photo, response flags has_photo instead of embedding the blob');
+
+  const mrListHasPhotoFlag = await residentSession('GET', '/api/tenant/maintenance-requests');
+  const mrPhotoRow = mrListHasPhotoFlag.data.find(r => r.id === mrWithPhoto.data.id);
+  ok(mrPhotoRow && mrPhotoRow.has_photo === true && !mrPhotoRow.photo_data, 'List view shows has_photo flag but never the raw photo blob');
+
+  const mrPhotoFetch = await residentSession('GET', `/api/tenant/maintenance-requests/${mrWithPhoto.data.id}/photo`);
+  ok(mrPhotoFetch.status === 200, 'Tenant can fetch their own maintenance photo back');
+
+  const mrPhotoStaffFetch = await orgA('GET', `/api/maintenance-requests/${mrWithPhoto.data.id}/photo`);
+  ok(mrPhotoStaffFetch.status === 200, 'Staff can fetch the tenant-submitted photo');
+
+  const mrPhotoNoneFetch = await residentSession('GET', `/api/tenant/maintenance-requests/${mrCreate.data.id}/photo`);
+  ok(mrPhotoNoneFetch.status === 404, 'Fetching a photo for a request that has none returns 404, not a crash');
+
+  console.log('\n── My Goals ──');
+  const goalCreate = await residentSession('POST', '/api/tenant/goals', { title: 'Save for a car', targetNote: '$5,000 by December' });
+  ok(goalCreate.status === 200 && goalCreate.data.progress_pct === 0 && goalCreate.data.status === 'in_progress', 'Tenant creates a goal, starts at 0% in_progress');
+
+  const goalList = await residentSession('GET', '/api/tenant/goals');
+  ok(goalList.status === 200 && goalList.data.some(g => g.id === goalCreate.data.id), 'Tenant sees their goal in the list');
+
+  const goalUpdate = await residentSession('PATCH', `/api/tenant/goals/${goalCreate.data.id}`, { progressPct: 60 });
+  ok(goalUpdate.status === 200 && goalUpdate.data.progress_pct === 60, 'Tenant updates goal progress');
+
+  const goalComplete = await residentSession('PATCH', `/api/tenant/goals/${goalCreate.data.id}`, { progressPct: 100, status: 'done' });
+  ok(goalComplete.status === 200 && goalComplete.data.status === 'done', 'Tenant marks a goal done');
+
+  const goalDelete = await residentSession('DELETE', `/api/tenant/goals/${goalCreate.data.id}`);
+  ok(goalDelete.status === 200, 'Tenant deletes a goal');
+
+  const goalListAfterDelete = await residentSession('GET', '/api/tenant/goals');
+  ok(!goalListAfterDelete.data.some(g => g.id === goalCreate.data.id), 'Deleted goal no longer appears in the list');
+
+  console.log('\n── AI Coach ──');
+  // No ANTHROPIC_API_KEY or OPENAI_API_KEY is set in this test environment
+  // (real credentials the org adds themselves in Render, same pattern as
+  // Stripe) — so the coach must degrade to a clear 503, never crash or
+  // silently fabricate a reply (especially never a fake credit score).
+  const coachNoKey = await residentSession('POST', '/api/tenant/coach/message', { message: 'What is my credit score?' });
+  ok(coachNoKey.status === 503, 'Coach returns a clear "not set up yet" error when no LLM API key is configured, instead of crashing or fabricating an answer');
+
+  const coachEmptyMessage = await residentSession('POST', '/api/tenant/coach/message', { message: '' });
+  ok(coachEmptyMessage.status === 400 || coachEmptyMessage.status === 503, 'Coach rejects an empty message (400) or still reports unconfigured (503) — never a 500');
 
   console.log('\n── Documents (digital lease / e-signature) ──');
   const leaseBoundary = '----smoketestleaseboundary';
