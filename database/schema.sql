@@ -91,6 +91,14 @@ CREATE TABLE IF NOT EXISTS units (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Backfill for deployments where the units table already existed before
+-- rent_due_day was added above: CREATE TABLE IF NOT EXISTS only runs on
+-- first creation, so the inline column definition never reaches an
+-- already-existing table (the exact bug that previously dropped
+-- maintenance_requests/documents/payments in production). ADD COLUMN IF
+-- NOT EXISTS is idempotent and safe to re-run on every boot.
+ALTER TABLE units ADD COLUMN IF NOT EXISTS rent_due_day INTEGER CHECK (rent_due_day BETWEEN 1 AND 28);
+
 -- ── Tenants ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tenants (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
