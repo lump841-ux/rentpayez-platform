@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>rentpayez — Resident Portal</title>
+<link rel="icon" type="image/png" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -179,20 +181,20 @@ input,select,textarea{font-family:inherit}
   <aside class="sidebar">
     <div class="sb-brand">
       <span class="brand-mark">
-        <svg viewBox="0 0 40 40" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 100 100" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <linearGradient id="sg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c93e3e"/><stop offset="1" stop-color="#8b2424"/></linearGradient>
-            <linearGradient id="sg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5bc05b"/><stop offset="1" stop-color="#2d7d2d"/></linearGradient>
+            <linearGradient id="pf-roof" x1="20" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c93e3e"/><stop offset="1" stop-color="#7a1f1f"/></linearGradient>
+            <linearGradient id="pf-smoke" x1="25" y1="4" x2="42" y2="34" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5bc05b"/><stop offset="1" stop-color="#2d7d2d"/></linearGradient>
           </defs>
-          <circle cx="26" cy="6" r="3" fill="url(#sg2)" opacity="0.85"/>
-          <circle cx="30" cy="10" r="2" fill="url(#sg2)" opacity="0.65"/>
-          <path d="M6 20 L20 8 L34 20 L34 33 Q34 35 32 35 L8 35 Q6 35 6 33 Z" fill="url(#sg1)"/>
-          <rect x="24" y="10" width="4" height="6" fill="url(#sg1)"/>
-          <rect x="17" y="24" width="6" height="11" rx="1" fill="#0b1a2a"/>
-          <rect x="9" y="22" width="6" height="6" rx="1" fill="#fff"/>
+          <path d="M22 30 C14 26 30 20 22 15 C15 11 28 6 22 3" stroke="url(#pf-smoke)" stroke-width="4.2" fill="none" stroke-linecap="round"/>
+          <path d="M34 26 C28 23 38 18 32 15" stroke="url(#pf-smoke)" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="0.85"/>
+          <rect x="24" y="10" width="15" height="27" fill="url(#pf-roof)"/>
+          <path d="M50 16 L86 47 L86 81 Q86 86 81 86 L19 86 Q14 86 14 81 L14 47 Z" fill="url(#pf-roof)"/>
+          <rect x="29" y="49" width="34" height="30" rx="6" fill="#f4f4f2"/>
+          <text x="46" y="73" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="30" fill="#111111" text-anchor="middle">R</text>
         </svg>
       </span>
-      <span class="brand-word"><span class="b2">R</span><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
+      <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
     </div>
     <nav class="sb-nav" id="sbNav"></nav>
     <div class="sb-foot">
