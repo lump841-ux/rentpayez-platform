@@ -37,6 +37,12 @@ router.post('/login', async (req, res) => {
       tenant.status = 'active';
     }
 
+    // A session is one identity at a time. Without this, a browser that was
+    // previously logged in as staff (req.session.user) would keep BOTH
+    // identities after a tenant login — the tenant portal would show the
+    // tenant, but staff-only routes would stay reachable underneath because
+    // requireAuth only checks for req.session.user, which never got cleared.
+    delete req.session.user;
     req.session.tenant = {
       id: tenant.id, email: tenant.email, name: tenant.name,
       organizationId: tenant.organization_id, unitId: tenant.unit_id,

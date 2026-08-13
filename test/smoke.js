@@ -167,6 +167,35 @@ async function main() {
   const updatePhone = await residentSession('PATCH', '/api/tenant/me', { phone: '555-9999' });
   ok(updatePhone.status === 200 && updatePhone.data.phone === '555-9999', 'Tenant can update their own phone number');
 
+  console.log('\n── Resident Portal: logging in as a tenant in a browser that was staff (or vice versa) fully switches identity ──');
+  // Regression test for a real bug caught against production: a session
+  // that had already logged in as staff, then logged in as a tenant
+  // WITHOUT the cookie changing, kept BOTH identities — the tenant portal
+  // worked, but staff-only routes stayed reachable underneath because
+  // req.session.user was never cleared. Reuse orgA's own already-staff
+  // session to prove that logging in as a tenant now wipes the staff
+  // identity, and logging back in as staff wipes the tenant identity.
+  const orgAStaffStillWorksBeforeSwitch = await orgA('GET', '/api/summary');
+  ok(orgAStaffStillWorksBeforeSwitch.status === 200, 'Sanity check: orgA session is still staff-authenticated going into the switch test');
+
+  // Give Sara a password we actually know for this test, then log the
+  // ALREADY-STAFF orgA session into the tenant portal.
+  const saraReset = await orgA('POST', `/api/tenants/${tenant.data.id}/reset-password`);
+  const switchToTenant = await orgA('POST', '/api/tenant-auth/login', { email: 'sara.kim@email.com', password: saraReset.data.tempPassword });
+  ok(switchToTenant.status === 200, 'A previously-staff session can log into the tenant portal');
+
+  const staffRouteAfterSwitch = await orgA('GET', '/api/summary');
+  ok(staffRouteAfterSwitch.status === 401, 'After switching to the tenant identity in the same session, staff routes are now blocked — the old staff identity did not linger');
+
+  const tenantRouteAfterSwitch = await orgA('GET', '/api/tenant/me');
+  ok(tenantRouteAfterSwitch.status === 200, 'The same session now correctly acts as the tenant');
+
+  // Switch back to staff and confirm the tenant identity is gone too.
+  const switchBackToStaff = await orgA('POST', '/api/auth/login', { email: 'alice@county.gov', password: 'supersecret1' });
+  ok(switchBackToStaff.status === 200, 'Logging back in as staff works from the same session');
+  const tenantRouteAfterSwitchBack = await orgA('GET', '/api/tenant/me');
+  ok(tenantRouteAfterSwitchBack.status === 401, 'Switching back to staff clears the tenant identity — no leftover tenant access either');
+
   const reactivated = await orgA('GET', '/api/tenants');
   const saraRecord = reactivated.data.find(t => t.email === 'sara.kim@email.com');
   ok(saraRecord && saraRecord.status === 'active', 'Tenant account auto-activates on first successful portal login, same as staff invites');

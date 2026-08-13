@@ -45,6 +45,7 @@ router.post('/signup-organization', async (req, res) => {
       [org.id, user.id, JSON.stringify({ orgName })]
     );
 
+    delete req.session.tenant; // see routes/tenant-auth.js login for why this matters
     req.session.user = { id: user.id, email: user.email, name: user.name, role: user.role, organizationId: org.id };
     res.json({ organization: org, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
@@ -78,6 +79,7 @@ router.post('/login', async (req, res) => {
       user.status = 'active';
     }
 
+    delete req.session.tenant; // see routes/tenant-auth.js login for why this matters
     req.session.user = {
       id: user.id, email: user.email, name: user.name, role: user.role,
       organizationId: user.organization_id,
