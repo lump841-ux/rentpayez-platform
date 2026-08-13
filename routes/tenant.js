@@ -28,7 +28,7 @@ function getStripe() {
 router.get('/me', async (req, res) => {
   const t = req.session.tenant;
   const { rows } = await db.query(
-    `SELECT te.id, te.name, te.email, te.phone, te.status,
+    `SELECT te.id, te.name, te.email, te.phone, te.status, (te.avatar_data IS NOT NULL) AS has_avatar,
             u.id AS unit_id, u.unit_number, u.monthly_rent, u.rent_due_day,
             p.id AS property_id, p.name AS property_name, p.address AS property_address,
             b.id AS building_id, b.name AS building_name,
@@ -76,6 +76,50 @@ router.patch('/me', async (req, res) => {
   );
   if (!rows.length) return res.status(404).json({ error: 'Tenant record not found' });
   res.json(rows[0]);
+});
+
+// Profile photo — self-service, base64 in JSON like every other photo in
+// this app. Capped smaller than the maintenance/inspection photo limits
+// since an avatar is rendered small everywhere (sidebar, admin tenant
+// list); the portal should downsize before upload regardless. Mime is
+// restricted to image/* here specifically because avatars are always
+// rendered via <img src>, unlike maintenance/inspection photos which are
+// proof documents opened on demand.
+const MAX_AVATAR_BASE64_CHARS = 3 * 1024 * 1024; // ~2.2MB decoded
+
+router.patch('/me/avatar', async (req, res) => {
+  const { avatarBase64, avatarMime } = req.body || {};
+  if (!avatarBase64 || !avatarMime) return res.status(400).json({ error: 'avatarBase64 and avatarMime are required' });
+  if (!avatarMime.startsWith('image/')) return res.status(400).json({ error: 'avatarMime must be an image type' });
+  if (avatarBase64.length > MAX_AVATAR_BASE64_CHARS) return res.status(400).json({ error: 'Photo is too large' });
+
+  const { rows } = await db.query(
+    `UPDATE tenants SET avatar_data = $1, avatar_mime = $2 WHERE id = $3 AND organization_id = $4
+     RETURNING id, name, email, phone, status, (avatar_data IS NOT NULL) AS has_avatar`,
+    [avatarBase64, avatarMime, req.session.tenant.id, req.session.tenant.organizationId]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Tenant record not found' });
+  res.json(rows[0]);
+});
+
+router.delete('/me/avatar', async (req, res) => {
+  const { rows } = await db.query(
+    `UPDATE tenants SET avatar_data = NULL, avatar_mime = NULL WHERE id = $1 AND organization_id = $2
+     RETURNING id, name, email, phone, status, (avatar_data IS NOT NULL) AS has_avatar`,
+    [req.session.tenant.id, req.session.tenant.organizationId]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Tenant record not found' });
+  res.json(rows[0]);
+});
+
+router.get('/me/avatar', async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT avatar_data, avatar_mime FROM tenants WHERE id = $1 AND organization_id = $2`,
+    [req.session.tenant.id, req.session.tenant.organizationId]
+  );
+  if (!rows.length || !rows[0].avatar_data) return res.status(404).json({ error: 'No photo set' });
+  res.setHeader('Content-Type', rows[0].avatar_mime);
+  res.send(Buffer.from(rows[0].avatar_data, 'base64'));
 });
 
 // ═══════════════════════════════ MAINTENANCE REQUESTS ═══════════════════════════════

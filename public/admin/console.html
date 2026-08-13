@@ -158,7 +158,7 @@
     <div class="card mt">
       <div class="section-title">Tenants</div>
       <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Every tenant gets a Resident Portal login the moment they're added — hand them the temporary password shown when you add or import them (there's no email service wired up yet, so it won't be sent automatically). They sign in at <a href="/tenant/login.html" target="_blank" style="color:var(--gold)">/tenant/login.html</a>.</p>
-      <table id="tn-table"><thead><tr><th>Name</th><th>Email</th><th>Unit</th><th>Status</th><th>Portal</th></tr></thead><tbody></tbody></table>
+      <table id="tn-table"><thead><tr><th>Photo</th><th>Name</th><th>Email</th><th>Unit</th><th>Status</th><th>Portal</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
@@ -351,8 +351,14 @@ async function refreshAll(){
      <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="assignStaff('${s.id}')">Assign</button></td></tr>`).join('') || emptyRow(5);
 
   document.getElementById('tn-table').querySelector('tbody').innerHTML = tenants.map(t=>
-    `<tr><td>${esc(t.name)}</td><td>${esc(t.email)}</td><td>${unitLabel(t.unit_id)}</td><td><span class="pill ${t.status==='active'?'active':'invited'}">${t.status}</span></td>
-     <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="resetTenantPassword('${t.id}','${escAttr(t.name)}')">Reset Password</button></td></tr>`).join('') || emptyRow(5);
+    `<tr><td>
+       <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;cursor:pointer;background:linear-gradient(135deg,#a32d2d,#5c1818);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"
+            onclick="uploadTenantAvatar('${t.id}')" title="Click to upload/replace photo">
+         ${t.has_avatar ? `<img src="/api/tenants/${t.id}/avatar" style="width:100%;height:100%;object-fit:cover"/>` : esc((t.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase())}
+       </div>
+     </td>
+     <td>${esc(t.name)}</td><td>${esc(t.email)}</td><td>${unitLabel(t.unit_id)}</td><td><span class="pill ${t.status==='active'?'active':'invited'}">${t.status}</span></td>
+     <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="resetTenantPassword('${t.id}','${escAttr(t.name)}')">Reset Password</button></td></tr>`).join('') || emptyRow(6);
 
   // populate selects
   fillSelect('pr-branch', branches, b=>b.id, b=>b.name, true);
@@ -374,6 +380,26 @@ async function refreshAll(){
 }
 
 function tenantName(id){ const t = TENANTS.find(x=>x.id===id); return t ? esc(t.name) : '—'; }
+
+// Staff can set/replace a tenant's portal photo on their behalf — useful
+// when a tenant can't do it themselves. No dedicated file input in the
+// table markup (one per row would be messy), so this creates one on the
+// fly, same pattern as any one-off file pick.
+function uploadTenantAvatar(tenantId){
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if(!file) return;
+    if(file.size > 2.2*1024*1024){ alert('Photo is too large — please choose one under 2MB.'); return; }
+    try{
+      const avatarBase64 = await fileToBase64(file);
+      await api(`/tenants/${tenantId}/avatar`, { method:'PATCH', body: JSON.stringify({ avatarBase64, avatarMime: file.type }) });
+      await refreshAll();
+    }catch(err){ alert(err.message); }
+  };
+  input.click();
+}
 
 // ═══════════════════════════════ MAINTENANCE ═══════════════════════════════
 async function refreshMaintenance(){

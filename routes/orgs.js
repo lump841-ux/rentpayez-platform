@@ -287,21 +287,74 @@ router.post('/tenants/:id/reset-password', requireRole('org_admin', 'branch_mana
   res.json({ tenant: rows[0], tempPassword });
 });
 
+// Explicit column list rather than t.* — password_hash and the (potentially
+// large) avatar_data blob have no business in a list response; has_avatar
+// is enough for the console to know whether to render a thumbnail.
+const TENANT_LIST_COLUMNS = `t.id, t.organization_id, t.unit_id, t.name, t.email, t.phone, t.status, t.created_at, (t.avatar_data IS NOT NULL) AS has_avatar`;
+
 router.get('/tenants', async (req, res) => {
   const scope = await scopedPropertyIds(req.session.user);
   if (scope !== null && scope.length === 0) return res.json([]);
   const { rows } = scope === null
     ? await db.query(
-        `SELECT t.* FROM tenants t WHERE t.organization_id = $1 ORDER BY t.name`,
+        `SELECT ${TENANT_LIST_COLUMNS} FROM tenants t WHERE t.organization_id = $1 ORDER BY t.name`,
         [req.orgId]
       )
     : await db.query(
-        `SELECT t.* FROM tenants t
+        `SELECT ${TENANT_LIST_COLUMNS} FROM tenants t
          JOIN units u ON u.id = t.unit_id
          WHERE t.organization_id = $1 AND u.property_id IN (${inPlaceholders(scope, 2)}) ORDER BY t.name`,
         [req.orgId, ...scope]
       );
   res.json(rows);
+});
+
+// ── Tenant avatar (staff can view any in-scope tenant's photo, and set/
+// replace it on the tenant's behalf — useful when a tenant can't do it
+// themselves). Same base64-in-JSON pattern as the tenant's own upload.
+const MAX_TENANT_AVATAR_BASE64_CHARS = 3 * 1024 * 1024; // ~2.2MB decoded
+
+router.patch('/tenants/:id/avatar', requireRole('org_admin', 'branch_manager', 'property_manager', 'office_staff', 'super_admin'), async (req, res) => {
+  const { avatarBase64, avatarMime } = req.body || {};
+  if (!avatarBase64 || !avatarMime) return res.status(400).json({ error: 'avatarBase64 and avatarMime are required' });
+  if (!avatarMime.startsWith('image/')) return res.status(400).json({ error: 'avatarMime must be an image type' });
+  if (avatarBase64.length > MAX_TENANT_AVATAR_BASE64_CHARS) return res.status(400).json({ error: 'Photo is too large' });
+
+  const { rows: tenantRows } = await db.query(`SELECT id, unit_id FROM tenants WHERE id = $1 AND organization_id = $2`, [req.params.id, req.orgId]);
+  if (!tenantRows.length) return res.status(404).json({ error: 'Tenant not found in this organization' });
+
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null) {
+    const { rows: unitRows } = await db.query(`SELECT property_id FROM units WHERE id = $1`, [tenantRows[0].unit_id]);
+    if (!unitRows.length || !scope.includes(unitRows[0].property_id)) return res.status(403).json({ error: 'Outside your assigned properties' });
+  }
+
+  // Plain UPDATE has no table alias, so RETURNING can't use the "t."
+  // prefix TENANT_LIST_COLUMNS is written for (that's for SELECT queries
+  // with FROM tenants t) — unprefixed column names here instead.
+  const { rows } = await db.query(
+    `UPDATE tenants SET avatar_data = $1, avatar_mime = $2 WHERE id = $3 AND organization_id = $4
+     RETURNING id, organization_id, unit_id, name, email, phone, status, created_at, (avatar_data IS NOT NULL) AS has_avatar`,
+    [avatarBase64, avatarMime, req.params.id, req.orgId]
+  );
+  await logAction(req, 'tenant.avatar_update', 'tenant', req.params.id, {});
+  res.json(rows[0]);
+});
+
+router.get('/tenants/:id/avatar', async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT t.avatar_data, t.avatar_mime, u.property_id
+     FROM tenants t LEFT JOIN units u ON u.id = t.unit_id
+     WHERE t.id = $1 AND t.organization_id = $2`,
+    [req.params.id, req.orgId]
+  );
+  if (!rows.length || !rows[0].avatar_data) return res.status(404).json({ error: 'No photo set' });
+
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && (!rows[0].property_id || !scope.includes(rows[0].property_id))) return res.status(403).json({ error: 'Outside your assigned properties' });
+
+  res.setHeader('Content-Type', rows[0].avatar_mime);
+  res.send(Buffer.from(rows[0].avatar_data, 'base64'));
 });
 
 router.post('/tenants/:id/assign-unit', requireRole('org_admin', 'branch_manager', 'property_manager', 'office_staff', 'super_admin'), async (req, res) => {
@@ -311,7 +364,8 @@ router.post('/tenants/:id/assign-unit', requireRole('org_admin', 'branch_manager
   if (!unitRows.length) return res.status(404).json({ error: 'Unit not found in this organization' });
 
   const { rows } = await db.query(
-    `UPDATE tenants SET unit_id = $1 WHERE id = $2 AND organization_id = $3 RETURNING *`,
+    `UPDATE tenants SET unit_id = $1 WHERE id = $2 AND organization_id = $3
+     RETURNING id, organization_id, unit_id, name, email, phone, status, created_at, (avatar_data IS NOT NULL) AS has_avatar`,
     [unitId, req.params.id, req.orgId]
   );
   if (!rows.length) return res.status(404).json({ error: 'Tenant not found in this organization' });

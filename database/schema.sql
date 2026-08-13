@@ -109,9 +109,19 @@ CREATE TABLE IF NOT EXISTS tenants (
   phone           TEXT,
   password_hash   TEXT,                                  -- set once tenant activates their login
   status          TEXT NOT NULL DEFAULT 'invited',        -- invited | active | moved_out
+  avatar_data     TEXT,                                   -- base64-encoded profile photo, optional
+  avatar_mime     TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (organization_id, email)
 );
+
+-- Backfill for deployments where the tenants table already existed before
+-- avatar_data/avatar_mime were added above — same reasoning as the
+-- rent_due_day backfill further up: CREATE TABLE IF NOT EXISTS only runs
+-- on first creation, so inline columns never reach an already-existing
+-- table. ADD COLUMN IF NOT EXISTS is idempotent and safe to re-run.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS avatar_data TEXT;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS avatar_mime TEXT;
 
 -- ── Audit log ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS audit_logs (

@@ -543,6 +543,48 @@ async function main() {
   const inspPriyaListNoLeak = await priya('GET', '/api/inspections');
   ok(!inspPriyaListNoLeak.data.some(i => i.id === inspOutOfScope.data.id), 'Branch manager\'s inspection list also excludes the out-of-scope one');
 
+  console.log('\n── Tenant profile photos ──');
+  const avatarBeforeUpload = await residentSession('GET', '/api/tenant/me/avatar');
+  ok(avatarBeforeUpload.status === 404, 'A tenant with no photo set gets a clean 404, not a crash');
+
+  const avatarBadMime = await residentSession('PATCH', '/api/tenant/me/avatar', { avatarBase64: tinyPngBase64, avatarMime: 'text/plain' });
+  ok(avatarBadMime.status === 400, 'Uploading a non-image mime type is rejected');
+
+  const avatarTooBig = await residentSession('PATCH', '/api/tenant/me/avatar', { avatarBase64: 'A'.repeat(3 * 1024 * 1024 + 1), avatarMime: 'image/png' });
+  ok(avatarTooBig.status === 400, 'An oversized photo is rejected');
+
+  const avatarUpload = await residentSession('PATCH', '/api/tenant/me/avatar', { avatarBase64: tinyPngBase64, avatarMime: 'image/png' });
+  ok(avatarUpload.status === 200 && avatarUpload.data.has_avatar === true, 'Tenant uploads their own profile photo');
+
+  const meAfterAvatar = await residentSession('GET', '/api/tenant/me');
+  ok(meAfterAvatar.data.has_avatar === true, 'Tenant\'s own profile now flags has_avatar');
+
+  const avatarFetchOwn = await residentSession('GET', '/api/tenant/me/avatar');
+  ok(avatarFetchOwn.status === 200, 'Tenant can fetch their own uploaded photo back');
+
+  const tenantsListWithAvatar = await orgA('GET', '/api/tenants');
+  const saraRow = tenantsListWithAvatar.data.find(t => t.id === tenant.data.id);
+  ok(saraRow && saraRow.has_avatar === true && !saraRow.avatar_data && !saraRow.password_hash,
+    'Staff tenant list flags has_avatar without leaking the photo blob or the password hash');
+
+  const avatarStaffFetch = await orgA('GET', `/api/tenants/${tenant.data.id}/avatar`);
+  ok(avatarStaffFetch.status === 200, 'Staff can fetch a tenant\'s photo directly');
+
+  const avatarStaffSetForDan = await orgA('PATCH', `/api/tenants/${dan.data.id}/avatar`, { avatarBase64: tinyPngBase64, avatarMime: 'image/jpeg' });
+  ok(avatarStaffSetForDan.status === 200 && avatarStaffSetForDan.data.has_avatar === true, 'Staff can set a photo on a tenant\'s behalf');
+
+  const avatarPriyaOutOfScope = await priya('GET', `/api/tenants/${dan.data.id}/avatar`);
+  ok(avatarPriyaOutOfScope.status === 403, 'Branch manager can\'t fetch a photo for a tenant outside her assigned properties');
+
+  const avatarPriyaSetOutOfScope = await priya('PATCH', `/api/tenants/${dan.data.id}/avatar`, { avatarBase64: tinyPngBase64, avatarMime: 'image/png' });
+  ok(avatarPriyaSetOutOfScope.status === 403, 'Branch manager can\'t set a photo for a tenant outside her assigned properties either');
+
+  const avatarRemove = await residentSession('DELETE', '/api/tenant/me/avatar');
+  ok(avatarRemove.status === 200 && avatarRemove.data.has_avatar === false, 'Tenant can remove their own photo');
+
+  const avatarAfterRemove = await residentSession('GET', '/api/tenant/me/avatar');
+  ok(avatarAfterRemove.status === 404, 'Fetching the photo after removal returns 404, not a crash');
+
   console.log('\n── Cross-organization isolation (the critical check) ──');
   const bBranches = await orgB('GET', '/api/branches');
   const bProperties = await orgB('GET', '/api/properties');
@@ -563,6 +605,7 @@ async function main() {
   ok((await orgB('GET', `/api/documents/${leaseUploadData.id}/file`)).status === 404, 'Org B cannot fetch Org A\'s document file by ID either');
   ok((await orgB('GET', `/api/inspections/${inspCreate.data.id}`)).status === 404, 'Org B cannot fetch Org A\'s inspection detail by ID either');
   ok((await orgB('GET', `/api/inspections/${inspCreate.data.id}/items/${kitchenItem.id}/photo`)).status === 404, 'Org B cannot fetch Org A\'s inspection photo by ID either');
+  ok((await orgB('GET', `/api/tenants/${dan.data.id}/avatar`)).status === 404, 'Org B cannot fetch Org A\'s tenant photo by ID either');
 
   const summaryA = await orgA('GET', '/api/summary');
   ok(summaryA.data.branches === 2 && summaryA.data.properties === 4 && summaryA.data.units === 5 && summaryA.data.tenants === 4,

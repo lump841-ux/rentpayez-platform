@@ -9,7 +9,14 @@ const db      = require('./services/db');
 const app  = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(express.json());
+// Default body-parser limit is 100kb — far below the base64 payloads sent
+// for maintenance/inspection/avatar photos (up to ~6MB decoded elsewhere
+// in this app). Without raising it, any real photo upload would hit an
+// unhandled PayloadTooLargeError before ever reaching route validation;
+// caught here by testing an oversized avatar upload, which surfaced a 500
+// instead of the app's own clean 400. 8mb comfortably covers every photo
+// limit used across the app plus JSON/base64 overhead.
+app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Session store ────────────────────────────────────────────────────
