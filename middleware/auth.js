@@ -66,4 +66,13 @@ async function scopedPropertyIds(user) {
   return [...new Set([...directPropertyIds, ...branchPropertyIds])];
 }
 
-module.exports = { requireAuth, requireRole, requireOrgScope, scopedPropertyIds };
+// ── Tenant session guard ─────────────────────────────────────────────
+// Tenants are a separate identity from staff (organization_users) — they
+// log in through /api/tenant-auth and get req.session.tenant, never
+// req.session.user, so a tenant session can never touch staff-only routes.
+function requireTenantAuth(req, res, next) {
+  if (!req.session || !req.session.tenant) return res.status(401).json({ error: 'Not authenticated' });
+  next();
+}
+
+module.exports = { requireAuth, requireRole, requireOrgScope, scopedPropertyIds, requireTenantAuth };

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rent Pay Easy — Resident Login</title>
+<link rel="stylesheet" href="/admin/shared.css" />
+<style>
+  .wrap{max-width:420px;margin:80px auto;padding:0 20px}
+  .brand{font-weight:800;font-size:20px;margin-bottom:6px;text-align:center}
+  .sub{color:var(--ink-3);font-size:13.5px;text-align:center;margin-bottom:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">🏠 rentpayez — Resident Portal</div>
+  <div class="sub">Sign in with the email and temporary password your property manager gave you</div>
+
+  <div class="card">
+    <div class="field"><label>Email</label><input id="li-email" type="email" placeholder="you@email.com" /></div>
+    <div class="field"><label>Password</label><input id="li-password" type="password" placeholder="••••••••" /></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign In</button>
+    <div id="li-msg"></div>
+  </div>
+
+  <p style="text-align:center;color:var(--ink-3);font-size:12.5px;margin-top:20px">
+    Property manager or staff? <a href="/admin/login.html" style="color:var(--gold)">Sign in here instead</a>
+  </p>
+</div>
+
+<script>
+async function doLogin(){
+  const email = document.getElementById('li-email').value.trim();
+  const password = document.getElementById('li-password').value;
+  const msg = document.getElementById('li-msg');
+  msg.className=''; msg.textContent='';
+  try{
+    const res = await fetch('/api/tenant-auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password}) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Login failed');
+    window.location.href = 'portal.html';
+  }catch(err){ msg.className='err'; msg.textContent = err.message; }
+}
+document.getElementById('li-password').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+</script>
+</body>
+</html>

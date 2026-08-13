@@ -147,7 +147,11 @@
       <button class="btn btn-outline" onclick="importCsv()">Upload &amp; Import</button>
       <div id="csv-msg"></div>
     </div>
-    <div class="card mt"><div class="section-title">Tenants</div><table id="tn-table"><thead><tr><th>Name</th><th>Email</th><th>Unit</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+    <div class="card mt">
+      <div class="section-title">Tenants</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Every tenant gets a Resident Portal login the moment they're added — hand them the temporary password shown when you add or import them (there's no email service wired up yet, so it won't be sent automatically). They sign in at <a href="/tenant/login.html" target="_blank" style="color:var(--gold)">/tenant/login.html</a>.</p>
+      <table id="tn-table"><thead><tr><th>Name</th><th>Email</th><th>Unit</th><th>Status</th><th>Portal</th></tr></thead><tbody></tbody></table>
+    </div>
   </div>
 
   <div class="panel" id="panel-bulk">
@@ -235,7 +239,8 @@ async function refreshAll(){
      <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="assignStaff('${s.id}')">Assign</button></td></tr>`).join('') || emptyRow(5);
 
   document.getElementById('tn-table').querySelector('tbody').innerHTML = tenants.map(t=>
-    `<tr><td>${esc(t.name)}</td><td>${esc(t.email)}</td><td>${unitLabel(t.unit_id)}</td><td><span class="pill ${t.status==='active'?'active':'invited'}">${t.status}</span></td></tr>`).join('') || emptyRow(4);
+    `<tr><td>${esc(t.name)}</td><td>${esc(t.email)}</td><td>${unitLabel(t.unit_id)}</td><td><span class="pill ${t.status==='active'?'active':'invited'}">${t.status}</span></td>
+     <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="resetTenantPassword('${t.id}','${escAttr(t.name)}')">Reset Password</button></td></tr>`).join('') || emptyRow(5);
 
   // populate selects
   fillSelect('pr-branch', branches, b=>b.id, b=>b.name, true);
@@ -331,10 +336,20 @@ async function createTenant(){
   const msg = document.getElementById('tn-msg');
   try{
     if(!name || !email) throw new Error('Name and email are required');
-    await api('/tenants', { method:'POST', body: JSON.stringify({name,email,phone,unitId}) });
+    const result = await api('/tenants', { method:'POST', body: JSON.stringify({name,email,phone,unitId}) });
     document.getElementById('tn-name').value=''; document.getElementById('tn-email').value=''; document.getElementById('tn-phone').value='';
-    msg.className='ok'; msg.textContent='Tenant added.'; await refreshAll();
+    msg.className='ok';
+    msg.textContent = `Tenant added. Resident Portal password (share this manually — no email service yet): ${result.tempPassword}`;
+    await refreshAll();
   }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+
+async function resetTenantPassword(tenantId, name){
+  if(!confirm(`Generate a new Resident Portal password for ${name}? Their old one will stop working.`)) return;
+  try{
+    const result = await api(`/tenants/${tenantId}/reset-password`, { method:'POST' });
+    alert(`New password for ${name}: ${result.tempPassword}\n\nShare this with them directly — it won't be shown again.`);
+  }catch(err){ alert(err.message); }
 }
 async function importCsv(){
   const fileInput = document.getElementById('csv-file');
@@ -347,7 +362,13 @@ async function importCsv(){
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'Import failed');
     msg.className='ok';
-    msg.textContent = `Imported ${data.created} tenant(s).` + (data.skipped.length ? ` ${data.skipped.length} without a unit match.` : '') + (data.errors.length ? ` ${data.errors.length} row error(s).` : '');
+    let summary = `Imported ${data.created} tenant(s).` + (data.skipped.length ? ` ${data.skipped.length} without a unit match.` : '') + (data.errors.length ? ` ${data.errors.length} row error(s).` : '');
+    if(data.credentials && data.credentials.length){
+      summary += ' Resident Portal passwords (share manually, shown once):\n' +
+        data.credentials.map(c => `  ${c.name} <${c.email}>: ${c.tempPassword}`).join('\n');
+    }
+    msg.style.whiteSpace = 'pre-line';
+    msg.textContent = summary;
     await refreshAll();
   }catch(err){ msg.className='err'; msg.textContent=err.message; }
 }

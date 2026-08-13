@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rent Pay Easy — Resident Portal</title>
+<link rel="stylesheet" href="/admin/shared.css" />
+<style>
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--line);margin-bottom:24px}
+  .brand{font-weight:800}
+  .who{font-size:13px;color:var(--ink-3)}
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:20px}
+  @media (max-width:800px){.grid{grid-template-columns:1fr}}
+  .section-title{font-weight:800;margin-bottom:14px;font-size:15px}
+  .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .row:last-child{border-bottom:none}
+  .row .lbl{color:var(--ink-3)}
+  .mt{margin-top:20px}
+  .rent{font-size:32px;font-weight:800}
+</style>
+</head>
+<body>
+<div class="container" style="max-width:900px">
+  <div class="topbar">
+    <div class="brand">🏠 rentpayez — <span id="orgName">Resident Portal</span></div>
+    <div class="who"><span id="whoami"></span> · <a href="#" onclick="logout();return false" style="color:var(--gold)">Sign out</a></div>
+  </div>
+
+  <div id="loading" style="color:var(--ink-3)">Loading your account…</div>
+
+  <div id="content" style="display:none">
+    <div class="grid">
+      <div class="card">
+        <div class="section-title">Your Home</div>
+        <div class="row"><span class="lbl">Property</span><span id="f-property">—</span></div>
+        <div class="row"><span class="lbl">Address</span><span id="f-address">—</span></div>
+        <div class="row"><span class="lbl">Building</span><span id="f-building">—</span></div>
+        <div class="row"><span class="lbl">Unit</span><span id="f-unit">—</span></div>
+        <div class="row"><span class="lbl">Status</span><span id="f-status">—</span></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Monthly Rent</div>
+        <div class="rent" id="f-rent">—</div>
+        <p style="color:var(--ink-3);font-size:12.5px;margin-top:8px">Online rent payment isn't wired up yet in this preview — this is a read-only view of what your property manager has on file.</p>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="section-title">Your Contact Info</div>
+      <div class="field"><label>Name</label><input id="f-name" disabled /></div>
+      <div class="field"><label>Email</label><input id="f-email" disabled /></div>
+      <div class="field"><label>Phone</label><input id="f-phone" placeholder="(555) 555-1234" /></div>
+      <button class="btn btn-primary" onclick="saveProfile()">Save Phone Number</button>
+      <div id="profile-msg"></div>
+    </div>
+
+    <div class="card mt" id="emergency-card" style="display:none">
+      <div class="section-title">Emergency Contact</div>
+      <div class="row"><span class="lbl">Contact</span><span id="f-em-name">—</span></div>
+      <div class="row"><span class="lbl">Phone</span><span id="f-em-phone">—</span></div>
+      <p id="f-em-instructions" style="color:var(--ink-2);font-size:13.5px;margin-top:10px"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+let ME = null;
+
+async function boot(){
+  try{
+    const meRes = await fetch('/api/tenant-auth/me');
+    if(!meRes.ok){ window.location.href = 'login.html'; return; }
+    ME = (await meRes.json()).tenant;
+    document.getElementById('whoami').textContent = ME.name;
+
+    const res = await fetch('/api/tenant/me');
+    if(!res.ok) throw new Error('Could not load your account');
+    const t = await res.json();
+
+    document.getElementById('orgName').textContent = t.organization_name || 'Resident Portal';
+    document.getElementById('f-property').textContent = t.property_name || '— Not yet assigned to a unit —';
+    document.getElementById('f-address').textContent = t.property_address || '—';
+    document.getElementById('f-building').textContent = t.building_name || '—';
+    document.getElementById('f-unit').textContent = t.unit_number || '—';
+    document.getElementById('f-status').textContent = t.status;
+    document.getElementById('f-rent').textContent = t.monthly_rent ? '$' + Number(t.monthly_rent).toLocaleString() : '—';
+    document.getElementById('f-name').value = t.name;
+    document.getElementById('f-email').value = t.email;
+    document.getElementById('f-phone').value = t.phone || '';
+
+    if(t.emergency_contact_name || t.emergency_contact_phone || t.emergency_instructions){
+      document.getElementById('emergency-card').style.display = '';
+      document.getElementById('f-em-name').textContent = t.emergency_contact_name || '—';
+      document.getElementById('f-em-phone').textContent = t.emergency_contact_phone || '—';
+      document.getElementById('f-em-instructions').textContent = t.emergency_instructions || '';
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = '';
+  }catch(err){
+    document.getElementById('loading').textContent = err.message;
+  }
+}
+
+async function saveProfile(){
+  const phone = document.getElementById('f-phone').value.trim();
+  const msg = document.getElementById('profile-msg');
+  try{
+    const res = await fetch('/api/tenant/me', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone}) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Could not save');
+    msg.className = 'ok'; msg.textContent = 'Saved.';
+  }catch(err){ msg.className = 'err'; msg.textContent = err.message; }
+}
+
+async function logout(){
+  await fetch('/api/tenant-auth/logout', { method:'POST' });
+  window.location.href = 'login.html';
+}
+
+boot();
+</script>
+</body>
+</html>

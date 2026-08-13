@@ -134,9 +134,49 @@ async function main() {
     'Branch manager cannot pull units for a property outside their scope by passing its propertyId directly'
   );
 
+  const priyaSummary = await priya('GET', '/api/summary');
+  ok(
+    priyaSummary.status === 200 &&
+    priyaSummary.data.branches === 1 && priyaSummary.data.properties === 1 && priyaSummary.data.units === 1,
+    `Branch manager's Overview stats are scoped too — 1 branch, 1 property, 1 unit, not the whole org (got ${JSON.stringify(priyaSummary.data)})`
+  );
+
   console.log('\n── Org A: tenants (individual + CSV import) ──');
   const tenant = await orgA('POST', '/api/tenants', { name: 'Sara Kim', email: 'sara.kim@email.com', unitId: unit.data.id });
   ok(tenant.status === 200 && tenant.data.unit_id === unit.data.id, 'Org A adds a tenant assigned directly to a unit');
+  ok(!!tenant.data.tempPassword, 'Adding a tenant returns a Resident Portal temp password');
+  ok(tenant.data.password_hash === undefined, 'The password hash itself is never sent back to the client');
+
+  console.log('\n── Resident Portal: tenant login is a separate identity from staff ──');
+  const residentSession = makeSession(base);
+  const badLogin = await residentSession('POST', '/api/tenant-auth/login', { email: 'sara.kim@email.com', password: 'wrong-password' });
+  ok(badLogin.status === 401, 'Tenant portal rejects a wrong password');
+
+  const residentLogin = await residentSession('POST', '/api/tenant-auth/login', { email: 'sara.kim@email.com', password: tenant.data.tempPassword });
+  ok(residentLogin.status === 200 && residentLogin.data.tenant.email === 'sara.kim@email.com', 'Tenant logs in with the temp password');
+
+  const staffRouteAsTenant = await residentSession('GET', '/api/tenants');
+  ok(staffRouteAsTenant.status === 401, 'A logged-in tenant session cannot hit staff-only routes (separate identity, not just a lower role)');
+
+  const myUnit = await residentSession('GET', '/api/tenant/me');
+  ok(
+    myUnit.status === 200 && myUnit.data.unit_number === unit.data.unit_number && myUnit.data.property_name === property.data.name,
+    `Tenant sees their own unit and property (got ${JSON.stringify(myUnit.data)})`
+  );
+
+  const updatePhone = await residentSession('PATCH', '/api/tenant/me', { phone: '555-9999' });
+  ok(updatePhone.status === 200 && updatePhone.data.phone === '555-9999', 'Tenant can update their own phone number');
+
+  const reactivated = await orgA('GET', '/api/tenants');
+  const saraRecord = reactivated.data.find(t => t.email === 'sara.kim@email.com');
+  ok(saraRecord && saraRecord.status === 'active', 'Tenant account auto-activates on first successful portal login, same as staff invites');
+
+  const resetRes = await orgA('POST', `/api/tenants/${tenant.data.id}/reset-password`);
+  ok(resetRes.status === 200 && !!resetRes.data.tempPassword, 'Org A can reset a tenant\'s portal password and gets a new temp password back');
+
+  const oldPasswordSession = makeSession(base);
+  const oldPasswordAttempt = await oldPasswordSession('POST', '/api/tenant-auth/login', { email: 'sara.kim@email.com', password: tenant.data.tempPassword });
+  ok(oldPasswordAttempt.status === 401, 'The old temp password stops working immediately after a reset');
 
   // CSV import via multipart/form-data (built manually — no extra deps needed)
   const csvBody = 'name,email,phone,unit_number\nJames Davis,james.davis@email.com,555-0101,204\nGhost Tenant,ghost@email.com,555-0102,999\n';

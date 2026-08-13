@@ -33,7 +33,14 @@ app.use(session({
   cookie: { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 8 * 60 * 60 * 1000 },
 }));
 
+// NOTE: order matters here. routes/orgs.js is mounted at the bare '/api'
+// prefix and its router.use(requireAuth, ...) gate runs for ANY sub-path
+// that reaches it — so the more specific tenant-portal routes must be
+// registered first, or requests to /api/tenant-auth/* would hit orgs.js's
+// staff-only auth gate before ever reaching the tenant router.
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/tenant-auth', require('./routes/tenant-auth'));
+app.use('/api/tenant', require('./routes/tenant'));
 app.use('/api', require('./routes/orgs'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

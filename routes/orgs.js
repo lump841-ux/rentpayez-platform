@@ -216,21 +216,44 @@ router.post('/staff/:id/assign', requireRole('org_admin', 'super_admin'), async 
 });
 
 // ═══════════════════════════════ TENANTS ═══════════════════════════════
+// Every tenant gets a portal login the moment they're created — same
+// "no email service yet, temp password comes back in the API/UI response"
+// pattern used for staff invites (see /staff/invite above). The tenant
+// portal lives at /tenant/login.html and only ever shows that one tenant
+// their own unit — see routes/tenant.js.
 router.post('/tenants', requireRole('org_admin', 'branch_manager', 'property_manager', 'office_staff', 'super_admin'), async (req, res) => {
   const { name, email, phone, unitId } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'name and email are required' });
+  const tempPassword = crypto.randomBytes(9).toString('base64url');
+  const hash = await bcrypt.hash(tempPassword, 12);
   try {
     const { rows } = await db.query(
-      `INSERT INTO tenants (organization_id, unit_id, name, email, phone, status)
-       VALUES ($1, $2, $3, $4, $5, 'invited') RETURNING *`,
-      [req.orgId, unitId || null, name, email.toLowerCase().trim(), phone || null]
+      `INSERT INTO tenants (organization_id, unit_id, name, email, phone, password_hash, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'invited') RETURNING *`,
+      [req.orgId, unitId || null, name, email.toLowerCase().trim(), phone || null, hash]
     );
     await logAction(req, 'tenant.create', 'tenant', rows[0].id, { name, email });
-    res.json(rows[0]);
+    const { password_hash, ...tenant } = rows[0];
+    res.json({ ...tenant, tempPassword });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'A tenant with that email already exists in this organization.' });
     throw err;
   }
+});
+
+// Generates a fresh portal password for a tenant who doesn't have one yet
+// (older records) or who lost theirs — same manual hand-off pattern as
+// creation, since there's no email service to send it automatically.
+router.post('/tenants/:id/reset-password', requireRole('org_admin', 'branch_manager', 'property_manager', 'office_staff', 'super_admin'), async (req, res) => {
+  const tempPassword = crypto.randomBytes(9).toString('base64url');
+  const hash = await bcrypt.hash(tempPassword, 12);
+  const { rows } = await db.query(
+    `UPDATE tenants SET password_hash = $1 WHERE id = $2 AND organization_id = $3 RETURNING id, name, email`,
+    [hash, req.params.id, req.orgId]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Tenant not found in this organization' });
+  await logAction(req, 'tenant.reset_password', 'tenant', rows[0].id, {});
+  res.json({ tenant: rows[0], tempPassword });
 });
 
 router.get('/tenants', async (req, res) => {
@@ -278,7 +301,7 @@ router.post('/tenants/import-csv', requireRole('org_admin', 'branch_manager', 'p
     return res.status(400).json({ error: 'Could not parse CSV: ' + err.message });
   }
 
-  const results = { created: 0, skipped: [], errors: [] };
+  const results = { created: 0, skipped: [], errors: [], credentials: [] };
   for (const [i, row] of records.entries()) {
     const rowNum = i + 2; // +1 for header, +1 for 1-index
     const name = row.name && row.name.trim();
@@ -297,12 +320,15 @@ router.post('/tenants/import-csv', requireRole('org_admin', 'branch_manager', 'p
     }
 
     try {
+      const tempPassword = crypto.randomBytes(9).toString('base64url');
+      const hash = await bcrypt.hash(tempPassword, 12);
       await db.query(
-        `INSERT INTO tenants (organization_id, unit_id, name, email, phone, status)
-         VALUES ($1, $2, $3, $4, $5, 'invited')`,
-        [req.orgId, unitId, name, email, row.phone ? row.phone.trim() : null]
+        `INSERT INTO tenants (organization_id, unit_id, name, email, phone, password_hash, status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'invited')`,
+        [req.orgId, unitId, name, email, row.phone ? row.phone.trim() : null, hash]
       );
       results.created++;
+      results.credentials.push({ row: rowNum, name, email, tempPassword });
     } catch (err) {
       if (err.code === '23505') results.errors.push({ row: rowNum, error: `Tenant with email ${email} already exists` });
       else results.errors.push({ row: rowNum, error: err.message });
@@ -517,22 +543,76 @@ router.post('/import/portfolio/commit', requireRole('org_admin', 'super_admin'),
 
 // ═══════════════════════════════ ORG SUMMARY / ISOLATION CHECK ═══════════════════════════════
 router.get('/summary', async (req, res) => {
-  const [branches, properties, buildings, units, tenants, staff] = await Promise.all([
-    db.query(`SELECT count(*)::int AS c FROM branches WHERE organization_id = $1`, [req.orgId]),
-    db.query(`SELECT count(*)::int AS c FROM properties WHERE organization_id = $1`, [req.orgId]),
-    db.query(`SELECT count(*)::int AS c FROM buildings WHERE organization_id = $1`, [req.orgId]),
-    db.query(`SELECT count(*)::int AS c FROM units WHERE organization_id = $1`, [req.orgId]),
-    db.query(`SELECT count(*)::int AS c FROM tenants WHERE organization_id = $1`, [req.orgId]),
-    db.query(`SELECT count(*)::int AS c FROM organization_users WHERE organization_id = $1`, [req.orgId]),
+  const scope = await scopedPropertyIds(req.session.user);
+
+  if (scope === null) {
+    // org_admin / super_admin: unrestricted, org-wide counts.
+    const [branches, properties, buildings, units, tenants, staff] = await Promise.all([
+      db.query(`SELECT count(*)::int AS c FROM branches WHERE organization_id = $1`, [req.orgId]),
+      db.query(`SELECT count(*)::int AS c FROM properties WHERE organization_id = $1`, [req.orgId]),
+      db.query(`SELECT count(*)::int AS c FROM buildings WHERE organization_id = $1`, [req.orgId]),
+      db.query(`SELECT count(*)::int AS c FROM units WHERE organization_id = $1`, [req.orgId]),
+      db.query(`SELECT count(*)::int AS c FROM tenants WHERE organization_id = $1`, [req.orgId]),
+      db.query(`SELECT count(*)::int AS c FROM organization_users WHERE organization_id = $1`, [req.orgId]),
+    ]);
+    return res.json({
+      organizationId: req.orgId,
+      branches: branches.rows[0].c,
+      properties: properties.rows[0].c,
+      buildings: buildings.rows[0].c,
+      units: units.rows[0].c,
+      tenants: tenants.rows[0].c,
+      staff: staff.rows[0].c,
+    });
+  }
+
+  if (scope.length === 0) {
+    return res.json({ organizationId: req.orgId, branches: 0, properties: 0, buildings: 0, units: 0, tenants: 0, staff: 1 });
+  }
+
+  // Scoped staff (below org_admin): every number below reflects only the
+  // branches/properties they're assigned to, not the whole organization —
+  // matches what their Branches/Properties/Units/Tenants tabs actually show.
+  const ph = inPlaceholders(scope, 2);
+  const { rows: branchRows } = await db.query(
+    `SELECT DISTINCT branch_id FROM properties WHERE organization_id = $1 AND id IN (${ph}) AND branch_id IS NOT NULL`,
+    [req.orgId, ...scope]
+  );
+  const branchIdsInScope = branchRows.map(r => r.branch_id);
+
+  const [buildings, units, tenants] = await Promise.all([
+    db.query(`SELECT count(*)::int AS c FROM buildings WHERE organization_id = $1 AND property_id IN (${ph})`, [req.orgId, ...scope]),
+    db.query(`SELECT count(*)::int AS c FROM units WHERE organization_id = $1 AND property_id IN (${ph})`, [req.orgId, ...scope]),
+    db.query(
+      `SELECT count(*)::int AS c FROM tenants t JOIN units u ON u.id = t.unit_id
+       WHERE t.organization_id = $1 AND u.property_id IN (${ph})`,
+      [req.orgId, ...scope]
+    ),
   ]);
+
+  let staffCount = 1; // at minimum, the caller themselves
+  {
+    const conditions = [`sa.property_id IN (${inPlaceholders(scope, 1)})`];
+    const params = [...scope];
+    if (branchIdsInScope.length) {
+      conditions.push(`sa.branch_id IN (${inPlaceholders(branchIdsInScope, params.length + 1)})`);
+      params.push(...branchIdsInScope);
+    }
+    const { rows } = await db.query(
+      `SELECT count(DISTINCT organization_user_id)::int AS c FROM staff_assignments sa WHERE ${conditions.join(' OR ')}`,
+      params
+    );
+    staffCount = Math.max(rows[0].c, 1);
+  }
+
   res.json({
     organizationId: req.orgId,
-    branches: branches.rows[0].c,
-    properties: properties.rows[0].c,
+    branches: branchIdsInScope.length,
+    properties: scope.length,
     buildings: buildings.rows[0].c,
     units: units.rows[0].c,
     tenants: tenants.rows[0].c,
-    staff: staff.rows[0].c,
+    staff: staffCount,
   });
 });
 
