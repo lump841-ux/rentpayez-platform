@@ -119,15 +119,46 @@ router.get('/buildings', async (req, res) => {
 });
 
 // ═══════════════════════════════ UNITS ═══════════════════════════════
+function parseDueDay(v) {
+  if (v === undefined) return undefined; // caller didn't touch it
+  if (v === null || v === '') return null; // explicit clear
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1 || n > 28) return NaN; // sentinel for "invalid"
+  return n;
+}
+
 router.post('/units', requireRole('org_admin', 'branch_manager', 'property_manager', 'super_admin'), async (req, res) => {
-  const { unitNumber, propertyId, buildingId, monthlyRent } = req.body || {};
+  const { unitNumber, propertyId, buildingId, monthlyRent, rentDueDay } = req.body || {};
   if (!unitNumber || !propertyId) return res.status(400).json({ error: 'unitNumber and propertyId are required' });
+  const dueDay = parseDueDay(rentDueDay);
+  if (Number.isNaN(dueDay)) return res.status(400).json({ error: 'rentDueDay must be an integer between 1 and 28' });
   const { rows } = await db.query(
-    `INSERT INTO units (organization_id, property_id, building_id, unit_number, monthly_rent)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [req.orgId, propertyId, buildingId || null, unitNumber, monthlyRent || null]
+    `INSERT INTO units (organization_id, property_id, building_id, unit_number, monthly_rent, rent_due_day)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [req.orgId, propertyId, buildingId || null, unitNumber, monthlyRent || null, dueDay || null]
   );
   await logAction(req, 'unit.create', 'unit', rows[0].id, { unitNumber });
+  res.json(rows[0]);
+});
+
+router.patch('/units/:id', requireRole('org_admin', 'branch_manager', 'property_manager', 'super_admin'), async (req, res) => {
+  const { monthlyRent, rentDueDay } = req.body || {};
+  const dueDay = parseDueDay(rentDueDay);
+  if (Number.isNaN(dueDay)) return res.status(400).json({ error: 'rentDueDay must be an integer between 1 and 28' });
+
+  const scope = await scopedPropertyIds(req.session.user);
+  const { rows: existing } = await db.query(`SELECT * FROM units WHERE id = $1 AND organization_id = $2`, [req.params.id, req.orgId]);
+  if (!existing.length) return res.status(404).json({ error: 'Unit not found' });
+  if (scope !== null && !scope.includes(existing[0].property_id)) return res.status(403).json({ error: 'Outside your assigned properties' });
+
+  const { rows } = await db.query(
+    `UPDATE units SET
+       monthly_rent = COALESCE($1, monthly_rent),
+       rent_due_day = CASE WHEN $2::text IS NULL THEN rent_due_day ELSE $3 END
+     WHERE id = $4 RETURNING *`,
+    [monthlyRent != null ? monthlyRent : null, rentDueDay !== undefined ? 'set' : null, dueDay === undefined ? null : dueDay, req.params.id]
+  );
+  await logAction(req, 'unit.update', 'unit', rows[0].id, { monthlyRent, rentDueDay: dueDay });
   res.json(rows[0]);
 });
 
@@ -816,6 +847,191 @@ router.get('/payments', async (req, res) => {
     params
   );
   res.json(rows);
+});
+
+// ═══════════════════════════════ INSPECTIONS ═══════════════════════════════
+// Staff conduct a digital walkthrough (move-in / move-out / routine) and
+// record a per-room condition checklist, each item with an optional proof
+// photo. Tenants get a read-only view of their own unit's history — see
+// routes/tenant.js. Scoped the same way as maintenance/documents.
+const INSPECTION_ROLES = ['org_admin', 'branch_manager', 'property_manager', 'maintenance_supervisor', 'inspector', 'super_admin'];
+const INSPECTION_TYPES = ['move_in', 'move_out', 'routine'];
+const INSPECTION_CONDITIONS = ['good', 'fair', 'damaged'];
+const MAX_ITEM_PHOTO_CHARS = 6 * 1024 * 1024;
+
+router.post('/inspections', requireRole(...INSPECTION_ROLES), async (req, res) => {
+  const { tenantId, unitId, inspectionType, overallNotes, items } = req.body || {};
+  if (!unitId) return res.status(400).json({ error: 'unitId is required' });
+  if (inspectionType && !INSPECTION_TYPES.includes(inspectionType)) return res.status(400).json({ error: `inspectionType must be one of: ${INSPECTION_TYPES.join(', ')}` });
+  if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'At least one room item is required' });
+  for (const it of items) {
+    if (!it.room || !String(it.room).trim()) return res.status(400).json({ error: 'Each item needs a room name' });
+    if (it.condition && !INSPECTION_CONDITIONS.includes(it.condition)) return res.status(400).json({ error: `condition must be one of: ${INSPECTION_CONDITIONS.join(', ')}` });
+    if (it.photoBase64 && it.photoBase64.length > MAX_ITEM_PHOTO_CHARS) return res.status(400).json({ error: `Photo for "${it.room}" is too large` });
+  }
+
+  const { rows: unitRows } = await db.query(`SELECT id, property_id FROM units WHERE id = $1 AND organization_id = $2`, [unitId, req.orgId]);
+  if (!unitRows.length) return res.status(404).json({ error: 'Unit not found in this organization' });
+
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && !scope.includes(unitRows[0].property_id)) return res.status(403).json({ error: 'Outside your assigned properties' });
+
+  if (tenantId) {
+    const { rows: tenantRows } = await db.query(`SELECT id FROM tenants WHERE id = $1 AND organization_id = $2 AND unit_id = $3`, [tenantId, req.orgId, unitId]);
+    if (!tenantRows.length) return res.status(400).json({ error: 'tenantId must belong to this organization and this unit' });
+  }
+
+  const { rows: insRows } = await db.query(
+    `INSERT INTO inspections (organization_id, tenant_id, unit_id, property_id, inspection_type, overall_notes, conducted_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [req.orgId, tenantId || null, unitId, unitRows[0].property_id, inspectionType || 'routine', overallNotes || null, req.session.user.id]
+  );
+  const inspection = insRows[0];
+
+  const itemRows = [];
+  for (const it of items) {
+    const { rows } = await db.query(
+      `INSERT INTO inspection_items (inspection_id, room, condition, notes, photo_data, photo_mime)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, inspection_id, room, condition, notes, created_at, (photo_data IS NOT NULL) AS has_photo`,
+      [inspection.id, String(it.room).trim(), it.condition || 'good', it.notes || null,
+       it.photoBase64 || null, it.photoBase64 ? (it.photoMime || 'image/jpeg') : null]
+    );
+    itemRows.push(rows[0]);
+  }
+
+  await logAction(req, 'inspection.create', 'inspection', inspection.id, { unitId, inspectionType, itemCount: items.length });
+  res.json({ ...inspection, items: itemRows });
+});
+
+router.get('/inspections', async (req, res) => {
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && scope.length === 0) return res.json([]);
+
+  const conditions = ['i.organization_id = $1'];
+  const params = [req.orgId];
+  if (scope !== null) { params.push(...scope); conditions.push(`i.property_id IN (${inPlaceholders(scope, params.length - scope.length + 1)})`); }
+
+  const { rows } = await db.query(
+    `SELECT i.id, i.organization_id, i.tenant_id, i.unit_id, i.property_id, i.inspection_type, i.overall_notes, i.created_at,
+            t.name AS tenant_name, u.unit_number, p.name AS property_name
+     FROM inspections i
+     LEFT JOIN tenants t ON t.id = i.tenant_id
+     LEFT JOIN units u ON u.id = i.unit_id
+     LEFT JOIN properties p ON p.id = i.property_id
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY i.created_at DESC`,
+    params
+  );
+  if (!rows.length) return res.json([]);
+
+  // Separate query + JS merge instead of a correlated subquery in the SELECT
+  // list above — same pattern used for the rent-reminders paid-check below,
+  // portable across real Postgres and the pg-mem test adapter.
+  const inspectionIds = rows.map(r => r.id);
+  const { rows: counts } = await db.query(
+    `SELECT inspection_id, COUNT(*) AS item_count FROM inspection_items
+     WHERE inspection_id IN (${inPlaceholders(inspectionIds, 1)}) GROUP BY inspection_id`,
+    inspectionIds
+  );
+  const countMap = new Map(counts.map(c => [c.inspection_id, Number(c.item_count)]));
+  res.json(rows.map(r => ({ ...r, item_count: countMap.get(r.id) || 0 })));
+});
+
+router.get('/inspections/:id', async (req, res) => {
+  const scope = await scopedPropertyIds(req.session.user);
+  const { rows } = await db.query(
+    `SELECT i.*, t.name AS tenant_name, u.unit_number, p.name AS property_name
+     FROM inspections i
+     LEFT JOIN tenants t ON t.id = i.tenant_id
+     LEFT JOIN units u ON u.id = i.unit_id
+     LEFT JOIN properties p ON p.id = i.property_id
+     WHERE i.id = $1 AND i.organization_id = $2`,
+    [req.params.id, req.orgId]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Inspection not found' });
+  if (scope !== null && (!rows[0].property_id || !scope.includes(rows[0].property_id))) return res.status(403).json({ error: 'Outside your assigned properties' });
+
+  const { rows: items } = await db.query(
+    `SELECT id, inspection_id, room, condition, notes, created_at, (photo_data IS NOT NULL) AS has_photo
+     FROM inspection_items WHERE inspection_id = $1 ORDER BY created_at ASC`,
+    [req.params.id]
+  );
+  res.json({ ...rows[0], items });
+});
+
+router.get('/inspections/:id/items/:itemId/photo', async (req, res) => {
+  const scope = await scopedPropertyIds(req.session.user);
+  const { rows } = await db.query(
+    `SELECT ii.photo_data, ii.photo_mime, i.property_id, i.organization_id
+     FROM inspection_items ii JOIN inspections i ON i.id = ii.inspection_id
+     WHERE ii.id = $1 AND ii.inspection_id = $2`,
+    [req.params.itemId, req.params.id]
+  );
+  if (!rows.length || rows[0].organization_id !== req.orgId || !rows[0].photo_data) return res.status(404).json({ error: 'No photo on this item' });
+  if (scope !== null && (!rows[0].property_id || !scope.includes(rows[0].property_id))) return res.status(403).json({ error: 'Outside your assigned properties' });
+  res.setHeader('Content-Type', rows[0].photo_mime);
+  res.send(Buffer.from(rows[0].photo_data, 'base64'));
+});
+
+// ═══════════════════════════════ RENT REMINDERS (in-app only) ═══════════════════════════════
+// No email/SMS service is wired up (same situation Stripe and AI Coach
+// were in before their keys were added) — this is a real, server-computed
+// "who's due soon or overdue this period" list based on unit.rent_due_day
+// and whether a payment already exists for the current calendar month.
+// Shared logic lives in services/reminders.js so the tenant-facing
+// dashboard banner (routes/tenant.js) computes identically.
+const { rentReminderStatus } = require('../services/reminders');
+
+router.get('/rent-reminders', async (req, res) => {
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && scope.length === 0) return res.json([]);
+
+  // Any tenant not yet marked moved_out is eligible for a reminder — not
+  // just 'active' ones. A tenant stays 'invited' until they log in for the
+  // first time, but they can still owe rent before that ever happens.
+  const conditions = [`te.organization_id = $1`, `te.status != 'moved_out'`, `u.rent_due_day IS NOT NULL`];
+  const params = [req.orgId];
+  if (scope !== null) { params.push(...scope); conditions.push(`u.property_id IN (${inPlaceholders(scope, params.length - scope.length + 1)})`); }
+
+  const { rows } = await db.query(
+    `SELECT te.id AS tenant_id, te.name AS tenant_name, u.id AS unit_id, u.unit_number, u.rent_due_day, u.monthly_rent,
+            p.name AS property_name
+     FROM tenants te
+     JOIN units u ON u.id = te.unit_id
+     JOIN properties p ON p.id = u.property_id
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY u.rent_due_day ASC`,
+    params
+  );
+  if (!rows.length) return res.json([]);
+
+  // Kept as a separate query rather than a correlated EXISTS per-row above
+  // — simpler, and avoids row-multiplication bugs if a JOIN were used
+  // instead. Month boundaries are computed here in JS (rather than SQL
+  // date_trunc) so this works identically against both real Postgres and
+  // the pg-mem test adapter, which doesn't implement date_trunc. Builds a
+  // Set of tenant IDs who already have a payment on file this month.
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const tenantIds = rows.map(r => r.tenant_id);
+  const { rows: paidRows } = await db.query(
+    `SELECT DISTINCT tenant_id FROM payments
+     WHERE tenant_id IN (${inPlaceholders(tenantIds, 3)}) AND paid_at >= $1 AND paid_at < $2`,
+    [periodStart, periodEnd, ...tenantIds]
+  );
+  const paidSet = new Set(paidRows.map(r => r.tenant_id));
+
+  const result = rows
+    .map(r => ({
+      tenantId: r.tenant_id, tenantName: r.tenant_name, unitId: r.unit_id, unitNumber: r.unit_number,
+      propertyName: r.property_name, monthlyRent: r.monthly_rent,
+      ...rentReminderStatus(r.rent_due_day, paidSet.has(r.tenant_id)),
+    }))
+    .filter(r => r.status === 'due_soon' || r.status === 'overdue');
+
+  res.json(result);
 });
 
 module.exports = router;

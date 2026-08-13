@@ -42,6 +42,8 @@
     <button onclick="switchTab('maintenance')">Maintenance</button>
     <button onclick="switchTab('documents')">Documents</button>
     <button onclick="switchTab('payments')">Payments</button>
+    <button onclick="switchTab('inspections')">Inspections</button>
+    <button onclick="switchTab('reminders')">Rent Reminders</button>
   </div>
 
   <div class="panel active" id="panel-overview">
@@ -100,10 +102,13 @@
         <div class="field"><label>Unit Number</label><input id="un-number" placeholder="101" /></div>
         <div class="field"><label>Monthly Rent</label><input id="un-rent" type="number" placeholder="1450" /></div>
       </div>
+      <div class="field"><label>Rent Due Day (optional)</label><input id="un-due-day" type="number" min="1" max="28" placeholder="1" />
+        <p style="color:var(--ink-3);font-size:12px;margin-top:4px">Day of the month rent is due (1–28). Powers the in-app Rent Reminders — no email/SMS is sent.</p>
+      </div>
       <button class="btn btn-primary" onclick="createUnit()">Add Unit</button>
       <div id="un-msg"></div>
     </div>
-    <div class="card mt"><div class="section-title">Units</div><table id="un-table"><thead><tr><th>Unit #</th><th>Property</th><th>Rent</th></tr></thead><tbody></tbody></table></div>
+    <div class="card mt"><div class="section-title">Units</div><table id="un-table"><thead><tr><th>Unit #</th><th>Property</th><th>Rent</th><th>Due Day</th><th></th></tr></thead><tbody></tbody></table></div>
   </div>
 
   <div class="panel" id="panel-staff">
@@ -233,6 +238,52 @@
       <table id="py-table"><thead><tr><th>Receipt #</th><th>Tenant</th><th>Amount</th><th>Method</th><th>Status</th><th>Paid</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
+
+  <div class="panel" id="panel-inspections">
+    <div class="card mt">
+      <div class="section-title">Conduct an Inspection</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Move-in, move-out, or routine walkthrough. Record each room's condition — tenants can view this in their portal, but never edit it.</p>
+      <div class="form-row">
+        <div class="field"><label>Unit</label><select id="in-unit" onchange="onInspectionUnitChange()"></select></div>
+        <div class="field"><label>Tenant (optional)</label><select id="in-tenant"><option value="">— No tenant on this unit —</option></select></div>
+      </div>
+      <div class="field"><label>Inspection Type</label>
+        <select id="in-type">
+          <option value="routine">Routine</option>
+          <option value="move_in">Move-in</option>
+          <option value="move_out">Move-out</option>
+        </select>
+      </div>
+      <div class="field"><label>Overall Notes (optional)</label><input id="in-overall-notes" placeholder="General condition summary…" /></div>
+
+      <div class="section-title mt" style="font-size:13px">Rooms</div>
+      <div id="in-rooms"></div>
+      <button class="btn btn-outline" onclick="addInspectionRoomRow()" style="margin-top:8px">+ Add Room</button>
+
+      <div class="mt">
+        <button class="btn btn-primary" onclick="submitInspection()">Save Inspection</button>
+      </div>
+      <div id="in-msg"></div>
+    </div>
+
+    <div class="card mt">
+      <div class="section-title">Past Inspections</div>
+      <table id="in-table"><thead><tr><th>Date</th><th>Unit</th><th>Tenant</th><th>Type</th><th>Rooms</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card mt" id="in-detail-card" style="display:none">
+      <div class="section-title">Inspection Detail</div>
+      <div id="in-detail"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-reminders">
+    <div class="card mt">
+      <div class="section-title">Rent Reminders</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Computed in-app from each unit's Rent Due Day (set on the Units tab) and whether a payment is on file for this calendar month. No email or SMS is sent — tenants see their own reminder banner in the Resident Portal.</p>
+      <table id="rr-table"><thead><tr><th>Tenant</th><th>Unit</th><th>Property</th><th>Rent</th><th>Due Day</th><th>Status</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -291,7 +342,9 @@ async function refreshAll(){
     `<tr><td>${esc(b.name)}</td><td>${propName(b.property_id)}</td></tr>`).join('') || emptyRow(2);
 
   document.getElementById('un-table').querySelector('tbody').innerHTML = units.map(u=>
-    `<tr><td>${esc(u.unit_number)}</td><td>${propName(u.property_id)}</td><td>${u.monthly_rent ? '$'+Number(u.monthly_rent).toLocaleString() : '—'}</td></tr>`).join('') || emptyRow(3);
+    `<tr><td>${esc(u.unit_number)}</td><td>${propName(u.property_id)}</td><td>${u.monthly_rent ? '$'+Number(u.monthly_rent).toLocaleString() : '—'}</td>
+     <td>${u.rent_due_day ? 'Day '+u.rent_due_day : '—'}</td>
+     <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="editUnitDueDay('${u.id}', ${u.rent_due_day||'null'})">Edit Due Day</button></td></tr>`).join('') || emptyRow(5);
 
   document.getElementById('st-table').querySelector('tbody').innerHTML = staff.map(s=>
     `<tr><td>${esc(s.name)}</td><td>${esc(s.email)}</td><td>${s.role.replace('_',' ')}</td><td><span class="pill ${s.status}">${s.status}</span></td>
@@ -309,10 +362,15 @@ async function refreshAll(){
   fillSelect('tn-unit', units, u=>u.id, u=>u.unit_number, true);
   fillSelect('dc-tenant', tenants, t=>t.id, t=>t.name);
   fillSelect('py-tenant', tenants, t=>t.id, t=>t.name);
+  fillSelect('in-unit', units, u=>u.id, u=>u.unit_number + ' — ' + propName(u.property_id));
+  onInspectionUnitChange();
+  if(!document.getElementById('in-rooms').children.length) addInspectionRoomRow();
 
   await refreshMaintenance();
   await refreshDocuments();
   await refreshPayments();
+  await refreshInspections();
+  await refreshRentReminders();
 }
 
 function tenantName(id){ const t = TENANTS.find(x=>x.id===id); return t ? esc(t.name) : '—'; }
@@ -449,12 +507,22 @@ async function createUnit(){
   const buildingId = document.getElementById('un-building').value || null;
   const unitNumber = document.getElementById('un-number').value.trim();
   const monthlyRent = document.getElementById('un-rent').value || null;
+  const rentDueDay = document.getElementById('un-due-day').value || null;
   const msg = document.getElementById('un-msg');
   try{ if(!propertyId || !unitNumber) throw new Error('Property and unit number are required');
-    await api('/units', { method:'POST', body: JSON.stringify({propertyId,buildingId,unitNumber,monthlyRent}) });
-    document.getElementById('un-number').value=''; document.getElementById('un-rent').value='';
+    await api('/units', { method:'POST', body: JSON.stringify({propertyId,buildingId,unitNumber,monthlyRent,rentDueDay}) });
+    document.getElementById('un-number').value=''; document.getElementById('un-rent').value=''; document.getElementById('un-due-day').value='';
     msg.className='ok'; msg.textContent='Unit added.'; await refreshAll();
   }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+async function editUnitDueDay(unitId, current){
+  const input = window.prompt('Rent due day (1–28, blank to clear):', current == null ? '' : String(current));
+  if(input === null) return; // cancelled
+  const rentDueDay = input.trim() === '' ? null : input.trim();
+  try{
+    await api(`/units/${unitId}`, { method:'PATCH', body: JSON.stringify({ rentDueDay }) });
+    await refreshAll();
+  }catch(err){ alert(err.message); }
 }
 async function inviteStaff(){
   const name = document.getElementById('st-name').value.trim();
@@ -600,6 +668,133 @@ function downloadBulkTemplate(){
 }
 
 function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════ INSPECTIONS ═══════════════════════════════
+let inspectionRoomSeq = 0;
+
+function onInspectionUnitChange(){
+  const unitId = document.getElementById('in-unit').value;
+  const tenantsOnUnit = TENANTS.filter(t => t.unit_id === unitId);
+  const sel = document.getElementById('in-tenant');
+  sel.innerHTML = '<option value="">— No tenant on this unit —</option>' +
+    tenantsOnUnit.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+}
+
+function addInspectionRoomRow(prefill){
+  const id = 'room-' + (++inspectionRoomSeq);
+  const row = document.createElement('div');
+  row.id = id;
+  row.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px';
+  row.innerHTML = `
+    <div class="form-row">
+      <div class="field"><label>Room</label><input class="room-name" placeholder="Kitchen" value="${escAttr((prefill&&prefill.room)||'')}" /></div>
+      <div class="field"><label>Condition</label>
+        <select class="room-condition">
+          <option value="good">Good</option>
+          <option value="fair">Fair</option>
+          <option value="damaged">Damaged</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Notes (optional)</label><input class="room-notes" placeholder="Scuff on the wall near the window…" /></div>
+    <div class="field"><label>Photo (optional)</label><input type="file" class="room-photo" accept="image/*" /></div>
+    <button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="document.getElementById('${id}').remove()">Remove Room</button>
+  `;
+  document.getElementById('in-rooms').appendChild(row);
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function submitInspection(){
+  const unitId = document.getElementById('in-unit').value;
+  const tenantId = document.getElementById('in-tenant').value || null;
+  const inspectionType = document.getElementById('in-type').value;
+  const overallNotes = document.getElementById('in-overall-notes').value.trim();
+  const msg = document.getElementById('in-msg');
+  try{
+    if(!unitId) throw new Error('Pick a unit first');
+    const roomEls = Array.from(document.getElementById('in-rooms').children);
+    if(!roomEls.length) throw new Error('Add at least one room');
+    const items = [];
+    for(const el of roomEls){
+      const room = el.querySelector('.room-name').value.trim();
+      if(!room) throw new Error('Every room needs a name');
+      const condition = el.querySelector('.room-condition').value;
+      const notes = el.querySelector('.room-notes').value.trim();
+      const fileInput = el.querySelector('.room-photo');
+      const item = { room, condition, notes };
+      if(fileInput.files.length){
+        if(fileInput.files[0].size > 4.5*1024*1024) throw new Error(`Photo for "${room}" is too large (max 4.5MB)`);
+        item.photoBase64 = await fileToBase64(fileInput.files[0]);
+        item.photoMime = fileInput.files[0].type;
+      }
+      items.push(item);
+    }
+    await api('/inspections', { method:'POST', body: JSON.stringify({ unitId, tenantId, inspectionType, overallNotes, items }) });
+    document.getElementById('in-overall-notes').value='';
+    document.getElementById('in-rooms').innerHTML=''; addInspectionRoomRow();
+    msg.className='ok'; msg.textContent='Inspection saved.';
+    await refreshInspections();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+
+async function refreshInspections(){
+  const rows = await api('/inspections').catch(()=>[]);
+  document.getElementById('in-table').querySelector('tbody').innerHTML = rows.map(i=>`
+    <tr>
+      <td>${new Date(i.created_at).toLocaleDateString()}</td>
+      <td>${esc(i.unit_number||'—')}</td>
+      <td>${esc(i.tenant_name||'—')}</td>
+      <td>${esc((i.inspection_type||'').replace('_',' '))}</td>
+      <td>${i.item_count}</td>
+      <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="viewInspection('${i.id}')">View</button></td>
+    </tr>`).join('') || emptyRow(6);
+}
+
+async function viewInspection(id){
+  try{
+    const insp = await api(`/inspections/${id}`);
+    const card = document.getElementById('in-detail-card');
+    const conditionColor = c => c==='good' ? 'var(--green,#3a9c3a)' : c==='fair' ? 'var(--gold,#d4a247)' : '#e76d6d';
+    document.getElementById('in-detail').innerHTML = `
+      <p style="color:var(--ink-2);font-size:13.5px;margin-bottom:12px">
+        <strong>${esc((insp.inspection_type||'').replace('_',' '))}</strong> · ${esc(insp.unit_number||'—')} · ${esc(insp.tenant_name||'No tenant on file')} · ${new Date(insp.created_at).toLocaleString()}
+      </p>
+      ${insp.overall_notes ? `<p style="color:var(--ink-2);font-size:13.5px;margin-bottom:14px">${esc(insp.overall_notes)}</p>` : ''}
+      ${insp.items.map(it=>`
+        <div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start">
+          ${it.has_photo ? `<img src="/api/inspections/${insp.id}/items/${it.id}/photo" style="width:56px;height:56px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open(this.src,'_blank')"/>` : ''}
+          <div style="flex:1">
+            <div style="font-weight:700">${esc(it.room)} — <span style="color:${conditionColor(it.condition)}">${esc(it.condition)}</span></div>
+            ${it.notes ? `<div style="color:var(--ink-3);font-size:12.5px;margin-top:3px">${esc(it.notes)}</div>` : ''}
+          </div>
+        </div>`).join('')}
+    `;
+    card.style.display = '';
+    card.scrollIntoView({ behavior: 'smooth' });
+  }catch(err){ alert(err.message); }
+}
+
+// ═══════════════════════════════ RENT REMINDERS ═══════════════════════════════
+async function refreshRentReminders(){
+  const rows = await api('/rent-reminders').catch(()=>[]);
+  document.getElementById('rr-table').querySelector('tbody').innerHTML = rows.map(r=>`
+    <tr>
+      <td>${esc(r.tenantName)}</td>
+      <td>${esc(r.unitNumber||'—')}</td>
+      <td>${esc(r.propertyName||'—')}</td>
+      <td>${r.monthlyRent ? '$'+Number(r.monthlyRent).toLocaleString() : '—'}</td>
+      <td>Day ${r.dueDay}</td>
+      <td><span class="pill ${r.status==='overdue'?'invited':'active'}">${r.status==='overdue' ? `Overdue ${Math.abs(r.daysUntilDue)}d` : `Due in ${r.daysUntilDue}d`}</span></td>
+    </tr>`).join('') || emptyRow(6);
+}
 
 boot();
 </script>

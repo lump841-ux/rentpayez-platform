@@ -3,9 +3,16 @@ const express = require('express');
 const crypto  = require('crypto');
 const db = require('../services/db');
 const { requireTenantAuth } = require('../middleware/auth');
+const { rentReminderStatus } = require('../services/reminders');
 
 const router = express.Router();
 router.use(requireTenantAuth);
+
+// Builds "$2, $3, $4..." style placeholders for a dynamic IN (...) clause,
+// starting at paramIndex. Mirrors the same helper in routes/orgs.js.
+function inPlaceholders(arr, paramIndex) {
+  return arr.map((_, i) => `$${paramIndex + i}`).join(', ');
+}
 
 // Stripe is optional — the org must set STRIPE_SECRET_KEY themselves
 // (Render dashboard -> Environment) before online payments work. Every
@@ -22,7 +29,7 @@ router.get('/me', async (req, res) => {
   const t = req.session.tenant;
   const { rows } = await db.query(
     `SELECT te.id, te.name, te.email, te.phone, te.status,
-            u.id AS unit_id, u.unit_number, u.monthly_rent,
+            u.id AS unit_id, u.unit_number, u.monthly_rent, u.rent_due_day,
             p.id AS property_id, p.name AS property_name, p.address AS property_address,
             b.id AS building_id, b.name AS building_name,
             o.name AS organization_name, o.emergency_contact_name,
@@ -36,7 +43,25 @@ router.get('/me', async (req, res) => {
     [t.id, t.organizationId]
   );
   if (!rows.length) return res.status(404).json({ error: 'Tenant record not found' });
-  res.json(rows[0]);
+  const row = rows[0];
+
+  // Kept as a separate query rather than a correlated EXISTS in the SELECT
+  // list above — simpler to reason about and avoids row-multiplication
+  // bugs if a JOIN were used instead. Month boundaries are computed here
+  // in JS (rather than SQL date_trunc) so this works identically against
+  // both real Postgres and the pg-mem test adapter, which doesn't
+  // implement date_trunc.
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const { rows: paidRows } = await db.query(
+    `SELECT 1 FROM payments WHERE tenant_id = $1 AND paid_at >= $2 AND paid_at < $3 LIMIT 1`,
+    [t.id, periodStart, periodEnd]
+  );
+  // In-app only — no email/SMS is sent. Computed from the real due day and
+  // whether a payment is already on file for the current calendar month.
+  row.rent_reminder = rentReminderStatus(row.rent_due_day, paidRows.length > 0);
+  res.json(row);
 });
 
 // Self-service contact info update — intentionally limited to phone only.
@@ -100,6 +125,67 @@ router.get('/maintenance-requests/:id/photo', async (req, res) => {
     [req.params.id, req.session.tenant.id, req.session.tenant.organizationId]
   );
   if (!rows.length || !rows[0].photo_data) return res.status(404).json({ error: 'No photo on this request' });
+  res.setHeader('Content-Type', rows[0].photo_mime);
+  res.send(Buffer.from(rows[0].photo_data, 'base64'));
+});
+
+// ═══════════════════════════════ INSPECTIONS (read-only) ═══════════════════════════════
+// Staff conduct these from the console; tenants can only view their own
+// unit's history, never create or edit one — this is not an area where a
+// tenant should be able to influence the record.
+router.get('/inspections', async (req, res) => {
+  const t = req.session.tenant;
+  const { rows } = await db.query(
+    `SELECT i.id, i.organization_id, i.tenant_id, i.unit_id, i.property_id, i.inspection_type, i.overall_notes, i.created_at
+     FROM inspections i
+     WHERE i.organization_id = $1 AND (i.tenant_id = $2 OR i.unit_id = $3)
+     ORDER BY i.created_at DESC`,
+    [t.organizationId, t.id, t.unitId || null]
+  );
+  if (!rows.length) return res.json([]);
+
+  // Separate query + JS merge instead of a correlated subquery — see
+  // routes/orgs.js GET /inspections for the same fix and rationale.
+  const inspectionIds = rows.map(r => r.id);
+  const { rows: counts } = await db.query(
+    `SELECT inspection_id, COUNT(*) AS item_count FROM inspection_items
+     WHERE inspection_id IN (${inPlaceholders(inspectionIds, 1)}) GROUP BY inspection_id`,
+    inspectionIds
+  );
+  const countMap = new Map(counts.map(c => [c.inspection_id, Number(c.item_count)]));
+  res.json(rows.map(r => ({ ...r, item_count: countMap.get(r.id) || 0 })));
+});
+
+router.get('/inspections/:id', async (req, res) => {
+  const t = req.session.tenant;
+  const { rows } = await db.query(
+    `SELECT i.* FROM inspections i
+     WHERE i.id = $1 AND i.organization_id = $2 AND (i.tenant_id = $3 OR i.unit_id = $4)`,
+    [req.params.id, t.organizationId, t.id, t.unitId || null]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Inspection not found' });
+
+  const { rows: items } = await db.query(
+    `SELECT id, inspection_id, room, condition, notes, created_at, (photo_data IS NOT NULL) AS has_photo
+     FROM inspection_items WHERE inspection_id = $1 ORDER BY created_at ASC`,
+    [req.params.id]
+  );
+  res.json({ ...rows[0], items });
+});
+
+router.get('/inspections/:id/items/:itemId/photo', async (req, res) => {
+  const t = req.session.tenant;
+  const { rows } = await db.query(
+    `SELECT ii.photo_data, ii.photo_mime, i.organization_id, i.tenant_id, i.unit_id
+     FROM inspection_items ii JOIN inspections i ON i.id = ii.inspection_id
+     WHERE ii.id = $1 AND ii.inspection_id = $2`,
+    [req.params.itemId, req.params.id]
+  );
+  if (!rows.length || !rows[0].photo_data) return res.status(404).json({ error: 'No photo on this item' });
+  const row = rows[0];
+  if (row.organization_id !== t.organizationId || (row.tenant_id !== t.id && row.unit_id !== t.unitId)) {
+    return res.status(404).json({ error: 'No photo on this item' });
+  }
   res.setHeader('Content-Type', rows[0].photo_mime);
   res.send(Buffer.from(rows[0].photo_data, 'base64'));
 });

@@ -212,6 +212,7 @@ const NAV = [
   {id:'pay', label:'Pay Rent', ic:'💳'},
   {id:'history', label:'Payment History', ic:'📋'},
   {id:'maintenance', label:'Maintenance', ic:'🔧'},
+  {id:'inspections', label:'Inspections', ic:'📝'},
   {id:'documents', label:'Documents', ic:'📄'},
   {id:'coach', label:'AI Coach', ic:'🤖'},
   {id:'goals', label:'My Goals', ic:'🎯'},
@@ -264,10 +265,36 @@ async function setView(id){
   renderSidebar();
   const m = document.getElementById('appMain');
   m.innerHTML = '<div class="empty">Loading…</div>';
-  const renderers = { dash: renderDash, pay: renderPay, history: renderHistory, maintenance: renderMaintenance, documents: renderDocuments, coach: renderCoach, goals: renderGoals, settings: renderSettings };
+  const renderers = { dash: renderDash, pay: renderPay, history: renderHistory, maintenance: renderMaintenance, inspections: renderInspections, documents: renderDocuments, coach: renderCoach, goals: renderGoals, settings: renderSettings };
   await renderers[id]();
   m.scrollTo?.({top:0});
 }
+
+/* ═══════════════════════════ RENT REMINDER (in-app only) ═══════════════════════════ */
+// No email/SMS is sent — this reads T.rent_reminder, computed server-side
+// by the same logic staff see in their Rent Reminders tab (see
+// services/reminders.js), from the unit's rent_due_day and whether a
+// payment already exists for the current calendar month.
+function reminderBannerHtml(){
+  const r = T.rent_reminder;
+  if(!r || r.status === 'no_due_day' || r.status === 'paid' || r.status === 'upcoming') return '';
+  const overdue = r.status === 'overdue';
+  const text = overdue
+    ? `Rent is <strong>${Math.abs(r.daysUntilDue)} day${Math.abs(r.daysUntilDue)===1?'':'s'} overdue</strong> (due on the ${r.dueDay}${ordinal(r.dueDay)}).`
+    : r.daysUntilDue === 0
+      ? `Rent is <strong>due today</strong> (the ${r.dueDay}${ordinal(r.dueDay)}).`
+      : `Rent is <strong>due in ${r.daysUntilDue} day${r.daysUntilDue===1?'':'s'}</strong> (the ${r.dueDay}${ordinal(r.dueDay)}).`;
+  return `
+    <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:13px;margin-bottom:18px;
+      background:${overdue?'rgba(139,36,36,0.12)':'rgba(212,162,71,0.1)'};
+      border:1px solid ${overdue?'rgba(139,36,36,0.3)':'rgba(212,162,71,0.28)'}">
+      <div style="font-size:18px">${overdue?'⚠️':'⏰'}</div>
+      <div style="flex:1;color:var(--ink);font-size:13.5px">${text}</div>
+      <button class="btn btn-sm ${overdue?'btn-primary':'btn-secondary'}" onclick="setView('pay')">Pay Now</button>
+    </div>
+  `;
+}
+function ordinal(n){ if(!n) return ''; const s=['th','st','nd','rd'], v=n%100; return s[(v-20)%10]||s[v]||s[0]; }
 
 /* ═══════════════════════════ DASHBOARD ═══════════════════════════ */
 async function renderDash(){
@@ -283,6 +310,8 @@ async function renderDash(){
     <div class="app-head">
       <div><h1>Welcome back, ${esc((T.name||'').split(' ')[0])} 👋</h1><div class="sub">${esc(T.property_name || 'Your resident portal')}${T.unit_number ? ' · Unit ' + esc(T.unit_number) : ''}</div></div>
     </div>
+
+    ${reminderBannerHtml()}
 
     <div class="kpi-grid">
       <div class="kpi gold"><div class="ic">📈</div><div class="label">Credit Score</div><div class="val">Preview</div><div class="trend" style="color:var(--gold-2)">Not connected yet</div></div>
@@ -378,6 +407,7 @@ function streakStripHtml(payments){
 async function renderPay(){
   document.getElementById('appMain').innerHTML = `
     <div class="app-head"><div><h1>Pay Rent</h1><div class="sub">${esc(T.property_name||'')}${T.unit_number?' · Unit '+esc(T.unit_number):''}</div></div></div>
+    ${reminderBannerHtml()}
     <div class="dash-grid">
       <div class="panel" style="background:linear-gradient(180deg,rgba(139,36,36,0.1),rgba(139,36,36,0.02));border-color:rgba(139,36,36,0.22)">
         <div class="panel-head"><h3 class="panel-title">Monthly Rent</h3><span class="pill pending">${esc(T.status||'')}</span></div>
@@ -547,6 +577,51 @@ async function submitMaintenance(){
     document.getElementById('mr-msg').className='msg ok';
     document.getElementById('mr-msg').textContent='Submitted — your property manager has been notified.';
   }catch(err){ msg.className='msg err'; msg.textContent=err.message; }
+}
+
+/* ═══════════════════════════ INSPECTIONS (read-only) ═══════════════════════════ */
+async function renderInspections(){
+  const rows = await fetch('/api/tenant/inspections').then(r=>r.ok?r.json():[]);
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>Inspections</h1><div class="sub">Move-in, move-out, and routine walkthroughs your property manager has recorded for your unit</div></div></div>
+    <div class="panel" style="padding:0">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Type</th><th>Rooms</th><th></th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(i=>`
+            <tr>
+              <td style="color:#fff;font-weight:600">${fmtDate(i.created_at)}</td>
+              <td style="text-transform:capitalize">${esc((i.inspection_type||'').replace('_',' '))}</td>
+              <td>${i.item_count}</td>
+              <td><button class="btn btn-sm btn-secondary" onclick="viewInspection('${i.id}')">View</button></td>
+            </tr>`).join('') : `<tr><td colspan="4"><div class="empty">No inspections recorded yet.</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel mt" id="insp-detail" style="display:none;margin-top:16px"></div>
+  `;
+}
+async function viewInspection(id){
+  try{
+    const insp = await fetch(`/api/tenant/inspections/${id}`).then(r=>r.json());
+    const conditionColor = c => c==='good' ? 'var(--green-3)' : c==='fair' ? 'var(--gold-2)' : '#e76d6d';
+    const card = document.getElementById('insp-detail');
+    card.innerHTML = `
+      <h3 class="panel-title" style="margin-bottom:4px">${esc((insp.inspection_type||'').replace('_',' '))} inspection</h3>
+      <div class="panel-sub" style="margin-bottom:14px">${new Date(insp.created_at).toLocaleString()}</div>
+      ${insp.overall_notes ? `<p style="color:var(--ink-2);font-size:13.5px;margin-bottom:14px">${esc(insp.overall_notes)}</p>` : ''}
+      ${insp.items.map(it=>`
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)">
+          ${it.has_photo ? `<img class="thumb" src="/api/tenant/inspections/${insp.id}/items/${it.id}/photo" onclick="window.open(this.src,'_blank')"/>` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);color:var(--ink-3);font-size:18px">📝</div>`}
+          <div style="flex:1">
+            <div style="color:#fff;font-weight:600;font-size:13.5px">${esc(it.room)} — <span style="color:${conditionColor(it.condition)}">${esc(it.condition)}</span></div>
+            ${it.notes ? `<div style="color:var(--ink-3);font-size:12.5px;margin-top:3px">${esc(it.notes)}</div>` : ''}
+          </div>
+        </div>`).join('')}
+    `;
+    card.style.display = '';
+    card.scrollIntoView({ behavior: 'smooth' });
+  }catch(err){ alert('Could not load inspection.'); }
 }
 
 /* ═══════════════════════════ DOCUMENTS ═══════════════════════════ */

@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS units (
   building_id     UUID REFERENCES buildings(id) ON DELETE SET NULL, -- optional
   unit_number     TEXT NOT NULL,
   monthly_rent    NUMERIC(10,2),
+  rent_due_day    INTEGER CHECK (rent_due_day BETWEEN 1 AND 28), -- day of month rent is due; 1-28 to stay valid in every month. NULL = no reminder computed.
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -200,6 +201,35 @@ CREATE TABLE IF NOT EXISTS goals (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ── Inspections (digital move-in / move-out / routine walkthroughs) ─────
+-- Staff conduct these from the console: pick a tenant/unit, an inspection
+-- type, and record a per-room condition checklist. Tenants can view (not
+-- edit) their own unit's inspection history in the portal. Kept simple —
+-- one row per room per inspection, each with an optional proof photo,
+-- rather than a deep multi-field walkthrough form.
+CREATE TABLE IF NOT EXISTS inspections (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  tenant_id       UUID REFERENCES tenants(id) ON DELETE SET NULL,
+  unit_id         UUID REFERENCES units(id) ON DELETE SET NULL,
+  property_id     UUID REFERENCES properties(id) ON DELETE SET NULL,
+  inspection_type TEXT NOT NULL DEFAULT 'routine', -- move_in | move_out | routine
+  overall_notes   TEXT,
+  conducted_by    UUID REFERENCES organization_users(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS inspection_items (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  inspection_id   UUID NOT NULL REFERENCES inspections(id) ON DELETE CASCADE,
+  room            TEXT NOT NULL,                    -- e.g. Kitchen, Bathroom, Living Room, Exterior
+  condition       TEXT NOT NULL DEFAULT 'good',      -- good | fair | damaged
+  notes           TEXT,
+  photo_data      TEXT,                              -- base64-encoded proof photo, optional
+  photo_mime      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ── Sessions (express-session store) ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS sessions (
   sid    TEXT PRIMARY KEY,
@@ -230,19 +260,21 @@ CREATE INDEX IF NOT EXISTS idx_payments_org         ON payments(organization_id)
 CREATE INDEX IF NOT EXISTS idx_payments_tenant      ON payments(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_goals_org            ON goals(organization_id);
 CREATE INDEX IF NOT EXISTS idx_goals_tenant         ON goals(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_inspections_org      ON inspections(organization_id);
+CREATE INDEX IF NOT EXISTS idx_inspections_tenant   ON inspections(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_inspections_property ON inspections(property_id);
+CREATE INDEX IF NOT EXISTS idx_inspection_items_ins ON inspection_items(inspection_id);
 
 -- ── staff_assignments FK constraints ─────────────────────────────────────
--- MUST STAY THE LAST STATEMENTS IN THIS FILE. services/db.js runs this
--- entire file as one multi-statement query on every server boot, and
--- Postgres has no "ADD CONSTRAINT IF NOT EXISTS" — so on the first boot
--- these succeed, and on every boot after that they fail with 42710
--- (duplicate_object), which db.js specifically catches and treats as
--- "schema already applied." But a multi-statement pool.query() STOPS at
--- the first failing statement — anything placed after these ALTER TABLEs
--- would silently never run on any boot past the first. (This is exactly
--- what happened to maintenance_requests/documents/payments the first time
--- they were added mid-file — see chat.) Keep this block last, and add any
--- future CREATE TABLE/INDEX statements ABOVE it, never below.
+-- Kept as the last statements in this file on principle, even though
+-- services/db.js now applies schema.sql one statement at a time
+-- (applySchema()), so file ordering can no longer break later statements
+-- the way it once did — see chat for the incident where these ALTER
+-- TABLEs sat mid-file, always "failed" with 42710 (duplicate_object) on
+-- every boot after the first (Postgres has no ADD CONSTRAINT IF NOT
+-- EXISTS), and silently stopped every statement that came after them
+-- because the whole file used to run as one multi-statement query.
+-- Add any future CREATE TABLE/INDEX statements ABOVE this block anyway.
 ALTER TABLE staff_assignments
   ADD CONSTRAINT fk_staff_branch   FOREIGN KEY (branch_id)   REFERENCES branches(id)   ON DELETE CASCADE,
   ADD CONSTRAINT fk_staff_property FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE;

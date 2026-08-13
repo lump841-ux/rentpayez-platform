@@ -453,6 +453,96 @@ async function main() {
   const confirmNoStripe = await residentSession('GET', '/api/tenant/payments/confirm?session_id=fake');
   ok(confirmNoStripe.status === 503, 'Stripe confirm also degrades cleanly when unconfigured');
 
+  console.log('\n── Rent reminder logic (pure function, fixed dates) ──');
+  const { rentReminderStatus } = require('../services/reminders');
+  const jan15 = new Date(2026, 0, 15); // Jan 15, 2026
+  ok(rentReminderStatus(null, false, jan15).status === 'no_due_day', 'No rent_due_day on the unit → no reminder computed');
+  ok(rentReminderStatus(1, true, jan15).status === 'paid', 'A payment already on file this period → status is "paid", no reminder shown');
+  ok(rentReminderStatus(15, false, jan15).status === 'due_soon' && rentReminderStatus(15, false, jan15).daysUntilDue === 0, 'Due today (day 15, today is the 15th) → "due_soon" with 0 days');
+  ok(rentReminderStatus(18, false, jan15).status === 'due_soon' && rentReminderStatus(18, false, jan15).daysUntilDue === 3, 'Due in 3 days (within the 5-day window) → "due_soon"');
+  ok(rentReminderStatus(25, false, jan15).status === 'upcoming' && rentReminderStatus(25, false, jan15).daysUntilDue === 10, 'Due in 10 days (outside the 5-day window) → "upcoming", not yet a reminder');
+  ok(rentReminderStatus(10, false, jan15).status === 'overdue' && rentReminderStatus(10, false, jan15).daysUntilDue === -5, 'Due day already passed (day 10, today is the 15th) → "overdue"');
+
+  console.log('\n── Rent reminders (in-app, real data) ──');
+  // `unit` already has a payment on file this period (payRecord above,
+  // paid_at defaults to now()), so setting a due day on it should NOT
+  // produce a reminder for Sara Kim — she's already paid.
+  const dueDaySet = await orgA('PATCH', `/api/units/${unit.data.id}`, { rentDueDay: 1 });
+  ok(dueDaySet.status === 200 && dueDaySet.data.rent_due_day === 1, 'Staff sets a unit\'s Rent Due Day');
+
+  const meAfterDueDay = await residentSession('GET', '/api/tenant/me');
+  ok(meAfterDueDay.data.rent_due_day === 1 && meAfterDueDay.data.rent_reminder, 'Tenant /me now includes rent_due_day and a computed rent_reminder object');
+  ok(meAfterDueDay.data.rent_reminder.status === 'paid', 'Sara already paid this period, so her own reminder correctly shows "paid" (no banner) even with a due day set');
+
+  const remindersAfterPaid = await orgA('GET', '/api/rent-reminders');
+  ok(remindersAfterPaid.status === 200 && !remindersAfterPaid.data.some(r => r.tenantId === tenant.data.id), 'A tenant who already paid this period does not show up in the Rent Reminders list');
+
+  // A second tenant, on the branch-less unit2, with NO payment on file —
+  // give them a due day guaranteed to land in the reminder window (today)
+  // so the assertion doesn't depend on which day of the month tests run.
+  const dan = await orgA('POST', '/api/tenants', { name: 'Dan Reyes', email: 'dan.reyes@email.com', unitId: unit2.data.id });
+  ok(dan.status === 200, 'A second tenant is added to the branch-less unit, with no payment on file yet');
+  const todayDay = Math.min(new Date().getDate(), 28);
+  await orgA('PATCH', `/api/units/${unit2.data.id}`, { rentDueDay: todayDay });
+
+  const remindersWithDan = await orgA('GET', '/api/rent-reminders');
+  const danReminder = remindersWithDan.data.find(r => r.tenantId === dan.data.id);
+  ok(danReminder && (danReminder.status === 'due_soon' || danReminder.status === 'overdue'), 'An unpaid tenant with a due day in range shows up in the Rent Reminders list');
+
+  const priyaReminders = await priya('GET', '/api/rent-reminders');
+  ok(!priyaReminders.data.some(r => r.tenantId === dan.data.id), 'Branch manager scoping applies to Rent Reminders too — Dan\'s unit is outside her branch, so he\'s invisible to her');
+
+  console.log('\n── Digital inspections ──');
+  const inspCreate = await orgA('POST', '/api/inspections', {
+    unitId: unit.data.id, tenantId: tenant.data.id, inspectionType: 'move_in', overallNotes: 'Unit in good shape overall.',
+    items: [
+      { room: 'Kitchen', condition: 'good', notes: 'New appliances', photoBase64: tinyPngBase64, photoMime: 'image/png' },
+      { room: 'Bathroom', condition: 'fair', notes: 'Minor grout wear' },
+    ],
+  });
+  ok(inspCreate.status === 200 && inspCreate.data.items.length === 2 && inspCreate.data.items[0].has_photo === true && inspCreate.data.items[1].has_photo === false,
+    'Staff conducts a move-in inspection with two room items, one with a photo');
+
+  const inspStaffList = await orgA('GET', '/api/inspections');
+  const inspStaffRow = inspStaffList.data.find(i => i.id === inspCreate.data.id);
+  ok(inspStaffRow && inspStaffRow.tenant_name === 'Sara Kim' && Number(inspStaffRow.item_count) === 2, 'Staff sees the inspection in the list with the tenant\'s name and correct room count');
+
+  const inspDetail = await orgA('GET', `/api/inspections/${inspCreate.data.id}`);
+  ok(inspDetail.status === 200 && inspDetail.data.items.length === 2, 'Staff can pull the full inspection detail with all room items');
+
+  const kitchenItem = inspDetail.data.items.find(i => i.room === 'Kitchen');
+  const bathroomItem = inspDetail.data.items.find(i => i.room === 'Bathroom');
+  const inspPhotoFetch = await orgA('GET', `/api/inspections/${inspCreate.data.id}/items/${kitchenItem.id}/photo`);
+  ok(inspPhotoFetch.status === 200, 'Staff can fetch the Kitchen item\'s proof photo');
+
+  const inspNoPhotoFetch = await orgA('GET', `/api/inspections/${inspCreate.data.id}/items/${bathroomItem.id}/photo`);
+  ok(inspNoPhotoFetch.status === 404, 'Fetching a photo for a room item that has none returns 404, not a crash');
+
+  const inspBadType = await orgA('POST', '/api/inspections', { unitId: unit.data.id, inspectionType: 'not_a_real_type', items: [{ room: 'Kitchen' }] });
+  ok(inspBadType.status === 400, 'An invalid inspectionType is rejected');
+
+  const inspNoItems = await orgA('POST', '/api/inspections', { unitId: unit.data.id, inspectionType: 'routine', items: [] });
+  ok(inspNoItems.status === 400, 'An inspection with zero room items is rejected');
+
+  const inspTenantList = await residentSession('GET', '/api/tenant/inspections');
+  ok(inspTenantList.status === 200 && inspTenantList.data.some(i => i.id === inspCreate.data.id), 'Tenant sees the inspection recorded for their unit');
+
+  const inspTenantDetail = await residentSession('GET', `/api/tenant/inspections/${inspCreate.data.id}`);
+  ok(inspTenantDetail.status === 200 && inspTenantDetail.data.items.length === 2, 'Tenant can view the full read-only inspection detail');
+
+  const inspTenantPhoto = await residentSession('GET', `/api/tenant/inspections/${inspCreate.data.id}/items/${kitchenItem.id}/photo`);
+  ok(inspTenantPhoto.status === 200, 'Tenant can view their own inspection\'s room photo');
+
+  const inspPriyaList = await priya('GET', '/api/inspections');
+  ok(inspPriyaList.data.some(i => i.id === inspCreate.data.id), 'Branch manager sees the inspection — it\'s under a property in their scope');
+
+  const inspOutOfScope = await orgA('POST', '/api/inspections', { unitId: unit2.data.id, inspectionType: 'routine', items: [{ room: 'Living Room', condition: 'good' }] });
+  ok(inspOutOfScope.status === 200, 'Staff conducts a routine inspection on the branch-less unit (outside the branch manager\'s scope)');
+  const inspPriyaDetailAttempt = await priya('GET', `/api/inspections/${inspOutOfScope.data.id}`);
+  ok(inspPriyaDetailAttempt.status === 403, 'Branch manager is forbidden from viewing an inspection outside her assigned properties');
+  const inspPriyaListNoLeak = await priya('GET', '/api/inspections');
+  ok(!inspPriyaListNoLeak.data.some(i => i.id === inspOutOfScope.data.id), 'Branch manager\'s inspection list also excludes the out-of-scope one');
+
   console.log('\n── Cross-organization isolation (the critical check) ──');
   const bBranches = await orgB('GET', '/api/branches');
   const bProperties = await orgB('GET', '/api/properties');
@@ -460,17 +550,23 @@ async function main() {
   const bMaintenance = await orgB('GET', '/api/maintenance-requests');
   const bDocuments = await orgB('GET', '/api/documents');
   const bPayments = await orgB('GET', '/api/payments');
+  const bInspections = await orgB('GET', '/api/inspections');
+  const bReminders = await orgB('GET', '/api/rent-reminders');
   ok(bBranches.data.length === 0, 'Org B sees ZERO branches (Org A\'s branch is invisible)');
   ok(bProperties.data.length === 0, 'Org B sees ZERO properties (Org A\'s properties are invisible)');
   ok(bTenants.data.length === 0, 'Org B sees ZERO tenants (Org A\'s tenants, including the CSV-imported ones, are invisible)');
   ok(bMaintenance.data.length === 0, 'Org B sees ZERO maintenance requests (Org A\'s are invisible)');
   ok(bDocuments.data.length === 0, 'Org B sees ZERO documents (Org A\'s are invisible)');
   ok(bPayments.data.length === 0, 'Org B sees ZERO payments (Org A\'s are invisible)');
+  ok(bInspections.data.length === 0, 'Org B sees ZERO inspections (Org A\'s are invisible)');
+  ok(bReminders.data.length === 0, 'Org B sees ZERO rent reminders (Org A\'s tenants are invisible)');
   ok((await orgB('GET', `/api/documents/${leaseUploadData.id}/file`)).status === 404, 'Org B cannot fetch Org A\'s document file by ID either');
+  ok((await orgB('GET', `/api/inspections/${inspCreate.data.id}`)).status === 404, 'Org B cannot fetch Org A\'s inspection detail by ID either');
+  ok((await orgB('GET', `/api/inspections/${inspCreate.data.id}/items/${kitchenItem.id}/photo`)).status === 404, 'Org B cannot fetch Org A\'s inspection photo by ID either');
 
   const summaryA = await orgA('GET', '/api/summary');
-  ok(summaryA.data.branches === 2 && summaryA.data.properties === 4 && summaryA.data.units === 5 && summaryA.data.tenants === 3,
-    `Org A summary is correct: 2 branches, 4 properties, 5 units, 3 tenants (got ${JSON.stringify(summaryA.data)})`);
+  ok(summaryA.data.branches === 2 && summaryA.data.properties === 4 && summaryA.data.units === 5 && summaryA.data.tenants === 4,
+    `Org A summary is correct: 2 branches, 4 properties, 5 units, 4 tenants (got ${JSON.stringify(summaryA.data)})`);
 
   console.log(`\n${pass} passed, ${fail} failed.\n`);
   process.exit(fail ? 1 : 0);
