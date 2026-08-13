@@ -140,6 +140,65 @@ async function main() {
   ok(importAuthed.status === 200 && importAuthedData.created === 2, 'CSV import creates 2 tenants');
   ok(importAuthedData.skipped.length === 1 && /999/.test(importAuthedData.skipped[0].reason), 'CSV import reports the unmatched unit_number (999) as skipped, not silently dropped');
 
+  console.log('\n── Org A: bulk portfolio import (flexible column mapping) ──');
+  // Headers deliberately use alias wording, not the exact field keys, to
+  // prove the fuzzy column-matching actually works against an unknown
+  // source spreadsheet's own header names.
+  const portfolioCsv =
+    'Branch,Property,Property Address,Building,Unit,Rent\n' +
+    'Sunset Division,Sunset Gardens,55 Sunset Blvd,Tower 1,301,1300\n' +
+    'Sunset Division,Sunset Gardens,55 Sunset Blvd,Tower 1,302,1300\n' +
+    ',Riverside House,9 River Rd,,5,950\n';
+  const pBoundary = '----smoketestportfolioboundary';
+  const previewBody =
+    `--${pBoundary}\r\nContent-Disposition: form-data; name="file"; filename="portfolio.csv"\r\nContent-Type: text/csv\r\n\r\n${portfolioCsv}\r\n--${pBoundary}--\r\n`;
+  const previewRes = await fetch(base + '/api/import/portfolio/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${pBoundary}`, Cookie: await sessionCookie(orgA, base) },
+    body: previewBody,
+  });
+  const previewData = await previewRes.json();
+  ok(previewRes.status === 200 && previewData.totalRows === 3, 'Portfolio preview parses the file and counts 3 rows');
+  ok(
+    previewData.suggestedMapping.branch_name === 'Branch' &&
+    previewData.suggestedMapping.property_name === 'Property' &&
+    previewData.suggestedMapping.property_address === 'Property Address' &&
+    previewData.suggestedMapping.building_name === 'Building' &&
+    previewData.suggestedMapping.unit_number === 'Unit' &&
+    previewData.suggestedMapping.monthly_rent === 'Rent',
+    `Portfolio preview auto-maps aliased headers correctly (got ${JSON.stringify(previewData.suggestedMapping)})`
+  );
+
+  function portfolioCommitBody(mapping) {
+    return `--${pBoundary}\r\nContent-Disposition: form-data; name="file"; filename="portfolio.csv"\r\nContent-Type: text/csv\r\n\r\n${portfolioCsv}\r\n` +
+      `--${pBoundary}\r\nContent-Disposition: form-data; name="mapping"\r\n\r\n${JSON.stringify(mapping)}\r\n` +
+      `--${pBoundary}--\r\n`;
+  }
+
+  const commit1 = await fetch(base + '/api/import/portfolio/commit', {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${pBoundary}`, Cookie: await sessionCookie(orgA, base) },
+    body: portfolioCommitBody(previewData.suggestedMapping),
+  });
+  const commit1Data = await commit1.json();
+  ok(
+    commit1.status === 200 && commit1Data.branchesCreated === 1 && commit1Data.propertiesCreated === 2 &&
+    commit1Data.buildingsCreated === 1 && commit1Data.unitsCreated === 3 && commit1Data.unitsSkipped === 0,
+    `First portfolio import creates 1 branch, 2 properties, 1 building, 3 units (got ${JSON.stringify(commit1Data)})`
+  );
+
+  const commit2 = await fetch(base + '/api/import/portfolio/commit', {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${pBoundary}`, Cookie: await sessionCookie(orgA, base) },
+    body: portfolioCommitBody(previewData.suggestedMapping),
+  });
+  const commit2Data = await commit2.json();
+  ok(
+    commit2.status === 200 && commit2Data.branchesCreated === 0 && commit2Data.propertiesCreated === 0 &&
+    commit2Data.buildingsCreated === 0 && commit2Data.unitsCreated === 0 && commit2Data.unitsSkipped === 3,
+    `Re-uploading the same file finds everything already exists and skips all 3 units instead of duplicating (got ${JSON.stringify(commit2Data)})`
+  );
+
   console.log('\n── Cross-organization isolation (the critical check) ──');
   const bBranches = await orgB('GET', '/api/branches');
   const bProperties = await orgB('GET', '/api/properties');
@@ -149,8 +208,8 @@ async function main() {
   ok(bTenants.data.length === 0, 'Org B sees ZERO tenants (Org A\'s tenants, including the CSV-imported ones, are invisible)');
 
   const summaryA = await orgA('GET', '/api/summary');
-  ok(summaryA.data.branches === 1 && summaryA.data.properties === 2 && summaryA.data.units === 2 && summaryA.data.tenants === 3,
-    `Org A summary is correct: 1 branch, 2 properties, 2 units, 3 tenants (got ${JSON.stringify(summaryA.data)})`);
+  ok(summaryA.data.branches === 2 && summaryA.data.properties === 4 && summaryA.data.units === 5 && summaryA.data.tenants === 3,
+    `Org A summary is correct: 2 branches, 4 properties, 5 units, 3 tenants (got ${JSON.stringify(summaryA.data)})`);
 
   console.log(`\n${pass} passed, ${fail} failed.\n`);
   process.exit(fail ? 1 : 0);

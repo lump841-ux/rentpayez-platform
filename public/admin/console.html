@@ -38,6 +38,7 @@
     <button onclick="switchTab('units')">Units</button>
     <button onclick="switchTab('staff')">Staff</button>
     <button onclick="switchTab('tenants')">Tenants</button>
+    <button onclick="switchTab('bulk')">Bulk Import</button>
   </div>
 
   <div class="panel active" id="panel-overview">
@@ -147,6 +148,27 @@
       <div id="csv-msg"></div>
     </div>
     <div class="card mt"><div class="section-title">Tenants</div><table id="tn-table"><thead><tr><th>Name</th><th>Email</th><th>Unit</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" id="panel-bulk">
+    <div class="card mt">
+      <div class="section-title">Bulk Import Your Portfolio</div>
+      <p style="color:var(--ink-3);font-size:13px;margin-bottom:10px">Upload a spreadsheet exported from whatever system you use now (CSV). Branches, properties, and buildings that don't already exist yet are created automatically — no need to enter them one at a time. Re-uploading the same file is safe; units that already exist are skipped, not duplicated.</p>
+      <p style="margin-bottom:10px"><a href="#" onclick="downloadBulkTemplate();return false" style="color:var(--gold);font-size:13px">Download a starter template (CSV)</a></p>
+      <input type="file" id="bulk-file" accept=".csv" style="margin-bottom:10px" />
+      <button class="btn btn-outline" onclick="bulkPreview()">Preview</button>
+      <div id="bulk-msg"></div>
+    </div>
+
+    <div class="card mt" id="bulk-mapping-card" style="display:none">
+      <div class="section-title">Match Your Columns</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">We guessed the mapping below from your headers — check it and adjust anything that's wrong. Property and Unit Number are required; everything else is optional.</p>
+      <div id="bulk-mapping"></div>
+      <div class="section-title mt">Sample Rows</div>
+      <table id="bulk-sample"><thead></thead><tbody></tbody></table>
+      <button class="btn btn-primary mt" onclick="bulkCommit()">Import <span id="bulk-total-rows"></span></button>
+      <div id="bulk-commit-msg"></div>
+    </div>
   </div>
 </div>
 
@@ -329,6 +351,82 @@ async function importCsv(){
     await refreshAll();
   }catch(err){ msg.className='err'; msg.textContent=err.message; }
 }
+
+let currentBulkMapping = null;
+let currentBulkHeaders = [];
+
+async function bulkPreview(){
+  const fileInput = document.getElementById('bulk-file');
+  const msg = document.getElementById('bulk-msg');
+  document.getElementById('bulk-mapping-card').style.display = 'none';
+  if(!fileInput.files.length){ msg.className='err'; msg.textContent='Choose a file first.'; return; }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  try{
+    const res = await fetch('/api/import/portfolio/preview', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Preview failed');
+    msg.className='ok'; msg.textContent = `Found ${data.totalRows} row(s). Confirm the column mapping below, then Import.`;
+    currentBulkHeaders = data.headers;
+    currentBulkMapping = data.suggestedMapping;
+    renderBulkMapping(data.fields, data.headers, data.suggestedMapping);
+    renderBulkSample(data.headers, data.sampleRows);
+    document.getElementById('bulk-total-rows').textContent = `(${data.totalRows} row(s))`;
+    document.getElementById('bulk-mapping-card').style.display = '';
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+
+function renderBulkMapping(fields, headers, suggested){
+  document.getElementById('bulk-mapping').innerHTML = fields.map(f=>{
+    const opts = ['<option value="">— Not in file —</option>'].concat(
+      headers.map(h=>`<option value="${escAttr(h)}" ${suggested[f.key]===h?'selected':''}>${esc(h)}</option>`)
+    ).join('');
+    return `<div class="field"><label>${esc(f.label)}${f.required?' *':''}</label>
+      <select data-field="${f.key}" onchange="currentBulkMapping['${f.key}']=this.value||null">${opts}</select></div>`;
+  }).join('');
+}
+
+function renderBulkSample(headers, rows){
+  const thead = document.getElementById('bulk-sample').querySelector('thead');
+  const tbody = document.getElementById('bulk-sample').querySelector('tbody');
+  thead.innerHTML = '<tr>' + headers.map(h=>`<th>${esc(h)}</th>`).join('') + '</tr>';
+  tbody.innerHTML = rows.map(r=>'<tr>' + headers.map(h=>`<td>${esc(r[h])}</td>`).join('') + '</tr>').join('') || emptyRow(headers.length);
+}
+
+async function bulkCommit(){
+  const fileInput = document.getElementById('bulk-file');
+  const msg = document.getElementById('bulk-commit-msg');
+  if(!fileInput.files.length || !currentBulkMapping){ msg.className='err'; msg.textContent='Preview a file first.'; return; }
+  if(!currentBulkMapping.property_name || !currentBulkMapping.unit_number){
+    msg.className='err'; msg.textContent='Property and Unit Number columns must be mapped.'; return;
+  }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  fd.append('mapping', JSON.stringify(currentBulkMapping));
+  try{
+    const res = await fetch('/api/import/portfolio/commit', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Import failed');
+    msg.className='ok';
+    msg.textContent = `Created ${data.branchesCreated} branch(es), ${data.propertiesCreated} property(ies), ${data.buildingsCreated} building(s), ${data.unitsCreated} unit(s). Skipped ${data.unitsSkipped} unit(s) already on file.` + (data.errors.length ? ` ${data.errors.length} row error(s).` : '');
+    await refreshAll();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+
+function downloadBulkTemplate(){
+  const csv = 'branch_name,property_name,property_address,building_name,unit_number,monthly_rent\n'
+    + 'Vine West Division,Vine West Development,10 Vine St,Building A,101,1450\n'
+    + 'Vine West Division,Vine West Development,10 Vine St,Building A,102,1450\n'
+    + ',Standalone Property,22 Oak Ave,,204,1200\n';
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'rentpayez-portfolio-template.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
 
 boot();
 </script>

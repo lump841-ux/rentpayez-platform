@@ -270,6 +270,208 @@ router.post('/tenants/import-csv', requireRole('org_admin', 'branch_manager', 'p
   res.json(results);
 });
 
+// ═══════════════════════════════ BULK PORTFOLIO IMPORT ═══════════════════════════════
+// Lets an org admin upload a spreadsheet (CSV) exported from whatever system
+// they currently use — column names don't have to match exactly, they're
+// matched against a flexible alias dictionary. Two-step flow:
+//   1) POST /import/portfolio/preview -> parses headers + a few sample rows,
+//      returns a suggested column mapping for the admin to confirm/adjust.
+//   2) POST /import/portfolio/commit  -> re-parses the full file with the
+//      confirmed mapping and finds-or-creates branches/properties/buildings,
+//      then creates units (skipping ones that already exist by unit_number
+//      within the same property, so re-uploading the same file is safe).
+const IMPORT_FIELDS = [
+  { key: 'branch_name',      label: 'Branch / Division',      required: false },
+  { key: 'property_name',    label: 'Property / Development',  required: true },
+  { key: 'property_address', label: 'Property Address',        required: false },
+  { key: 'building_name',    label: 'Building',                required: false },
+  { key: 'unit_number',      label: 'Unit Number',             required: true },
+  { key: 'monthly_rent',     label: 'Monthly Rent',            required: false },
+];
+
+const IMPORT_ALIASES = {
+  branch_name:      ['branch', 'division', 'branch name', 'district', 'region', 'branch division'],
+  property_name:    ['property', 'development', 'property name', 'project', 'site', 'community', 'property development'],
+  property_address: ['address', 'property address', 'street address', 'street', 'location'],
+  building_name:    ['building', 'bldg', 'building name', 'building number'],
+  unit_number:      ['unit', 'unit number', 'unit no', 'apt', 'apartment', 'apt number', 'apartment number'],
+  monthly_rent:     ['rent', 'monthly rent', 'rent amount', 'monthly rent amount'],
+};
+
+function normalizeHeader(h) {
+  return String(h || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Given the raw CSV header row, suggests which header goes with which
+// IMPORT_FIELDS key by matching normalized text against the key itself and
+// its alias list. Returns { fieldKey: headerNameOrNull, ... }.
+function suggestMapping(headers) {
+  const normalizedHeaders = headers.map(h => ({ raw: h, norm: normalizeHeader(h) }));
+  const mapping = {};
+  for (const field of IMPORT_FIELDS) {
+    const candidates = [normalizeHeader(field.key.replace(/_/g, ' ')), ...(IMPORT_ALIASES[field.key] || []).map(normalizeHeader)];
+    const match = normalizedHeaders.find(h => candidates.includes(h.norm));
+    mapping[field.key] = match ? match.raw : null;
+  }
+  return mapping;
+}
+
+router.post('/import/portfolio/preview', requireRole('org_admin', 'super_admin'), upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'File is required (field name "file")' });
+
+  let records;
+  try {
+    records = parse(req.file.buffer.toString('utf8'), { columns: true, skip_empty_lines: true, trim: true });
+  } catch (err) {
+    return res.status(400).json({ error: 'Could not parse file: ' + err.message });
+  }
+  if (!records.length) return res.status(400).json({ error: 'File has no data rows' });
+
+  const headers = Object.keys(records[0]);
+  res.json({
+    headers,
+    fields: IMPORT_FIELDS,
+    suggestedMapping: suggestMapping(headers),
+    sampleRows: records.slice(0, 5),
+    totalRows: records.length,
+  });
+});
+
+router.post('/import/portfolio/commit', requireRole('org_admin', 'super_admin'), upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'File is required (field name "file")' });
+  let mapping;
+  try {
+    mapping = JSON.parse(req.body.mapping || '{}');
+  } catch {
+    return res.status(400).json({ error: 'mapping must be JSON' });
+  }
+  if (!mapping.property_name || !mapping.unit_number) {
+    return res.status(400).json({ error: 'Property and Unit Number columns must be mapped' });
+  }
+
+  let records;
+  try {
+    records = parse(req.file.buffer.toString('utf8'), { columns: true, skip_empty_lines: true, trim: true });
+  } catch (err) {
+    return res.status(400).json({ error: 'Could not parse file: ' + err.message });
+  }
+
+  const results = { branchesCreated: 0, propertiesCreated: 0, buildingsCreated: 0, unitsCreated: 0, unitsSkipped: 0, errors: [] };
+  const branchCache = new Map();   // lowercased name -> id
+  const propertyCache = new Map(); // `${branchId||''}::${lowercased name}` -> id
+  const buildingCache = new Map(); // `${propertyId}::${lowercased name}` -> id
+
+  async function findOrCreateBranch(name) {
+    if (!name) return null;
+    const key = name.trim().toLowerCase();
+    if (branchCache.has(key)) return branchCache.get(key);
+    const { rows: existing } = await db.query(
+      `SELECT id FROM branches WHERE organization_id = $1 AND lower(name) = $2`, [req.orgId, key]
+    );
+    let id;
+    if (existing.length) {
+      id = existing[0].id;
+    } else {
+      const { rows } = await db.query(
+        `INSERT INTO branches (organization_id, name) VALUES ($1, $2) RETURNING id`, [req.orgId, name.trim()]
+      );
+      id = rows[0].id;
+      results.branchesCreated++;
+    }
+    branchCache.set(key, id);
+    return id;
+  }
+
+  async function findOrCreateProperty(name, address, branchId) {
+    const key = `${branchId || ''}::${name.trim().toLowerCase()}`;
+    if (propertyCache.has(key)) return propertyCache.get(key);
+    const { rows: existing } = await db.query(
+      `SELECT id FROM properties WHERE organization_id = $1 AND lower(name) = $2 AND coalesce(branch_id::text, '') = coalesce($3::text, '')`,
+      [req.orgId, name.trim().toLowerCase(), branchId || null]
+    );
+    let id;
+    if (existing.length) {
+      id = existing[0].id;
+    } else {
+      const { rows } = await db.query(
+        `INSERT INTO properties (organization_id, branch_id, name, address) VALUES ($1, $2, $3, $4) RETURNING id`,
+        [req.orgId, branchId || null, name.trim(), address ? address.trim() : null]
+      );
+      id = rows[0].id;
+      results.propertiesCreated++;
+    }
+    propertyCache.set(key, id);
+    return id;
+  }
+
+  async function findOrCreateBuilding(name, propertyId) {
+    if (!name) return null;
+    const key = `${propertyId}::${name.trim().toLowerCase()}`;
+    if (buildingCache.has(key)) return buildingCache.get(key);
+    const { rows: existing } = await db.query(
+      `SELECT id FROM buildings WHERE organization_id = $1 AND property_id = $2 AND lower(name) = $3`,
+      [req.orgId, propertyId, name.trim().toLowerCase()]
+    );
+    let id;
+    if (existing.length) {
+      id = existing[0].id;
+    } else {
+      const { rows } = await db.query(
+        `INSERT INTO buildings (organization_id, property_id, name) VALUES ($1, $2, $3) RETURNING id`,
+        [req.orgId, propertyId, name.trim()]
+      );
+      id = rows[0].id;
+      results.buildingsCreated++;
+    }
+    buildingCache.set(key, id);
+    return id;
+  }
+
+  for (const [i, row] of records.entries()) {
+    const rowNum = i + 2; // +1 for header, +1 for 1-index
+    const get = (fieldKey) => {
+      const header = mapping[fieldKey];
+      return header && row[header] != null ? String(row[header]).trim() : '';
+    };
+    const propertyName = get('property_name');
+    const unitNumber = get('unit_number');
+    if (!propertyName || !unitNumber) {
+      results.errors.push({ row: rowNum, error: 'Missing property name or unit number' });
+      continue;
+    }
+    try {
+      const branchId = await findOrCreateBranch(get('branch_name'));
+      const propertyId = await findOrCreateProperty(propertyName, get('property_address'), branchId);
+      const buildingId = await findOrCreateBuilding(get('building_name'), propertyId);
+      const rentRaw = get('monthly_rent');
+      const monthlyRent = rentRaw ? (Number(rentRaw.replace(/[^0-9.]/g, '')) || null) : null;
+
+      const { rows: existingUnit } = await db.query(
+        `SELECT id FROM units WHERE organization_id = $1 AND property_id = $2 AND unit_number = $3`,
+        [req.orgId, propertyId, unitNumber]
+      );
+      if (existingUnit.length) {
+        results.unitsSkipped++;
+      } else {
+        await db.query(
+          `INSERT INTO units (organization_id, property_id, building_id, unit_number, monthly_rent) VALUES ($1, $2, $3, $4, $5)`,
+          [req.orgId, propertyId, buildingId, unitNumber, monthlyRent]
+        );
+        results.unitsCreated++;
+      }
+    } catch (err) {
+      results.errors.push({ row: rowNum, error: err.message });
+    }
+  }
+
+  await logAction(req, 'portfolio.import', 'unit', null, {
+    unitsCreated: results.unitsCreated, unitsSkipped: results.unitsSkipped,
+    propertiesCreated: results.propertiesCreated, branchesCreated: results.branchesCreated,
+    buildingsCreated: results.buildingsCreated, errorCount: results.errors.length,
+  });
+  res.json(results);
+});
+
 // ═══════════════════════════════ ORG SUMMARY / ISOLATION CHECK ═══════════════════════════════
 router.get('/summary', async (req, res) => {
   const [branches, properties, buildings, units, tenants, staff] = await Promise.all([
