@@ -153,10 +153,18 @@ CREATE TABLE IF NOT EXISTS maintenance_requests (
   staff_notes     TEXT,
   photo_data      TEXT,   -- base64-encoded proof photo, optional
   photo_mime      TEXT,
+  language        TEXT NOT NULL DEFAULT 'en',   -- language the tenant wrote `description` in ('en' | 'es')
+  description_en  TEXT,   -- machine translation of `description` into English for office staff, only populated when language != 'en' and a translation API key is configured
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved_at     TIMESTAMPTZ
 );
+
+-- Backfill for deployments where maintenance_requests already existed before
+-- language/description_en were added above — same CREATE TABLE IF NOT EXISTS
+-- migration gap explained next to the rent_due_day and avatar backfills.
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS description_en TEXT;
 
 -- ── Documents (digital lease / paperwork / e-signature) ─────────────────
 -- Staff upload a file for a tenant; if requires_signature is set, the

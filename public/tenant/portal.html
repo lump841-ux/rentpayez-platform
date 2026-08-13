@@ -56,6 +56,10 @@ input,select,textarea{font-family:inherit}
 .sb-user-info .r{color:var(--ink-3);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-logout{margin-top:6px;width:100%;padding:9px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid var(--line);color:var(--ink-2);font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px}
 .sb-logout:hover{background:rgba(255,255,255,0.06);color:#fff}
+.lang-toggle{display:flex;border-radius:9px;overflow:hidden;border:1px solid var(--line-2);margin-top:2px}
+.lang-toggle button{flex:1;padding:7px 0;font-size:11.5px;font-weight:700;color:var(--ink-3);background:rgba(255,255,255,0.02)}
+.lang-toggle button.active{background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff}
+.lang-toggle button:not(.active):hover{background:rgba(255,255,255,0.06);color:#fff}
 
 @media (max-width:880px){
   body{flex-direction:column}
@@ -199,9 +203,13 @@ input,select,textarea{font-family:inherit}
     <nav class="sb-nav" id="sbNav"></nav>
     <div class="sb-foot">
       <div class="sb-user" id="sbUser"></div>
+      <div class="lang-toggle" id="langToggle">
+        <button id="langBtnEn" onclick="setLang('en')">EN</button>
+        <button id="langBtnEs" onclick="setLang('es')">ES</button>
+      </div>
       <button class="sb-logout" onclick="logout()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-        Sign out
+        <span id="signOutLabel">Sign out</span>
       </button>
     </div>
   </aside>
@@ -209,16 +217,156 @@ input,select,textarea{font-family:inherit}
 </div>
 
 <script>
+/* ═══════════════════════════ i18n (English / Español) ═══════════════════════════ */
+const I18N = {
+  en: {
+    nav_dash:'Dashboard', nav_pay:'Pay Rent', nav_history:'Payment History', nav_maintenance:'Maintenance',
+    nav_inspections:'Inspections', nav_documents:'Documents', nav_coach:'AI Coach', nav_goals:'My Goals', nav_settings:'Settings',
+    sign_out:'Sign out', resident:'Resident', unit_n:'Unit {{n}}',
+    loading_account:'Loading your account…', loading:'Loading…',
+    welcome_back:'Welcome back, {{name}} 👋', your_resident_portal:'Your resident portal',
+    credit_score:'Credit Score', preview:'Preview', not_connected_yet:'Not connected yet',
+    payment_streak:'Payment Streak', mo_n:'{{n}} mo', based_on_real_payments:'Based on your real payments',
+    total_paid_on_record:'Total Paid on Record', payment_n:'{{n}} payment', payments_n:'{{n}} payments',
+    open_requests:'Open Requests', total_filed_n:'{{n}} total filed',
+    pay_rent_panel:'Pay Rent', due_monthly:'Due monthly', no_rent_on_file:'No rent amount on file yet',
+    go_to_pay_rent:'Go to Pay Rent →',
+    last_12_months:'Last 12 months', months_with_payment:'Months with a recorded payment',
+    recent_maintenance:'Recent maintenance', request_n_filed:'{{n}} request filed', requests_n_filed:'{{n}} requests filed',
+    view_all:'View All →', no_maintenance_yet:'No maintenance requests yet.',
+    streak_legend:'Green = a payment was recorded that month. Red = none on file.',
+    credit_score_title:'Credit score', sample_data_sub:"Sample data — rent-payment credit reporting isn't connected to your account yet",
+    sample_good_range:'Sample · Good range', sample_card_desc:'This is what your score card will look like once your organization turns on rent-payment credit reporting.',
+    poor:'Poor', fair:'Fair', good:'Good', very_good:'Very Good', excellent:'Excellent',
+    pay_rent_title:'Pay Rent', monthly_rent:'Monthly Rent', pay_online:'Pay {{amt}} Online', secured_by_stripe:'🔒 Secured by Stripe',
+    prefer_another_way:'Prefer another way to pay?', online_payment_text:"Online payment goes through your property manager's Stripe account. If it isn't set up yet, or you'd rather pay another way, contact your property manager directly — payments they record manually will still show up in your Payment History.",
+    payment_history_title:'Payment History', total_on_record:'total on record',
+    receipt_num:'Receipt #', date:'Date', amount:'Amount', method:'Method', no_payments_yet:'No payments on record yet.',
+    payment_received:'Payment received — thank you!', payment_status:'Payment status: {{status}}', could_not_confirm:'Could not confirm payment', payment_cancelled:'Payment was cancelled.',
+    maintenance_title:'Maintenance', maintenance_sub:"Report an issue — add a photo so your property manager can see exactly what's going on",
+    report_new_issue:'Report a new issue', category:'Category', priority:'Priority', whats_going_on:"What's going on?",
+    desc_placeholder:'Kitchen sink is leaking under the cabinet…', photo_optional:'Photo (optional)', tap_to_add_photo:'📷 Tap to add a photo as proof',
+    submit_request:'Submit Request', your_requests:'Your requests', no_requests_yet:'No maintenance requests yet.',
+    property_manager_label:'Property manager: ', submitted_msg:'Submitted — your property manager has been notified.',
+    photo_too_large_mr:'Photo is too large — please choose one under 4.5MB.', please_describe:'Please describe the issue', could_not_submit:'Could not submit request',
+    cat_plumbing:'Plumbing', cat_electrical:'Electrical', cat_appliance:'Appliance', cat_hvac:'Heating / Cooling', cat_pest:'Pest', cat_structural:'Structural', cat_other:'Other',
+    pri_low:'Low', pri_normal:'Normal', pri_high:'High', pri_emergency:'Emergency',
+    inspections_title:'Inspections', inspections_sub:'Move-in, move-out, and routine walkthroughs your property manager has recorded for your unit',
+    type:'Type', rooms:'Rooms', view:'View', no_inspections_yet:'No inspections recorded yet.', inspection_suffix:'inspection',
+    documents_title:'Documents', documents_sub:'Your lease, renewals, and paperwork from your property manager — no office visit or mail needed',
+    doc_title:'Title', status:'Status', sign:'Sign', nothing_here_yet:'Nothing here yet.', signed_by:'Signed by {{name}}',
+    sign_prompt:'Type your full legal name to sign this document:', could_not_sign:'Could not sign',
+    coach_title:'AI Coach', coach_sub:'Ask about your rent, payment history, or general credit and budgeting questions',
+    coach_name:'Coach Ezra', grounded_in:'Grounded in your real payment & goal data', ask_anything:'Ask Coach Ezra anything…',
+    coach_greeting:'Hi {{name}}! Ask me anything about your rent, payment history, or general credit and budgeting questions.',
+    coach_unavailable:"Coach Ezra isn't available right now.", coach_error:'Something went wrong reaching Coach Ezra. Try again in a moment.',
+    goals_title:'My Goals', goals_sub:'Personal milestones you set for yourself',
+    add_goal:'Add a goal', title_label:'Title', goal_title_ph:'Save for a car', notes_optional:'Notes (optional)', goal_note_ph:'$5,000 by December',
+    add_goal_btn:'Add Goal', your_goals:'Your goals', no_goals_yet:'No goals yet — add one to start tracking.',
+    done:'Done', mark_done:'Mark done', delete:'Delete', give_goal_title:'Give your goal a title', could_not_add_goal:'Could not add goal', delete_goal_confirm:'Delete this goal?',
+    settings_title:'Settings', settings_sub:'Your contact info and home details',
+    profile_photo:'Profile Photo', upload_photo:'Upload Photo', remove_photo:'Remove Photo',
+    photo_too_large_av:'Photo is too large — please choose one under 2MB.', choose_photo_first:'Choose a photo first.',
+    could_not_save_photo:'Could not save photo', photo_updated:'Photo updated.', could_not_remove_photo:'Could not remove photo',
+    your_home:'Your Home', property:'Property', not_yet_assigned:'Not yet assigned', address:'Address', unit:'Unit',
+    emergency_contact:'Emergency Contact', your_contact_info:'Your Contact Info', name:'Name', email:'Email', phone:'Phone',
+    phone_ph:'(555) 555-1234', save_phone:'Save Phone Number', could_not_save:'Could not save', saved:'Saved.',
+    rent_overdue:'Rent is <strong>{{days}} day{{s}} overdue</strong> (due on the {{due}}).',
+    rent_due_today:'Rent is <strong>due today</strong> (the {{due}}).',
+    rent_due_in:'Rent is <strong>due in {{days}} day{{s}}</strong> (the {{due}}).',
+    pay_now:'Pay Now', could_not_load_account:'Could not load your account',
+    status_reported:'reported', status_in_progress:'in progress', status_resolved:'resolved', status_open:'open',
+    status_pending:'pending', status_pending_signature:'pending signature', status_signed:'signed', status_closed:'closed',
+    status_paid:'paid', status_processing:'processing', status_failed:'failed', status_active:'active', status_done:'done',
+    type_move_in:'move in', type_move_out:'move out', type_routine:'routine',
+  },
+  es: {
+    nav_dash:'Panel', nav_pay:'Pagar Renta', nav_history:'Historial de Pagos', nav_maintenance:'Mantenimiento',
+    nav_inspections:'Inspecciones', nav_documents:'Documentos', nav_coach:'Asistente IA', nav_goals:'Mis Metas', nav_settings:'Configuración',
+    sign_out:'Cerrar sesión', resident:'Residente', unit_n:'Unidad {{n}}',
+    loading_account:'Cargando tu cuenta…', loading:'Cargando…',
+    welcome_back:'Bienvenido de nuevo, {{name}} 👋', your_resident_portal:'Tu portal de residente',
+    credit_score:'Puntaje de Crédito', preview:'Vista previa', not_connected_yet:'Aún no conectado',
+    payment_streak:'Racha de Pagos', mo_n:'{{n}} mes(es)', based_on_real_payments:'Basado en tus pagos reales',
+    total_paid_on_record:'Total Pagado Registrado', payment_n:'{{n}} pago', payments_n:'{{n}} pagos',
+    open_requests:'Solicitudes Abiertas', total_filed_n:'{{n}} en total',
+    pay_rent_panel:'Pagar Renta', due_monthly:'Vence mensualmente', no_rent_on_file:'Aún no hay monto de renta registrado',
+    go_to_pay_rent:'Ir a Pagar Renta →',
+    last_12_months:'Últimos 12 meses', months_with_payment:'Meses con un pago registrado',
+    recent_maintenance:'Mantenimiento reciente', request_n_filed:'{{n}} solicitud presentada', requests_n_filed:'{{n}} solicitudes presentadas',
+    view_all:'Ver Todo →', no_maintenance_yet:'Aún no hay solicitudes de mantenimiento.',
+    streak_legend:'Verde = se registró un pago ese mes. Rojo = ninguno registrado.',
+    credit_score_title:'Puntaje de crédito', sample_data_sub:'Datos de muestra — el reporte de crédito por pago de renta aún no está conectado a tu cuenta',
+    sample_good_range:'Muestra · Rango bueno', sample_card_desc:'Así se verá tu puntaje una vez que tu organización active el reporte de crédito por pago de renta.',
+    poor:'Malo', fair:'Regular', good:'Bueno', very_good:'Muy bueno', excellent:'Excelente',
+    pay_rent_title:'Pagar Renta', monthly_rent:'Renta Mensual', pay_online:'Pagar {{amt}} en línea', secured_by_stripe:'🔒 Protegido por Stripe',
+    prefer_another_way:'¿Prefieres otra forma de pago?', online_payment_text:'El pago en línea se procesa a través de la cuenta de Stripe de tu administrador de propiedad. Si aún no está configurada, o prefieres pagar de otra manera, contacta directamente a tu administrador — los pagos que registre manualmente aparecerán igualmente en tu Historial de Pagos.',
+    payment_history_title:'Historial de Pagos', total_on_record:'total registrado',
+    receipt_num:'Recibo #', date:'Fecha', amount:'Monto', method:'Método', no_payments_yet:'Aún no hay pagos registrados.',
+    payment_received:'Pago recibido — ¡gracias!', payment_status:'Estado del pago: {{status}}', could_not_confirm:'No se pudo confirmar el pago', payment_cancelled:'El pago fue cancelado.',
+    maintenance_title:'Mantenimiento', maintenance_sub:'Reporta un problema — agrega una foto para que tu administrador vea exactamente lo que ocurre',
+    report_new_issue:'Reportar un nuevo problema', category:'Categoría', priority:'Prioridad', whats_going_on:'¿Qué está pasando?',
+    desc_placeholder:'El fregadero de la cocina gotea debajo del gabinete…', photo_optional:'Foto (opcional)', tap_to_add_photo:'📷 Toca para agregar una foto como evidencia',
+    submit_request:'Enviar Solicitud', your_requests:'Tus solicitudes', no_requests_yet:'Aún no hay solicitudes de mantenimiento.',
+    property_manager_label:'Administrador de propiedad: ', submitted_msg:'Enviado — tu administrador de propiedad ha sido notificado.',
+    photo_too_large_mr:'La foto es demasiado grande — elige una menor a 4.5MB.', please_describe:'Por favor describe el problema', could_not_submit:'No se pudo enviar la solicitud',
+    cat_plumbing:'Plomería', cat_electrical:'Eléctrico', cat_appliance:'Electrodoméstico', cat_hvac:'Calefacción / Aire', cat_pest:'Plagas', cat_structural:'Estructural', cat_other:'Otro',
+    pri_low:'Baja', pri_normal:'Normal', pri_high:'Alta', pri_emergency:'Emergencia',
+    inspections_title:'Inspecciones', inspections_sub:'Recorridos de entrada, salida y rutina que tu administrador ha registrado para tu unidad',
+    type:'Tipo', rooms:'Habitaciones', view:'Ver', no_inspections_yet:'Aún no hay inspecciones registradas.', inspection_suffix:'inspección',
+    documents_title:'Documentos', documents_sub:'Tu contrato, renovaciones y papeleo de tu administrador — sin necesidad de visitar la oficina ni enviar correo',
+    doc_title:'Título', status:'Estado', sign:'Firmar', nothing_here_yet:'Aún no hay nada aquí.', signed_by:'Firmado por {{name}}',
+    sign_prompt:'Escribe tu nombre legal completo para firmar este documento:', could_not_sign:'No se pudo firmar',
+    coach_title:'Asistente IA', coach_sub:'Pregunta sobre tu renta, historial de pagos, o dudas generales de crédito y presupuesto',
+    coach_name:'Asistente Ezra', grounded_in:'Basado en tus datos reales de pagos y metas', ask_anything:'Pregúntale algo al Asistente Ezra…',
+    coach_greeting:'¡Hola {{name}}! Pregúntame lo que quieras sobre tu renta, historial de pagos, o dudas generales de crédito y presupuesto.',
+    coach_unavailable:'El Asistente Ezra no está disponible en este momento.', coach_error:'Algo salió mal al contactar al Asistente Ezra. Intenta de nuevo en un momento.',
+    goals_title:'Mis Metas', goals_sub:'Metas personales que te has propuesto',
+    add_goal:'Agregar una meta', title_label:'Título', goal_title_ph:'Ahorrar para un auto', notes_optional:'Notas (opcional)', goal_note_ph:'$5,000 para diciembre',
+    add_goal_btn:'Agregar Meta', your_goals:'Tus metas', no_goals_yet:'Aún no hay metas — agrega una para empezar a seguirla.',
+    done:'Completada', mark_done:'Marcar como hecha', delete:'Eliminar', give_goal_title:'Ponle un título a tu meta', could_not_add_goal:'No se pudo agregar la meta', delete_goal_confirm:'¿Eliminar esta meta?',
+    settings_title:'Configuración', settings_sub:'Tu información de contacto y detalles del hogar',
+    profile_photo:'Foto de Perfil', upload_photo:'Subir Foto', remove_photo:'Eliminar Foto',
+    photo_too_large_av:'La foto es demasiado grande — elige una menor a 2MB.', choose_photo_first:'Elige una foto primero.',
+    could_not_save_photo:'No se pudo guardar la foto', photo_updated:'Foto actualizada.', could_not_remove_photo:'No se pudo eliminar la foto',
+    your_home:'Tu Hogar', property:'Propiedad', not_yet_assigned:'Aún no asignada', address:'Dirección', unit:'Unidad',
+    emergency_contact:'Contacto de Emergencia', your_contact_info:'Tu Información de Contacto', name:'Nombre', email:'Correo electrónico', phone:'Teléfono',
+    phone_ph:'(555) 555-1234', save_phone:'Guardar Teléfono', could_not_save:'No se pudo guardar', saved:'Guardado.',
+    rent_overdue:'La renta está <strong>vencida hace {{days}} día{{s}}</strong> (vence el {{due}}).',
+    rent_due_today:'La renta <strong>vence hoy</strong> (el {{due}}).',
+    rent_due_in:'La renta <strong>vence en {{days}} día{{s}}</strong> (el {{due}}).',
+    pay_now:'Pagar Ahora', could_not_load_account:'No se pudo cargar tu cuenta',
+    status_reported:'reportado', status_in_progress:'en progreso', status_resolved:'resuelto', status_open:'abierto',
+    status_pending:'pendiente', status_pending_signature:'pendiente de firma', status_signed:'firmado', status_closed:'cerrado',
+    status_paid:'pagado', status_processing:'procesando', status_failed:'fallido', status_active:'activo', status_done:'hecho',
+    type_move_in:'entrada', type_move_out:'salida', type_routine:'rutina',
+  }
+};
+let LANG = localStorage.getItem('rpz_lang') === 'es' ? 'es' : 'en';
+function t(key, vars){
+  let s = (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+  if(vars) Object.keys(vars).forEach(k => { s = s.split('{{'+k+'}}').join(vars[k]); });
+  return s;
+}
+function statusLabel(s){ return t('status_' + String(s||'').toLowerCase()) !== 'status_' + String(s||'').toLowerCase() ? t('status_' + String(s||'').toLowerCase()) : String(s||'').replace('_',' '); }
+function setLang(lang){
+  LANG = lang;
+  localStorage.setItem('rpz_lang', lang);
+  document.getElementById('loadingScreen').textContent = t('loading_account');
+  renderSidebar();
+  setView(VIEW);
+}
+
 const NAV = [
-  {id:'dash', label:'Dashboard', ic:'🏠'},
-  {id:'pay', label:'Pay Rent', ic:'💳'},
-  {id:'history', label:'Payment History', ic:'📋'},
-  {id:'maintenance', label:'Maintenance', ic:'🔧'},
-  {id:'inspections', label:'Inspections', ic:'📝'},
-  {id:'documents', label:'Documents', ic:'📄'},
-  {id:'coach', label:'AI Coach', ic:'🤖'},
-  {id:'goals', label:'My Goals', ic:'🎯'},
-  {id:'settings', label:'Settings', ic:'⚙️'}
+  {id:'dash', key:'nav_dash', ic:'🏠'},
+  {id:'pay', key:'nav_pay', ic:'💳'},
+  {id:'history', key:'nav_history', ic:'📋'},
+  {id:'maintenance', key:'nav_maintenance', ic:'🔧'},
+  {id:'inspections', key:'nav_inspections', ic:'📝'},
+  {id:'documents', key:'nav_documents', ic:'📄'},
+  {id:'coach', key:'nav_coach', ic:'🤖'},
+  {id:'goals', key:'nav_goals', ic:'🎯'},
+  {id:'settings', key:'nav_settings', ic:'⚙️'}
 ];
 let ME = null;      // { tenant: {...} } from /api/tenant-auth/me
 let T = null;       // full profile from /api/tenant/me
@@ -233,13 +381,14 @@ function money(cents){ return '$' + (cents/100).toLocaleString(undefined,{minimu
 function fmtDate(d){ return new Date(d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
 
 async function boot(){
+  document.getElementById('loadingScreen').textContent = t('loading_account');
   try{
     const meRes = await fetch('/api/tenant-auth/me');
     if(!meRes.ok){ window.location.href = 'login.html'; return; }
     ME = (await meRes.json()).tenant;
 
     const res = await fetch('/api/tenant/me');
-    if(!res.ok) throw new Error('Could not load your account');
+    if(!res.ok) throw new Error(t('could_not_load_account'));
     T = await res.json();
 
     document.getElementById('loadingScreen').style.display = 'none';
@@ -255,7 +404,7 @@ async function boot(){
 
 function renderSidebar(){
   document.getElementById('sbNav').innerHTML = NAV.map(n =>
-    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}')"><span class="ic">${n.ic}</span><span>${esc(n.label)}</span></button>`
+    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}')"><span class="ic">${n.ic}</span><span>${esc(t(n.key))}</span></button>`
   ).join('');
   const initials = (T.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
   const av = T.has_avatar
@@ -263,15 +412,18 @@ function renderSidebar(){
     : esc(initials);
   document.getElementById('sbUser').innerHTML = `
     <div class="sb-user-av">${av}</div>
-    <div class="sb-user-info"><div class="n">${esc(T.name)}</div><div class="r">${esc(T.unit_number ? 'Unit ' + T.unit_number : 'Resident')}</div></div>
+    <div class="sb-user-info"><div class="n">${esc(T.name)}</div><div class="r">${esc(T.unit_number ? t('unit_n',{n:T.unit_number}) : t('resident'))}</div></div>
   `;
+  document.getElementById('langBtnEn').classList.toggle('active', LANG==='en');
+  document.getElementById('langBtnEs').classList.toggle('active', LANG==='es');
+  document.getElementById('signOutLabel').textContent = t('sign_out');
 }
 
 async function setView(id){
   VIEW = id;
   renderSidebar();
   const m = document.getElementById('appMain');
-  m.innerHTML = '<div class="empty">Loading…</div>';
+  m.innerHTML = `<div class="empty">${t('loading')}</div>`;
   const renderers = { dash: renderDash, pay: renderPay, history: renderHistory, maintenance: renderMaintenance, inspections: renderInspections, documents: renderDocuments, coach: renderCoach, goals: renderGoals, settings: renderSettings };
   await renderers[id]();
   m.scrollTo?.({top:0});
@@ -286,18 +438,19 @@ function reminderBannerHtml(){
   const r = T.rent_reminder;
   if(!r || r.status === 'no_due_day' || r.status === 'paid' || r.status === 'upcoming') return '';
   const overdue = r.status === 'overdue';
+  const due = r.dueDay + ordinal(r.dueDay);
   const text = overdue
-    ? `Rent is <strong>${Math.abs(r.daysUntilDue)} day${Math.abs(r.daysUntilDue)===1?'':'s'} overdue</strong> (due on the ${r.dueDay}${ordinal(r.dueDay)}).`
+    ? t('rent_overdue', {days: Math.abs(r.daysUntilDue), s: Math.abs(r.daysUntilDue)===1?'':'s', due})
     : r.daysUntilDue === 0
-      ? `Rent is <strong>due today</strong> (the ${r.dueDay}${ordinal(r.dueDay)}).`
-      : `Rent is <strong>due in ${r.daysUntilDue} day${r.daysUntilDue===1?'':'s'}</strong> (the ${r.dueDay}${ordinal(r.dueDay)}).`;
+      ? t('rent_due_today', {due})
+      : t('rent_due_in', {days: r.daysUntilDue, s: r.daysUntilDue===1?'':'s', due});
   return `
     <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:13px;margin-bottom:18px;
       background:${overdue?'rgba(139,36,36,0.12)':'rgba(212,162,71,0.1)'};
       border:1px solid ${overdue?'rgba(139,36,36,0.3)':'rgba(212,162,71,0.28)'}">
       <div style="font-size:18px">${overdue?'⚠️':'⏰'}</div>
       <div style="flex:1;color:var(--ink);font-size:13.5px">${text}</div>
-      <button class="btn btn-sm ${overdue?'btn-primary':'btn-secondary'}" onclick="setView('pay')">Pay Now</button>
+      <button class="btn btn-sm ${overdue?'btn-primary':'btn-secondary'}" onclick="setView('pay')">${esc(t('pay_now'))}</button>
     </div>
   `;
 }
@@ -315,67 +468,68 @@ async function renderDash(){
 
   document.getElementById('appMain').innerHTML = `
     <div class="app-head">
-      <div><h1>Welcome back, ${esc((T.name||'').split(' ')[0])} 👋</h1><div class="sub">${esc(T.property_name || 'Your resident portal')}${T.unit_number ? ' · Unit ' + esc(T.unit_number) : ''}</div></div>
+      <div><h1>${esc(t('welcome_back',{name:(T.name||'').split(' ')[0]}))}</h1><div class="sub">${esc(T.property_name || t('your_resident_portal'))}${T.unit_number ? ' · ' + esc(t('unit_n',{n:T.unit_number})) : ''}</div></div>
     </div>
 
     ${reminderBannerHtml()}
 
     <div class="kpi-grid">
-      <div class="kpi gold"><div class="ic">📈</div><div class="label">Credit Score</div><div class="val">Preview</div><div class="trend" style="color:var(--gold-2)">Not connected yet</div></div>
-      <div class="kpi"><div class="ic">🔥</div><div class="label">Payment Streak</div><div class="val">${streak} mo</div><div class="trend">Based on your real payments</div></div>
-      <div class="kpi green"><div class="ic">💰</div><div class="label">Total Paid on Record</div><div class="val">${money(reportedTotal)}</div><div class="trend">${payments.length} payment${payments.length===1?'':'s'}</div></div>
-      <div class="kpi blue"><div class="ic">🔧</div><div class="label">Open Requests</div><div class="val">${openRequests}</div><div class="trend">${mrList.length} total filed</div></div>
+      <div class="kpi gold"><div class="ic">📈</div><div class="label">${esc(t('credit_score'))}</div><div class="val">${esc(t('preview'))}</div><div class="trend" style="color:var(--gold-2)">${esc(t('not_connected_yet'))}</div></div>
+      <div class="kpi"><div class="ic">🔥</div><div class="label">${esc(t('payment_streak'))}</div><div class="val">${t('mo_n',{n:streak})}</div><div class="trend">${esc(t('based_on_real_payments'))}</div></div>
+      <div class="kpi green"><div class="ic">💰</div><div class="label">${esc(t('total_paid_on_record'))}</div><div class="val">${money(reportedTotal)}</div><div class="trend">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))}</div></div>
+      <div class="kpi blue"><div class="ic">🔧</div><div class="label">${esc(t('open_requests'))}</div><div class="val">${openRequests}</div><div class="trend">${esc(t('total_filed_n',{n:mrList.length}))}</div></div>
     </div>
 
     <div class="dash-grid">
       ${scoreCardHtml()}
       <div class="panel" style="background:linear-gradient(180deg,rgba(139,36,36,0.08),rgba(139,36,36,0.02));border-color:rgba(139,36,36,0.2)">
-        <div class="panel-head"><div><h3 class="panel-title">Pay Rent</h3><div class="panel-sub">${T.monthly_rent ? 'Due monthly' : 'No rent amount on file yet'}</div></div></div>
+        <div class="panel-head"><div><h3 class="panel-title">${esc(t('pay_rent_panel'))}</h3><div class="panel-sub">${esc(T.monthly_rent ? t('due_monthly') : t('no_rent_on_file'))}</div></div></div>
         ${T.monthly_rent ? `<div style="font-family:'Plus Jakarta Sans';font-size:42px;font-weight:800;letter-spacing:-1px;color:#fff;line-height:1;margin:4px 0 14px">$${Number(T.monthly_rent).toLocaleString()}<small style="font-size:16px;color:var(--ink-3);font-weight:600;margin-left:3px">/mo</small></div>` : ''}
-        <button class="btn btn-primary btn-block btn-lg" onclick="setView('pay')">Go to Pay Rent →</button>
+        <button class="btn btn-primary btn-block btn-lg" onclick="setView('pay')">${esc(t('go_to_pay_rent'))}</button>
       </div>
     </div>
 
     <div class="dash-grid" style="margin-top:16px">
       <div class="panel">
-        <div class="panel-head"><div><h3 class="panel-title">Last 12 months</h3><div class="panel-sub">Months with a recorded payment</div></div></div>
+        <div class="panel-head"><div><h3 class="panel-title">${esc(t('last_12_months'))}</h3><div class="panel-sub">${esc(t('months_with_payment'))}</div></div></div>
         ${streakStripHtml(payments)}
       </div>
       <div class="panel">
-        <div class="panel-head"><div><h3 class="panel-title">Recent maintenance</h3><div class="panel-sub">${mrList.length} request${mrList.length===1?'':'s'} filed</div></div>
-          <button class="btn btn-sm btn-secondary" onclick="setView('maintenance')">View All →</button>
+        <div class="panel-head"><div><h3 class="panel-title">${esc(t('recent_maintenance'))}</h3><div class="panel-sub">${esc(t(mrList.length===1?'request_n_filed':'requests_n_filed',{n:mrList.length}))}</div></div>
+          <button class="btn btn-sm btn-secondary" onclick="setView('maintenance')">${esc(t('view_all'))}</button>
         </div>
         ${mrList.length ? mrList.slice(0,3).map(r=>`
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line)">
-            <div><div style="color:#fff;font-size:13px;font-weight:600">${esc(r.category)}</div><div style="color:var(--ink-3);font-size:11.5px">${fmtDate(r.created_at)}</div></div>
-            <span class="pill ${esc(r.status)}">${esc(r.status.replace('_',' '))}</span>
-          </div>`).join('') : '<div class="empty">No maintenance requests yet.</div>'}
+            <div><div style="color:#fff;font-size:13px;font-weight:600">${esc(catLabel(r.category))}</div><div style="color:var(--ink-3);font-size:11.5px">${fmtDate(r.created_at)}</div></div>
+            <span class="pill ${esc(r.status)}">${esc(statusLabel(r.status))}</span>
+          </div>`).join('') : `<div class="empty">${esc(t('no_maintenance_yet'))}</div>`}
       </div>
     </div>
   `;
 }
+function catLabel(c){ return t('cat_' + String(c||'').toLowerCase()) !== 'cat_' + String(c||'').toLowerCase() ? t('cat_' + String(c||'').toLowerCase()) : c; }
 
 function scoreCardHtml(){
   // Sample/demo numbers only — no real credit-bureau connection exists yet.
   // Clearly labeled PREVIEW per explicit product decision, never presented as real.
   return `
     <div class="panel score-hero">
-      <div class="preview-ribbon">PREVIEW</div>
+      <div class="preview-ribbon">${esc(t('preview').toUpperCase())}</div>
       <div class="panel-head">
-        <div><h3 class="panel-title">Credit score</h3><div class="panel-sub">Sample data — rent-payment credit reporting isn't connected to your account yet</div></div>
+        <div><h3 class="panel-title">${esc(t('credit_score_title'))}</h3><div class="panel-sub">${esc(t('sample_data_sub'))}</div></div>
       </div>
       <div style="display:flex;align-items:flex-end;gap:14px;margin:10px 0 8px">
         <div style="font-family:'Plus Jakarta Sans';font-size:58px;line-height:0.95;font-weight:800;letter-spacing:-1.5px;color:#fff;opacity:0.55">689</div>
         <div style="margin-bottom:8px">
-          <div style="font-size:12px;color:var(--gold-2);font-weight:700;margin-bottom:2px">Sample · Good range</div>
-          <div style="font-size:11.5px;color:var(--ink-3)">This is what your score card will look like once your organization turns on rent-payment credit reporting.</div>
+          <div style="font-size:12px;color:var(--gold-2);font-weight:700;margin-bottom:2px">${esc(t('sample_good_range'))}</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">${esc(t('sample_card_desc'))}</div>
         </div>
       </div>
       <div style="height:9px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;margin-top:6px;opacity:0.55">
         <div style="height:100%;width:62%;border-radius:99px;background:linear-gradient(90deg, var(--brick-2) 0%, var(--gold) 35%, var(--green-2) 70%, var(--green-3) 100%)"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.5px;text-transform:uppercase">
-        <span>Poor</span><span>Fair</span><span>Good</span><span>Very Good</span><span>Excellent</span>
+        <span>${esc(t('poor'))}</span><span>${esc(t('fair'))}</span><span>${esc(t('good'))}</span><span>${esc(t('very_good'))}</span><span>${esc(t('excellent'))}</span>
       </div>
     </div>
   `;
@@ -407,26 +561,26 @@ function streakStripHtml(payments){
     cells.push(`<div class="${months.has(key)?'':'miss'}">${esc(label)}</div>`);
     cursor.setMonth(cursor.getMonth()+1);
   }
-  return `<div class="streak">${cells.join('')}</div><div style="color:var(--ink-3);font-size:11.5px;margin-top:10px">Green = a payment was recorded that month. Red = none on file.</div>`;
+  return `<div class="streak">${cells.join('')}</div><div style="color:var(--ink-3);font-size:11.5px;margin-top:10px">${esc(t('streak_legend'))}</div>`;
 }
 
 /* ═══════════════════════════ PAY RENT ═══════════════════════════ */
 async function renderPay(){
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>Pay Rent</h1><div class="sub">${esc(T.property_name||'')}${T.unit_number?' · Unit '+esc(T.unit_number):''}</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('pay_rent_title'))}</h1><div class="sub">${esc(T.property_name||'')}${T.unit_number?' · '+esc(t('unit_n',{n:T.unit_number})):''}</div></div></div>
     ${reminderBannerHtml()}
     <div class="dash-grid">
       <div class="panel" style="background:linear-gradient(180deg,rgba(139,36,36,0.1),rgba(139,36,36,0.02));border-color:rgba(139,36,36,0.22)">
-        <div class="panel-head"><h3 class="panel-title">Monthly Rent</h3><span class="pill pending">${esc(T.status||'')}</span></div>
+        <div class="panel-head"><h3 class="panel-title">${esc(t('monthly_rent'))}</h3><span class="pill pending">${esc(statusLabel(T.status))}</span></div>
         <div style="font-family:'Plus Jakarta Sans';font-size:52px;font-weight:800;letter-spacing:-1.5px;color:#fff;line-height:1;margin:4px 0">${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}<small style="font-size:18px;color:var(--ink-3);font-weight:600;margin-left:4px">${T.monthly_rent?'.00':''}</small></div>
         <div style="color:var(--ink-2);font-size:13.5px;margin-bottom:20px">${esc(T.property_address||'')}</div>
-        <button class="btn btn-primary btn-block btn-lg" id="payBtn" onclick="payRent()" ${T.monthly_rent?'':'disabled'}>Pay ${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : ''} Online</button>
+        <button class="btn btn-primary btn-block btn-lg" id="payBtn" onclick="payRent()" ${T.monthly_rent?'':'disabled'}>${esc(t('pay_online',{amt: T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : ''}))}</button>
         <div id="pay-msg" class="msg"></div>
-        <div style="text-align:center;color:var(--ink-3);font-size:11.5px;margin-top:12px">🔒 Secured by Stripe</div>
+        <div style="text-align:center;color:var(--ink-3);font-size:11.5px;margin-top:12px">${esc(t('secured_by_stripe'))}</div>
       </div>
       <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:12px">Prefer another way to pay?</h3>
-        <p style="color:var(--ink-2);font-size:13.5px;line-height:1.6">Online payment goes through your property manager's Stripe account. If it isn't set up yet, or you'd rather pay another way, contact your property manager directly — payments they record manually will still show up in your Payment History.</p>
+        <h3 class="panel-title" style="margin-bottom:12px">${esc(t('prefer_another_way'))}</h3>
+        <p style="color:var(--ink-2);font-size:13.5px;line-height:1.6">${esc(t('online_payment_text'))}</p>
       </div>
     </div>
   `;
@@ -439,11 +593,11 @@ async function handleStripeReturn(){
       const res = await fetch('/api/tenant/payments/confirm?session_id=' + encodeURIComponent(sessionId));
       const data = await res.json();
       window.__payReturnMsg = res.ok
-        ? (data.status === 'paid' ? {cls:'ok', text:'Payment received — thank you!'} : {cls:'err', text:`Payment status: ${data.status}`})
-        : {cls:'err', text: data.error || 'Could not confirm payment'};
+        ? (data.status === 'paid' ? {cls:'ok', text:t('payment_received')} : {cls:'err', text:t('payment_status',{status:data.status})})
+        : {cls:'err', text: data.error || t('could_not_confirm')};
     }catch(err){ window.__payReturnMsg = {cls:'err', text: err.message}; }
   } else if(params.get('payment') === 'cancelled'){
-    window.__payReturnMsg = {cls:'err', text:'Payment was cancelled.'};
+    window.__payReturnMsg = {cls:'err', text:t('payment_cancelled')};
   }
   window.history.replaceState({}, '', window.location.pathname);
 }
@@ -464,10 +618,10 @@ async function renderHistory(){
   const payments = await fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]);
   const total = payments.reduce((s,p)=>s+p.amount_cents,0);
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>Payment History</h1><div class="sub">${payments.length} payment${payments.length===1?'':'s'} · ${money(total)} total on record</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('payment_history_title'))}</h1><div class="sub">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))} · ${money(total)} ${esc(t('total_on_record'))}</div></div></div>
     <div class="panel" style="padding:0">
       <table class="table">
-        <thead><tr><th>Receipt #</th><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
+        <thead><tr><th>${esc(t('receipt_num'))}</th><th>${esc(t('date'))}</th><th>${esc(t('amount'))}</th><th>${esc(t('method'))}</th></tr></thead>
         <tbody>
           ${payments.length ? payments.map(p=>`
             <tr>
@@ -475,7 +629,7 @@ async function renderHistory(){
               <td>${fmtDate(p.paid_at)}</td>
               <td style="font-weight:600;color:#fff">${money(p.amount_cents)}</td>
               <td><span class="pill paid">${esc(p.method)}</span></td>
-            </tr>`).join('') : `<tr><td colspan="4"><div class="empty">No payments on record yet.</div></td></tr>`}
+            </tr>`).join('') : `<tr><td colspan="4"><div class="empty">${esc(t('no_payments_yet'))}</div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -495,70 +649,71 @@ async function renderMaintenance(){
   const rows = await fetch('/api/tenant/maintenance-requests').then(r=>r.ok?r.json():[]);
   PENDING_PHOTO = null;
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>Maintenance</h1><div class="sub">Report an issue — add a photo so your property manager can see exactly what's going on</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('maintenance_title'))}</h1><div class="sub">${esc(t('maintenance_sub'))}</div></div></div>
     <div class="dash-grid">
       <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">Report a new issue</h3>
-        <div class="field"><label>Category</label>
+        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('report_new_issue'))}</h3>
+        <div class="field"><label>${esc(t('category'))}</label>
           <select id="mr-category">
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="appliance">Appliance</option>
-            <option value="hvac">Heating / Cooling</option>
-            <option value="pest">Pest</option>
-            <option value="structural">Structural</option>
-            <option value="other">Other</option>
+            <option value="plumbing">${esc(t('cat_plumbing'))}</option>
+            <option value="electrical">${esc(t('cat_electrical'))}</option>
+            <option value="appliance">${esc(t('cat_appliance'))}</option>
+            <option value="hvac">${esc(t('cat_hvac'))}</option>
+            <option value="pest">${esc(t('cat_pest'))}</option>
+            <option value="structural">${esc(t('cat_structural'))}</option>
+            <option value="other">${esc(t('cat_other'))}</option>
           </select>
         </div>
-        <div class="field"><label>Priority</label>
+        <div class="field"><label>${esc(t('priority'))}</label>
           <select id="mr-priority">
-            <option value="low">Low</option>
-            <option value="normal" selected>Normal</option>
-            <option value="high">High</option>
-            <option value="emergency">Emergency</option>
+            <option value="low">${esc(t('pri_low'))}</option>
+            <option value="normal" selected>${esc(t('pri_normal'))}</option>
+            <option value="high">${esc(t('pri_high'))}</option>
+            <option value="emergency">${esc(t('pri_emergency'))}</option>
           </select>
         </div>
-        <div class="field"><label>What's going on?</label>
-          <textarea id="mr-description" rows="3" placeholder="Kitchen sink is leaking under the cabinet…"></textarea>
+        <div class="field"><label>${esc(t('whats_going_on'))}</label>
+          <textarea id="mr-description" rows="3" placeholder="${esc(t('desc_placeholder'))}"></textarea>
         </div>
         <div class="field">
-          <label>Photo (optional)</label>
-          <label class="upload-box" for="mr-photo-input">📷 Tap to add a photo as proof</label>
+          <label>${esc(t('photo_optional'))}</label>
+          <label class="upload-box" for="mr-photo-input">${esc(t('tap_to_add_photo'))}</label>
           <input type="file" id="mr-photo-input" accept="image/*" style="display:none" onchange="onPhotoSelected(event)"/>
           <div id="mr-photo-preview"></div>
         </div>
-        <button class="btn btn-primary btn-block" onclick="submitMaintenance()">Submit Request</button>
+        <button class="btn btn-primary btn-block" onclick="submitMaintenance()">${esc(t('submit_request'))}</button>
         <div id="mr-msg" class="msg"></div>
       </div>
       <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">Your requests</h3>
+        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('your_requests'))}</h3>
         <div id="mr-list">${renderMrList(rows)}</div>
       </div>
     </div>
   `;
 }
 function renderMrList(rows){
-  if(!rows.length) return '<div class="empty">No maintenance requests yet.</div>';
+  if(!rows.length) return `<div class="empty">${esc(t('no_requests_yet'))}</div>`;
   return rows.map(r => `
     <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)">
       ${r.has_photo ? `<img class="thumb" src="/api/tenant/maintenance-requests/${r.id}/photo" onclick="window.open(this.src,'_blank')"/>` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);color:var(--ink-3);font-size:18px">🔧</div>`}
       <div style="flex:1;min-width:0">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
-          <div style="color:#fff;font-weight:600;font-size:13.5px;text-transform:capitalize">${esc(r.category)} · <span style="color:var(--ink-3);font-weight:500;text-transform:none">${esc(r.priority)}</span></div>
-          <span class="pill ${esc(r.status)}">${esc(r.status.replace('_',' '))}</span>
+          <div style="color:#fff;font-weight:600;font-size:13.5px">${esc(catLabel(r.category))} · <span style="color:var(--ink-3);font-weight:500">${esc(priLabel(r.priority))}</span></div>
+          <span class="pill ${esc(r.status)}">${esc(statusLabel(r.status))}</span>
         </div>
         <div style="color:var(--ink-2);font-size:12.5px;margin-top:3px">${esc(r.description)}</div>
-        ${r.staff_notes ? `<div style="color:var(--ink-3);font-size:12px;margin-top:4px">Property manager: ${esc(r.staff_notes)}</div>` : ''}
+        ${r.staff_notes ? `<div style="color:var(--ink-3);font-size:12px;margin-top:4px">${esc(t('property_manager_label'))}${esc(r.staff_notes)}</div>` : ''}
         <div style="color:var(--ink-3);font-size:11px;margin-top:4px">${fmtDate(r.created_at)}</div>
       </div>
     </div>
   `).join('');
 }
+function priLabel(p){ return t('pri_' + String(p||'').toLowerCase()) !== 'pri_' + String(p||'').toLowerCase() ? t('pri_' + String(p||'').toLowerCase()) : p; }
 function onPhotoSelected(e){
   const file = e.target.files[0];
   const preview = document.getElementById('mr-photo-preview');
   if(!file){ PENDING_PHOTO = null; preview.innerHTML=''; return; }
-  if(file.size > 4.5*1024*1024){ preview.innerHTML = '<div class="msg err">Photo is too large — please choose one under 4.5MB.</div>'; e.target.value=''; return; }
+  if(file.size > 4.5*1024*1024){ preview.innerHTML = `<div class="msg err">${esc(t('photo_too_large_mr'))}</div>`; e.target.value=''; return; }
   const reader = new FileReader();
   reader.onload = () => {
     const base64 = reader.result.split(',')[1];
@@ -573,16 +728,15 @@ async function submitMaintenance(){
   const description = document.getElementById('mr-description').value.trim();
   const msg = document.getElementById('mr-msg');
   try{
-    if(!description) throw new Error('Please describe the issue');
-    const body = { category, priority, description };
+    if(!description) throw new Error(t('please_describe'));
+    const body = { category, priority, description, language: LANG };
     if(PENDING_PHOTO){ body.photoBase64 = PENDING_PHOTO.base64; body.photoMime = PENDING_PHOTO.mime; }
     const res = await fetch('/api/tenant/maintenance-requests', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error || 'Could not submit request');
-    msg.className='msg ok'; msg.textContent='Submitted — your property manager has been notified.';
+    if(!res.ok) throw new Error(data.error || t('could_not_submit'));
     await renderMaintenance();
     document.getElementById('mr-msg').className='msg ok';
-    document.getElementById('mr-msg').textContent='Submitted — your property manager has been notified.';
+    document.getElementById('mr-msg').textContent=t('submitted_msg');
   }catch(err){ msg.className='msg err'; msg.textContent=err.message; }
 }
 
@@ -590,31 +744,32 @@ async function submitMaintenance(){
 async function renderInspections(){
   const rows = await fetch('/api/tenant/inspections').then(r=>r.ok?r.json():[]);
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>Inspections</h1><div class="sub">Move-in, move-out, and routine walkthroughs your property manager has recorded for your unit</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('inspections_title'))}</h1><div class="sub">${esc(t('inspections_sub'))}</div></div></div>
     <div class="panel" style="padding:0">
       <table class="table">
-        <thead><tr><th>Date</th><th>Type</th><th>Rooms</th><th></th></tr></thead>
+        <thead><tr><th>${esc(t('date'))}</th><th>${esc(t('type'))}</th><th>${esc(t('rooms'))}</th><th></th></tr></thead>
         <tbody>
           ${rows.length ? rows.map(i=>`
             <tr>
               <td style="color:#fff;font-weight:600">${fmtDate(i.created_at)}</td>
-              <td style="text-transform:capitalize">${esc((i.inspection_type||'').replace('_',' '))}</td>
+              <td>${esc(inspTypeLabel(i.inspection_type))}</td>
               <td>${i.item_count}</td>
-              <td><button class="btn btn-sm btn-secondary" onclick="viewInspection('${i.id}')">View</button></td>
-            </tr>`).join('') : `<tr><td colspan="4"><div class="empty">No inspections recorded yet.</div></td></tr>`}
+              <td><button class="btn btn-sm btn-secondary" onclick="viewInspection('${i.id}')">${esc(t('view'))}</button></td>
+            </tr>`).join('') : `<tr><td colspan="4"><div class="empty">${esc(t('no_inspections_yet'))}</div></td></tr>`}
         </tbody>
       </table>
     </div>
     <div class="panel mt" id="insp-detail" style="display:none;margin-top:16px"></div>
   `;
 }
+function inspTypeLabel(ty){ const k='type_'+String(ty||'').toLowerCase(); return t(k)!==k ? t(k) : String(ty||'').replace('_',' '); }
 async function viewInspection(id){
   try{
     const insp = await fetch(`/api/tenant/inspections/${id}`).then(r=>r.json());
     const conditionColor = c => c==='good' ? 'var(--green-3)' : c==='fair' ? 'var(--gold-2)' : '#e76d6d';
     const card = document.getElementById('insp-detail');
     card.innerHTML = `
-      <h3 class="panel-title" style="margin-bottom:4px">${esc((insp.inspection_type||'').replace('_',' '))} inspection</h3>
+      <h3 class="panel-title" style="margin-bottom:4px">${esc(inspTypeLabel(insp.inspection_type))} ${esc(t('inspection_suffix'))}</h3>
       <div class="panel-sub" style="margin-bottom:14px">${new Date(insp.created_at).toLocaleString()}</div>
       ${insp.overall_notes ? `<p style="color:var(--ink-2);font-size:13.5px;margin-bottom:14px">${esc(insp.overall_notes)}</p>` : ''}
       ${insp.items.map(it=>`
@@ -635,34 +790,34 @@ async function viewInspection(id){
 async function renderDocuments(){
   const rows = await fetch('/api/tenant/documents').then(r=>r.ok?r.json():[]);
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>Documents</h1><div class="sub">Your lease, renewals, and paperwork from your property manager — no office visit or mail needed</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('documents_title'))}</h1><div class="sub">${esc(t('documents_sub'))}</div></div></div>
     <div class="panel" style="padding:0">
       <table class="table">
-        <thead><tr><th>Title</th><th>Type</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>${esc(t('doc_title'))}</th><th>${esc(t('type'))}</th><th>${esc(t('status'))}</th><th></th></tr></thead>
         <tbody>
           ${rows.length ? rows.map(d=>{
             const action = d.status === 'pending_signature'
-              ? `<button class="btn btn-sm btn-primary" onclick="signDocument('${d.id}')">Sign</button>`
-              : `<a class="btn btn-sm btn-secondary" href="/api/tenant/documents/${d.id}/file" target="_blank">View</a>`;
+              ? `<button class="btn btn-sm btn-primary" onclick="signDocument('${d.id}')">${esc(t('sign'))}</button>`
+              : `<a class="btn btn-sm btn-secondary" href="/api/tenant/documents/${d.id}/file" target="_blank">${esc(t('view'))}</a>`;
             return `<tr>
               <td style="color:#fff;font-weight:600">${esc(d.title)}</td>
               <td style="text-transform:capitalize">${esc(d.doc_type)}</td>
-              <td><span class="pill ${esc(d.status)}">${esc(d.status.replace('_',' '))}</span>${d.signed_name?`<div style="color:var(--ink-3);font-size:11px;margin-top:2px">Signed by ${esc(d.signed_name)}</div>`:''}</td>
+              <td><span class="pill ${esc(d.status)}">${esc(statusLabel(d.status))}</span>${d.signed_name?`<div style="color:var(--ink-3);font-size:11px;margin-top:2px">${esc(t('signed_by',{name:d.signed_name}))}</div>`:''}</td>
               <td>${action}</td>
             </tr>`;
-          }).join('') : `<tr><td colspan="4"><div class="empty">Nothing here yet.</div></td></tr>`}
+          }).join('') : `<tr><td colspan="4"><div class="empty">${esc(t('nothing_here_yet'))}</div></td></tr>`}
         </tbody>
       </table>
     </div>
   `;
 }
 async function signDocument(id){
-  const name = window.prompt('Type your full legal name to sign this document:');
+  const name = window.prompt(t('sign_prompt'));
   if(!name || !name.trim()) return;
   try{
     const res = await fetch(`/api/tenant/documents/${id}/sign`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({signedName:name}) });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error || 'Could not sign');
+    if(!res.ok) throw new Error(data.error || t('could_not_sign'));
     await renderDocuments();
   }catch(err){ alert(err.message); }
 }
@@ -670,16 +825,16 @@ async function signDocument(id){
 /* ═══════════════════════════ AI COACH ═══════════════════════════ */
 async function renderCoach(){
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>AI Coach</h1><div class="sub">Ask about your rent, payment history, or general credit and budgeting questions</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('coach_title'))}</h1><div class="sub">${esc(t('coach_sub'))}</div></div></div>
     <div class="coach-panel">
       <div class="coach-head-bar">
         <div class="chat-avatar">🤖</div>
-        <div style="flex:1"><div style="color:#fff;font-weight:700;font-size:14.5px">Coach Ezra</div><div style="color:var(--ink-3);font-size:11.5px">Grounded in your real payment &amp; goal data</div></div>
+        <div style="flex:1"><div style="color:#fff;font-weight:700;font-size:14.5px">${esc(t('coach_name'))}</div><div style="color:var(--ink-3);font-size:11.5px">${esc(t('grounded_in'))}</div></div>
       </div>
       <div class="coach-feed" id="coachFeed"></div>
       <div class="coach-foot">
         <div class="chat-input">
-          <input id="coachIn" placeholder="Ask Coach Ezra anything…" onkeydown="if(event.key==='Enter')sendCoach()"/>
+          <input id="coachIn" placeholder="${esc(t('ask_anything'))}" onkeydown="if(event.key==='Enter')sendCoach()"/>
           <button id="coachSendBtn" onclick="sendCoach()">→</button>
         </div>
       </div>
@@ -699,7 +854,7 @@ function renderCoachFeed(){
   feed.scrollTop = feed.scrollHeight;
 }
 function appendCoachSystemGreeting(){
-  COACH_HISTORY.push({role:'sys', content: `Hi ${(T.name||'').split(' ')[0]}! Ask me anything about your rent, payment history, or general credit and budgeting questions.`});
+  COACH_HISTORY.push({role:'sys', content: t('coach_greeting', {name:(T.name||'').split(' ')[0]})});
   renderCoachFeed();
 }
 async function sendCoach(){
@@ -713,15 +868,15 @@ async function sendCoach(){
   btn.disabled = true;
   try{
     const historyForApi = COACH_HISTORY.filter(m=>m.role==='user'||m.role==='assistant').slice(-10);
-    const res = await fetch('/api/tenant/coach/message', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message:text, history: historyForApi.slice(0,-1) }) });
+    const res = await fetch('/api/tenant/coach/message', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message:text, history: historyForApi.slice(0,-1), language: LANG }) });
     const data = await res.json();
     if(!res.ok){
-      COACH_HISTORY.push({role:'sys', content: data.error || "Coach Ezra isn't available right now."});
+      COACH_HISTORY.push({role:'sys', content: data.error || t('coach_unavailable')});
     } else {
       COACH_HISTORY.push({role:'assistant', content: data.reply});
     }
   }catch(err){
-    COACH_HISTORY.push({role:'sys', content: 'Something went wrong reaching Coach Ezra. Try again in a moment.'});
+    COACH_HISTORY.push({role:'sys', content: t('coach_error')});
   }
   btn.disabled = false;
   renderCoachFeed();
@@ -731,37 +886,37 @@ async function sendCoach(){
 async function renderGoals(){
   const goals = await fetch('/api/tenant/goals').then(r=>r.ok?r.json():[]);
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>My Goals</h1><div class="sub">Personal milestones you set for yourself</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('goals_title'))}</h1><div class="sub">${esc(t('goals_sub'))}</div></div></div>
     <div class="dash-grid">
       <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">Add a goal</h3>
-        <div class="field"><label>Title</label><input id="goal-title" placeholder="Save for a car"/></div>
-        <div class="field"><label>Notes (optional)</label><input id="goal-note" placeholder="$5,000 by December"/></div>
-        <button class="btn btn-primary btn-block" onclick="addGoal()">Add Goal</button>
+        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('add_goal'))}</h3>
+        <div class="field"><label>${esc(t('title_label'))}</label><input id="goal-title" placeholder="${esc(t('goal_title_ph'))}"/></div>
+        <div class="field"><label>${esc(t('notes_optional'))}</label><input id="goal-note" placeholder="${esc(t('goal_note_ph'))}"/></div>
+        <button class="btn btn-primary btn-block" onclick="addGoal()">${esc(t('add_goal_btn'))}</button>
         <div id="goal-msg" class="msg"></div>
       </div>
       <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">Your goals</h3>
+        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('your_goals'))}</h3>
         <div id="goal-list">${renderGoalList(goals)}</div>
       </div>
     </div>
   `;
 }
 function renderGoalList(goals){
-  if(!goals.length) return '<div class="empty">No goals yet — add one to start tracking.</div>';
+  if(!goals.length) return `<div class="empty">${esc(t('no_goals_yet'))}</div>`;
   return goals.map(g => `
     <div class="goal-card ${g.status==='done'?'done':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div><div style="color:#fff;font-weight:600;font-size:14px">${esc(g.title)}</div>${g.target_note?`<div style="color:var(--ink-3);font-size:12px;margin-top:2px">${esc(g.target_note)}</div>`:''}</div>
-        <span class="pill ${g.status==='done'?'done':'in_progress'}">${g.status==='done'?'Done':g.progress_pct+'%'}</span>
+        <span class="pill ${g.status==='done'?'done':'in_progress'}">${g.status==='done'?esc(t('done')):g.progress_pct+'%'}</span>
       </div>
       <div class="goal-bar"><i style="width:${g.progress_pct}%"></i></div>
       <div style="display:flex;gap:8px;margin-top:8px">
         ${g.status!=='done' ? `
           <button class="btn btn-sm btn-secondary" onclick="bumpGoal('${g.id}', ${Math.min(100,g.progress_pct+10)})">+10%</button>
-          <button class="btn btn-sm btn-secondary" onclick="completeGoal('${g.id}')">Mark done</button>
+          <button class="btn btn-sm btn-secondary" onclick="completeGoal('${g.id}')">${esc(t('mark_done'))}</button>
         ` : ''}
-        <button class="btn btn-sm btn-secondary" onclick="deleteGoal('${g.id}')">Delete</button>
+        <button class="btn btn-sm btn-secondary" onclick="deleteGoal('${g.id}')">${esc(t('delete'))}</button>
       </div>
     </div>
   `).join('');
@@ -771,10 +926,10 @@ async function addGoal(){
   const targetNote = document.getElementById('goal-note').value.trim();
   const msg = document.getElementById('goal-msg');
   try{
-    if(!title) throw new Error('Give your goal a title');
+    if(!title) throw new Error(t('give_goal_title'));
     const res = await fetch('/api/tenant/goals', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title, targetNote}) });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error || 'Could not add goal');
+    if(!res.ok) throw new Error(data.error || t('could_not_add_goal'));
     await renderGoals();
   }catch(err){ msg.className='msg err'; msg.textContent = err.message; }
 }
@@ -787,7 +942,7 @@ async function completeGoal(id){
   await renderGoals();
 }
 async function deleteGoal(id){
-  if(!confirm('Delete this goal?')) return;
+  if(!confirm(t('delete_goal_confirm'))) return;
   await fetch(`/api/tenant/goals/${id}`, { method:'DELETE' });
   await renderGoals();
 }
@@ -795,10 +950,10 @@ async function deleteGoal(id){
 /* ═══════════════════════════ SETTINGS ═══════════════════════════ */
 async function renderSettings(){
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>Settings</h1><div class="sub">Your contact info and home details</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('settings_title'))}</h1><div class="sub">${esc(t('settings_sub'))}</div></div></div>
     <div class="dash-grid">
       <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">Profile Photo</h3>
+        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('profile_photo'))}</h3>
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
           <div id="avatar-preview" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#a32d2d,#5c1818);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:20px;flex-shrink:0;overflow:hidden">
             ${T.has_avatar ? `<img src="/api/tenant/me/avatar?v=${AVATAR_V}" alt="" style="width:100%;height:100%;object-fit:cover"/>` : esc((T.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase())}
@@ -806,29 +961,29 @@ async function renderSettings(){
           <div style="flex:1">
             <input type="file" id="avatar-file" accept="image/*" onchange="onAvatarSelected(event)" style="font-size:12.5px"/>
             <div style="margin-top:8px;display:flex;gap:8px">
-              <button class="btn btn-primary btn-sm" onclick="saveAvatar()">Upload Photo</button>
-              ${T.has_avatar ? `<button class="btn btn-secondary btn-sm" onclick="removeAvatar()">Remove Photo</button>` : ''}
+              <button class="btn btn-primary btn-sm" onclick="saveAvatar()">${esc(t('upload_photo'))}</button>
+              ${T.has_avatar ? `<button class="btn btn-secondary btn-sm" onclick="removeAvatar()">${esc(t('remove_photo'))}</button>` : ''}
             </div>
           </div>
         </div>
         <div id="avatar-msg" class="msg"></div>
       </div>
       <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">Your Home</h3>
-        <div class="field"><label>Property</label><input disabled value="${esc(T.property_name || 'Not yet assigned')}"/></div>
-        <div class="field"><label>Address</label><input disabled value="${esc(T.property_address || '—')}"/></div>
-        <div class="field"><label>Unit</label><input disabled value="${esc(T.unit_number || '—')}"/></div>
-        <div class="field"><label>Monthly Rent</label><input disabled value="${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}"/></div>
+        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('your_home'))}</h3>
+        <div class="field"><label>${esc(t('property'))}</label><input disabled value="${esc(T.property_name || t('not_yet_assigned'))}"/></div>
+        <div class="field"><label>${esc(t('address'))}</label><input disabled value="${esc(T.property_address || '—')}"/></div>
+        <div class="field"><label>${esc(t('unit'))}</label><input disabled value="${esc(T.unit_number || '—')}"/></div>
+        <div class="field"><label>${esc(t('monthly_rent'))}</label><input disabled value="${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}"/></div>
         ${(T.emergency_contact_name || T.emergency_contact_phone) ? `
-          <div class="field"><label>Emergency Contact</label><input disabled value="${esc(T.emergency_contact_name||'')}${T.emergency_contact_phone?' · '+esc(T.emergency_contact_phone):''}"/></div>
+          <div class="field"><label>${esc(t('emergency_contact'))}</label><input disabled value="${esc(T.emergency_contact_name||'')}${T.emergency_contact_phone?' · '+esc(T.emergency_contact_phone):''}"/></div>
         ` : ''}
       </div>
       <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">Your Contact Info</h3>
-        <div class="field"><label>Name</label><input disabled value="${esc(T.name)}"/></div>
-        <div class="field"><label>Email</label><input disabled value="${esc(T.email)}"/></div>
-        <div class="field"><label>Phone</label><input id="f-phone" value="${esc(T.phone||'')}" placeholder="(555) 555-1234"/></div>
-        <button class="btn btn-primary" onclick="saveProfile()">Save Phone Number</button>
+        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('your_contact_info'))}</h3>
+        <div class="field"><label>${esc(t('name'))}</label><input disabled value="${esc(T.name)}"/></div>
+        <div class="field"><label>${esc(t('email'))}</label><input disabled value="${esc(T.email)}"/></div>
+        <div class="field"><label>${esc(t('phone'))}</label><input id="f-phone" value="${esc(T.phone||'')}" placeholder="${esc(t('phone_ph'))}"/></div>
+        <button class="btn btn-primary" onclick="saveProfile()">${esc(t('save_phone'))}</button>
         <div id="profile-msg" class="msg"></div>
       </div>
     </div>
@@ -839,7 +994,7 @@ function onAvatarSelected(e){
   if(!file) return;
   if(file.size > 2.2*1024*1024){
     document.getElementById('avatar-msg').className = 'msg err';
-    document.getElementById('avatar-msg').textContent = 'Photo is too large — please choose one under 2MB.';
+    document.getElementById('avatar-msg').textContent = t('photo_too_large_av');
     e.target.value = ''; return;
   }
   const reader = new FileReader();
@@ -848,14 +1003,14 @@ function onAvatarSelected(e){
 }
 async function saveAvatar(){
   const msg = document.getElementById('avatar-msg');
-  if(!PENDING_AVATAR){ msg.className = 'msg err'; msg.textContent = 'Choose a photo first.'; return; }
+  if(!PENDING_AVATAR){ msg.className = 'msg err'; msg.textContent = t('choose_photo_first'); return; }
   try{
     const res = await fetch('/api/tenant/me/avatar', { method:'PATCH', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ avatarBase64: PENDING_AVATAR.base64, avatarMime: PENDING_AVATAR.mime }) });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error || 'Could not save photo');
+    if(!res.ok) throw new Error(data.error || t('could_not_save_photo'));
     T.has_avatar = true; PENDING_AVATAR = null; AVATAR_V++;
-    msg.className = 'msg ok'; msg.textContent = 'Photo updated.';
+    msg.className = 'msg ok'; msg.textContent = t('photo_updated');
     renderSidebar(); renderSettings();
   }catch(err){ msg.className = 'msg err'; msg.textContent = err.message; }
 }
@@ -864,7 +1019,7 @@ async function removeAvatar(){
   try{
     const res = await fetch('/api/tenant/me/avatar', { method:'DELETE' });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error || 'Could not remove photo');
+    if(!res.ok) throw new Error(data.error || t('could_not_remove_photo'));
     T.has_avatar = false; AVATAR_V++;
     renderSidebar(); renderSettings();
   }catch(err){ msg.className = 'msg err'; msg.textContent = err.message; }
@@ -875,9 +1030,9 @@ async function saveProfile(){
   try{
     const res = await fetch('/api/tenant/me', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone}) });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error || 'Could not save');
+    if(!res.ok) throw new Error(data.error || t('could_not_save'));
     T.phone = phone;
-    msg.className = 'msg ok'; msg.textContent = 'Saved.';
+    msg.className = 'msg ok'; msg.textContent = t('saved');
   }catch(err){ msg.className = 'msg err'; msg.textContent = err.message; }
 }
 

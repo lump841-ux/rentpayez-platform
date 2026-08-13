@@ -422,6 +422,21 @@ function uploadTenantAvatar(tenantId){
 }
 
 // ═══════════════════════════════ MAINTENANCE ═══════════════════════════════
+// If a tenant filed a request in Spanish, show staff the English translation
+// as the primary text (what most office staff will read day-to-day), with
+// the original Spanish available underneath so nothing is lost. If no
+// translation API key is configured on the org, description_en will be
+// null — show a clear note instead of silently hiding the request or
+// guessing a translation ourselves.
+function maintDescriptionHtml(r){
+  if(r.language !== 'es') return esc(r.description);
+  if(r.description_en){
+    return `<div>${esc(r.description_en)}</div>
+      <div style="color:var(--ink-3,#8a94a3);font-size:11px;margin-top:3px">🇪🇸 ${esc(r.description)}</div>`;
+  }
+  return `<div>${esc(r.description)}</div>
+    <div style="color:var(--ink-3,#8a94a3);font-size:11px;margin-top:3px;font-style:italic">Written in Spanish — translation not available (no AI key configured)</div>`;
+}
 async function refreshMaintenance(){
   const rows = await api('/maintenance-requests').catch(()=>[]);
   document.getElementById('mr-table').querySelector('tbody').innerHTML = rows.map(r=>`
@@ -430,7 +445,7 @@ async function refreshMaintenance(){
       <td>${esc(r.unit_number||'—')}</td>
       <td>${esc(r.category)}</td>
       <td>${esc(r.priority)}</td>
-      <td style="max-width:260px">${esc(r.description)}</td>
+      <td style="max-width:260px">${maintDescriptionHtml(r)}</td>
       <td><select onchange="updateMaintenance('${r.id}', this.value, null)">
         ${['open','in_progress','resolved','closed'].map(s=>`<option value="${s}" ${s===r.status?'selected':''}>${s.replace('_',' ')}</option>`).join('')}
       </select></td>

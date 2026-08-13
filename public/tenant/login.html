@@ -48,6 +48,10 @@ a{color:inherit}
 .msg.err{color:#e76d6d}
 .foot{text-align:center;color:var(--ink-3);font-size:12.5px;margin-top:20px}
 .foot a{color:var(--gold-2)}
+.lang-toggle{display:flex;justify-content:center;gap:6px;margin-bottom:18px}
+.lang-toggle button{padding:6px 14px;border-radius:99px;font-size:11.5px;font-weight:700;color:var(--ink-3);border:1px solid var(--line-2);background:rgba(255,255,255,0.02)}
+.lang-toggle button.active{background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff;border-color:var(--green)}
+.lang-toggle button:not(.active):hover{background:rgba(255,255,255,0.06);color:#fff}
 </style>
 </head>
 <body>
@@ -69,19 +73,40 @@ a{color:inherit}
     </span>
     <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
   </div>
-  <div class="sub">Sign in with the email and temporary password your property manager gave you</div>
+  <div class="lang-toggle" id="langToggle">
+    <button id="langBtnEn" onclick="setLang('en')">EN</button>
+    <button id="langBtnEs" onclick="setLang('es')">ES</button>
+  </div>
+  <div class="sub" id="loginSub">Sign in with the email and temporary password your property manager gave you</div>
 
   <div class="card">
-    <div class="field"><label>Email</label><input id="li-email" type="email" placeholder="you@email.com" /></div>
-    <div class="field"><label>Password</label><input id="li-password" type="password" placeholder="••••••••" /></div>
-    <button class="btn-primary" onclick="doLogin()">Sign In</button>
+    <div class="field"><label id="lblEmail">Email</label><input id="li-email" type="email" placeholder="you@email.com" /></div>
+    <div class="field"><label id="lblPassword">Password</label><input id="li-password" type="password" placeholder="••••••••" /></div>
+    <button class="btn-primary" onclick="doLogin()" id="btnSignIn">Sign In</button>
     <div id="li-msg" class="msg"></div>
   </div>
 
-  <p class="foot">Property manager or staff? <a href="/admin/login.html">Sign in here instead</a></p>
+  <p class="foot" id="footText">Property manager or staff? <a href="/admin/login.html">Sign in here instead</a></p>
 </div>
 
 <script>
+const I18N_LOGIN = {
+  en: { sub:'Sign in with the email and temporary password your property manager gave you', email:'Email', password:'Password', sign_in:'Sign In', login_failed:'Login failed', staff_prompt:'Property manager or staff? ', staff_link:'Sign in here instead' },
+  es: { sub:'Inicia sesión con el correo y la contraseña temporal que te dio tu administrador de propiedad', email:'Correo electrónico', password:'Contraseña', sign_in:'Iniciar Sesión', login_failed:'No se pudo iniciar sesión', staff_prompt:'¿Administrador de propiedad o personal? ', staff_link:'Inicia sesión aquí' }
+};
+let LANG = localStorage.getItem('rpz_lang') === 'es' ? 'es' : 'en';
+function applyLang(){
+  const d = I18N_LOGIN[LANG];
+  document.getElementById('loginSub').textContent = d.sub;
+  document.getElementById('lblEmail').textContent = d.email;
+  document.getElementById('lblPassword').textContent = d.password;
+  document.getElementById('btnSignIn').textContent = d.sign_in;
+  document.getElementById('footText').innerHTML = d.staff_prompt + '<a href="/admin/login.html">' + d.staff_link + '</a>';
+  document.getElementById('langBtnEn').classList.toggle('active', LANG==='en');
+  document.getElementById('langBtnEs').classList.toggle('active', LANG==='es');
+}
+function setLang(l){ LANG = l; localStorage.setItem('rpz_lang', l); applyLang(); }
+applyLang();
 async function doLogin(){
   const email = document.getElementById('li-email').value.trim();
   const password = document.getElementById('li-password').value;
@@ -90,7 +115,7 @@ async function doLogin(){
   try{
     const res = await fetch('/api/tenant-auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password}) });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error || 'Login failed');
+    if(!res.ok) throw new Error(data.error || I18N_LOGIN[LANG].login_failed);
     window.location.href = 'portal.html';
   }catch(err){ msg.className='msg err'; msg.textContent = err.message; }
 }

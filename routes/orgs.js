@@ -705,8 +705,15 @@ router.get('/summary', async (req, res) => {
 // Tenants file these from the portal (routes/tenant.js); staff triage/work
 // them here, scoped the same way as tenants/units (via scopedPropertyIds).
 const MAINT_LIST_COLS = `mr.id, mr.organization_id, mr.tenant_id, mr.unit_id, mr.property_id, mr.category, mr.priority,
-  mr.description, mr.status, mr.staff_notes, mr.created_at, mr.updated_at, mr.resolved_at,
+  mr.description, mr.status, mr.staff_notes, mr.language, mr.description_en, mr.created_at, mr.updated_at, mr.resolved_at,
   (mr.photo_data IS NOT NULL) AS has_photo`;
+// Same column list, unprefixed, for use after a plain UPDATE maintenance_requests
+// (no alias) — RETURNING * would also leak the base64 photo_data blob into
+// every status-update response, which is unnecessary since the admin console
+// already has a dedicated /maintenance-requests/:id/photo route for that.
+const MAINT_UPDATE_RETURNING = `id, organization_id, tenant_id, unit_id, property_id, category, priority,
+  description, status, staff_notes, language, description_en, created_at, updated_at, resolved_at,
+  (photo_data IS NOT NULL) AS has_photo`;
 
 router.get('/maintenance-requests', async (req, res) => {
   const scope = await scopedPropertyIds(req.session.user);
@@ -755,7 +762,7 @@ router.patch('/maintenance-requests/:id', requireRole(...MAINT_ROLES), async (re
 
   const scope = await scopedPropertyIds(req.session.user);
   const { rows: existing } = await db.query(
-    `SELECT * FROM maintenance_requests WHERE id = $1 AND organization_id = $2`, [req.params.id, req.orgId]
+    `SELECT id, property_id FROM maintenance_requests WHERE id = $1 AND organization_id = $2`, [req.params.id, req.orgId]
   );
   if (!existing.length) return res.status(404).json({ error: 'Maintenance request not found' });
   if (scope !== null && (!existing[0].property_id || !scope.includes(existing[0].property_id))) {
@@ -769,7 +776,7 @@ router.patch('/maintenance-requests/:id', requireRole(...MAINT_ROLES), async (re
        staff_notes = COALESCE($3, staff_notes),
        updated_at = now(),
        resolved_at = CASE WHEN $1 IN ('resolved','closed') THEN now() ELSE resolved_at END
-     WHERE id = $4 RETURNING *`,
+     WHERE id = $4 RETURNING ${MAINT_UPDATE_RETURNING}`,
     [status || null, priority || null, staffNotes != null ? staffNotes : null, req.params.id]
   );
   await logAction(req, 'maintenance.update', 'maintenance_request', req.params.id, { status, priority });

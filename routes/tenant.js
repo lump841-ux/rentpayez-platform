@@ -4,6 +4,7 @@ const crypto  = require('crypto');
 const db = require('../services/db');
 const { requireTenantAuth } = require('../middleware/auth');
 const { rentReminderStatus } = require('../services/reminders');
+const { translateToEnglish } = require('../services/translate');
 
 const router = express.Router();
 router.use(requireTenantAuth);
@@ -130,7 +131,7 @@ router.get('/me/avatar', async (req, res) => {
 const MAX_PHOTO_BASE64_CHARS = 6 * 1024 * 1024; // ~4.5MB decoded, generous for a downsized photo
 
 router.post('/maintenance-requests', async (req, res) => {
-  const { category, priority, description, photoBase64, photoMime } = req.body || {};
+  const { category, priority, description, photoBase64, photoMime, language } = req.body || {};
   if (!description || !description.trim()) return res.status(400).json({ error: 'description is required' });
   if (photoBase64 && photoBase64.length > MAX_PHOTO_BASE64_CHARS) return res.status(400).json({ error: 'Photo is too large' });
   if (photoBase64 && !photoMime) return res.status(400).json({ error: 'photoMime is required when photoBase64 is provided' });
@@ -142,13 +143,25 @@ router.post('/maintenance-requests', async (req, res) => {
     if (rows.length) propertyId = rows[0].property_id;
   }
 
+  // If the tenant is writing in Spanish, translate the description into
+  // English so office staff (who may not read Spanish) can understand it
+  // without leaving the original. Never fabricated — description_en stays
+  // null if no translation API key is configured or the call fails; the
+  // admin console shows a clear "translation not available" note in that case.
+  const lang = language === 'es' ? 'es' : 'en';
+  let descriptionEn = null;
+  if (lang === 'es') {
+    const { text } = await translateToEnglish(description.trim());
+    descriptionEn = text;
+  }
+
   const { rows } = await db.query(
-    `INSERT INTO maintenance_requests (organization_id, tenant_id, unit_id, property_id, category, priority, description, photo_data, photo_mime)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     RETURNING id, organization_id, tenant_id, unit_id, property_id, category, priority, description, status, staff_notes, created_at, updated_at, resolved_at,
+    `INSERT INTO maintenance_requests (organization_id, tenant_id, unit_id, property_id, category, priority, description, photo_data, photo_mime, language, description_en)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     RETURNING id, organization_id, tenant_id, unit_id, property_id, category, priority, description, status, staff_notes, language, description_en, created_at, updated_at, resolved_at,
                (photo_data IS NOT NULL) AS has_photo`,
     [t.organizationId, t.id, t.unitId || null, propertyId, category || 'other', priority || 'normal', description.trim(),
-     photoBase64 || null, photoBase64 ? photoMime : null]
+     photoBase64 || null, photoBase64 ? photoMime : null, lang, descriptionEn]
   );
   res.json(rows[0]);
 });

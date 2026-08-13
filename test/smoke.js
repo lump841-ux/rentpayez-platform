@@ -371,6 +371,23 @@ async function main() {
   const mrPhotoNoneFetch = await residentSession('GET', `/api/tenant/maintenance-requests/${mrCreate.data.id}/photo`);
   ok(mrPhotoNoneFetch.status === 404, 'Fetching a photo for a request that has none returns 404, not a crash');
 
+  console.log('\n── Maintenance request language + translation ──');
+  ok(mrCreate.data.language === 'en' && mrCreate.data.description_en === null, 'A request filed without a language defaults to English, no translation needed');
+
+  const mrSpanish = await residentSession('POST', '/api/tenant/maintenance-requests', {
+    category: 'hvac', priority: 'normal', description: 'El aire acondicionado no enfría', language: 'es',
+  });
+  ok(mrSpanish.status === 200 && mrSpanish.data.language === 'es', 'A request filed with language: es is stored as Spanish');
+  ok(mrSpanish.data.description === 'El aire acondicionado no enfría', 'The original Spanish text is preserved exactly as written');
+  ok(mrSpanish.data.description_en === null, 'No ANTHROPIC_API_KEY/OPENAI_API_KEY is configured in this test env, so description_en stays null rather than fabricating a translation');
+
+  const mrStaffListEs = await orgA('GET', '/api/maintenance-requests');
+  const mrSpanishStaffRow = mrStaffListEs.data.find(r => r.id === mrSpanish.data.id);
+  ok(mrSpanishStaffRow && mrSpanishStaffRow.language === 'es' && mrSpanishStaffRow.description_en === null, 'Staff list view also exposes language + description_en (null here) so the console can show a "translation not available" note instead of guessing');
+
+  const mrUpdateEs = await orgA('PATCH', `/api/maintenance-requests/${mrSpanish.data.id}`, { staffNotes: 'Técnico asignado' });
+  ok(mrUpdateEs.status === 200 && mrUpdateEs.data.language === 'es' && !('photo_data' in mrUpdateEs.data), 'Updating a request keeps the language field and never leaks the raw photo_data blob in the response');
+
   console.log('\n── My Goals ──');
   const goalCreate = await residentSession('POST', '/api/tenant/goals', { title: 'Save for a car', targetNote: '$5,000 by December' });
   ok(goalCreate.status === 200 && goalCreate.data.progress_pct === 0 && goalCreate.data.status === 'in_progress', 'Tenant creates a goal, starts at 0% in_progress');
