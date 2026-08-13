@@ -42,7 +42,8 @@
       <div class="card">
         <div class="section-title">Monthly Rent</div>
         <div class="rent" id="f-rent">—</div>
-        <p style="color:var(--ink-3);font-size:12.5px;margin-top:8px">Online rent payment isn't wired up yet in this preview — this is a read-only view of what your property manager has on file.</p>
+        <button class="btn btn-primary mt" onclick="payRent()" id="pay-btn">Pay Rent Online</button>
+        <div id="pay-msg" class="mt"></div>
       </div>
     </div>
 
@@ -60,6 +61,44 @@
       <div class="row"><span class="lbl">Contact</span><span id="f-em-name">—</span></div>
       <div class="row"><span class="lbl">Phone</span><span id="f-em-phone">—</span></div>
       <p id="f-em-instructions" style="color:var(--ink-2);font-size:13.5px;margin-top:10px"></p>
+    </div>
+
+    <div class="card mt">
+      <div class="section-title">Payment History &amp; Receipts</div>
+      <table id="pay-table" style="width:100%"><thead><tr><th style="text-align:left">Receipt #</th><th style="text-align:left">Amount</th><th style="text-align:left">Method</th><th style="text-align:left">Date</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card mt">
+      <div class="section-title">Report a Maintenance Issue</div>
+      <div class="field"><label>Category</label>
+        <select id="mr-category">
+          <option value="plumbing">Plumbing</option>
+          <option value="electrical">Electrical</option>
+          <option value="appliance">Appliance</option>
+          <option value="hvac">Heating / Cooling</option>
+          <option value="pest">Pest</option>
+          <option value="structural">Structural</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Priority</label>
+        <select id="mr-priority">
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
+          <option value="emergency">Emergency</option>
+        </select>
+      </div>
+      <div class="field"><label>What's going on?</label><textarea id="mr-description" rows="3" placeholder="Kitchen sink is leaking under the cabinet…" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line-2);font-family:inherit"></textarea></div>
+      <button class="btn btn-primary" onclick="submitMaintenance()">Submit Request</button>
+      <div id="mr-msg"></div>
+      <table id="mr-table" class="mt" style="width:100%"><thead><tr><th style="text-align:left">Date</th><th style="text-align:left">Category</th><th style="text-align:left">Description</th><th style="text-align:left">Status</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card mt">
+      <div class="section-title">Documents</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Your lease, renewals, and any paperwork your property manager sends land here — no need to visit the office or wait for mail.</p>
+      <table id="doc-table" style="width:100%"><thead><tr><th style="text-align:left">Title</th><th style="text-align:left">Type</th><th style="text-align:left">Status</th><th></th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 </div>
@@ -98,9 +137,100 @@ async function boot(){
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = '';
+
+    await handleStripeReturn();
+    await refreshPayments();
+    await refreshMaintenance();
+    await refreshDocuments();
   }catch(err){
     document.getElementById('loading').textContent = err.message;
   }
+}
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function emptyRow(cols){ return `<tr><td colspan="${cols}" style="color:var(--ink-3);text-align:center;padding:16px">Nothing here yet.</td></tr>`; }
+
+// ═══════════════════════════════ PAYMENTS (Stripe) ═══════════════════════════════
+async function handleStripeReturn(){
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session_id');
+  const payMsg = document.getElementById('pay-msg');
+  if(params.get('payment') === 'success' && sessionId){
+    try{
+      const res = await fetch('/api/tenant/payments/confirm?session_id=' + encodeURIComponent(sessionId));
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error || 'Could not confirm payment');
+      payMsg.className = data.status === 'paid' ? 'ok' : 'err';
+      payMsg.textContent = data.status === 'paid' ? 'Payment received — thank you!' : `Payment status: ${data.status}`;
+    }catch(err){ payMsg.className = 'err'; payMsg.textContent = err.message; }
+  } else if(params.get('payment') === 'cancelled'){
+    payMsg.className = 'err'; payMsg.textContent = 'Payment was cancelled.';
+  }
+  window.history.replaceState({}, '', window.location.pathname);
+}
+
+async function payRent(){
+  const payMsg = document.getElementById('pay-msg');
+  try{
+    const res = await fetch('/api/tenant/payments/checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Could not start checkout');
+    window.location.href = data.url;
+  }catch(err){ payMsg.className = 'err'; payMsg.textContent = err.message; }
+}
+
+async function refreshPayments(){
+  const res = await fetch('/api/tenant/payments');
+  const rows = res.ok ? await res.json() : [];
+  document.getElementById('pay-table').querySelector('tbody').innerHTML = rows.map(p=>
+    `<tr><td>${esc(p.receipt_number)}</td><td>$${(p.amount_cents/100).toFixed(2)}</td><td>${esc(p.method)}</td><td>${new Date(p.paid_at).toLocaleDateString()}</td></tr>`
+  ).join('') || emptyRow(4);
+}
+
+// ═══════════════════════════════ MAINTENANCE ═══════════════════════════════
+async function submitMaintenance(){
+  const category = document.getElementById('mr-category').value;
+  const priority = document.getElementById('mr-priority').value;
+  const description = document.getElementById('mr-description').value.trim();
+  const msg = document.getElementById('mr-msg');
+  try{
+    if(!description) throw new Error('Please describe the issue');
+    const res = await fetch('/api/tenant/maintenance-requests', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({category,priority,description}) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Could not submit request');
+    document.getElementById('mr-description').value='';
+    msg.className='ok'; msg.textContent='Submitted — your property manager has been notified.';
+    await refreshMaintenance();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+async function refreshMaintenance(){
+  const res = await fetch('/api/tenant/maintenance-requests');
+  const rows = res.ok ? await res.json() : [];
+  document.getElementById('mr-table').querySelector('tbody').innerHTML = rows.map(r=>
+    `<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${esc(r.category)}</td><td>${esc(r.description)}</td><td>${esc(r.status.replace('_',' '))}</td></tr>`
+  ).join('') || emptyRow(4);
+}
+
+// ═══════════════════════════════ DOCUMENTS ═══════════════════════════════
+async function refreshDocuments(){
+  const res = await fetch('/api/tenant/documents');
+  const rows = res.ok ? await res.json() : [];
+  document.getElementById('doc-table').querySelector('tbody').innerHTML = rows.map(d=>{
+    const action = d.status === 'pending_signature'
+      ? `<button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="signDocument('${d.id}')">Sign</button>`
+      : `<a href="/api/tenant/documents/${d.id}/file" target="_blank" style="color:var(--gold)">View</a>`;
+    return `<tr><td>${esc(d.title)}</td><td>${esc(d.doc_type)}</td><td>${esc(d.status.replace('_',' '))}${d.signed_name?` — ${esc(d.signed_name)}`:''}</td><td>${action}</td></tr>`;
+  }).join('') || emptyRow(4);
+}
+async function signDocument(id){
+  const name = window.prompt('Type your full legal name to sign this document:');
+  if(!name || !name.trim()) return;
+  try{
+    const res = await fetch(`/api/tenant/documents/${id}/sign`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({signedName:name}) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Could not sign');
+    await refreshDocuments();
+  }catch(err){ alert(err.message); }
 }
 
 async function saveProfile(){

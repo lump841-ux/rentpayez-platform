@@ -39,6 +39,9 @@
     <button onclick="switchTab('staff')">Staff</button>
     <button onclick="switchTab('tenants')">Tenants</button>
     <button onclick="switchTab('bulk')">Bulk Import</button>
+    <button onclick="switchTab('maintenance')">Maintenance</button>
+    <button onclick="switchTab('documents')">Documents</button>
+    <button onclick="switchTab('payments')">Payments</button>
   </div>
 
   <div class="panel active" id="panel-overview">
@@ -174,11 +177,67 @@
       <div id="bulk-commit-msg"></div>
     </div>
   </div>
+
+  <div class="panel" id="panel-maintenance">
+    <div class="card mt">
+      <div class="section-title">Maintenance Requests</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Tenants file these from the Resident Portal. Update status/notes as work happens.</p>
+      <table id="mr-table"><thead><tr><th>Tenant</th><th>Unit</th><th>Category</th><th>Priority</th><th>Description</th><th>Status</th><th>Notes</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-documents">
+    <div class="card mt">
+      <div class="section-title">Send a Document to a Tenant</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Upload a lease, renewal, or notice for one tenant — it shows up in their Resident Portal immediately. Check "Requires signature" for anything that needs a digital signature back (a typed-name e-signature with a timestamp/IP audit trail — not a DocuSign integration).</p>
+      <div class="form-row">
+        <div class="field"><label>Tenant</label><select id="dc-tenant"></select></div>
+        <div class="field"><label>Title</label><input id="dc-title" placeholder="2026 Lease Renewal" /></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Type</label>
+          <select id="dc-type">
+            <option value="lease">Lease</option>
+            <option value="renewal">Renewal</option>
+            <option value="notice">Notice</option>
+            <option value="addendum">Addendum</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field"><label>File (PDF, etc.)</label><input type="file" id="dc-file" /></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);margin:8px 0"><input type="checkbox" id="dc-requires-sig" /> Requires tenant signature</label>
+      <button class="btn btn-primary" onclick="uploadDocument()">Send Document</button>
+      <div id="dc-msg"></div>
+    </div>
+    <div class="card mt">
+      <div class="section-title">Documents</div>
+      <table id="dc-table"><thead><tr><th>Tenant</th><th>Title</th><th>Type</th><th>Status</th><th>File</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-payments">
+    <div class="card mt">
+      <div class="section-title">Record a Payment</div>
+      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">For rent paid off-platform (cash, check, money order). Online card payments made through the Resident Portal (Stripe) show up here automatically once a tenant pays.</p>
+      <div class="form-row">
+        <div class="field"><label>Tenant</label><select id="py-tenant"></select></div>
+        <div class="field"><label>Amount ($)</label><input id="py-amount" type="number" step="0.01" placeholder="1450.00" /></div>
+      </div>
+      <div class="field"><label>Memo (optional)</label><input id="py-memo" placeholder="August rent, check #1042" /></div>
+      <button class="btn btn-primary" onclick="recordPayment()">Record Payment</button>
+      <div id="py-msg"></div>
+    </div>
+    <div class="card mt">
+      <div class="section-title">Payments &amp; Receipts</div>
+      <table id="py-table"><thead><tr><th>Receipt #</th><th>Tenant</th><th>Amount</th><th>Method</th><th>Status</th><th>Paid</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
 </div>
 
 <script>
 let ME = null;
-let BRANCHES = [], PROPERTIES = [], BUILDINGS = [], UNITS = [];
+let BRANCHES = [], PROPERTIES = [], BUILDINGS = [], UNITS = [], TENANTS = [];
 
 async function api(path, opts){
   const res = await fetch('/api' + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
@@ -215,7 +274,7 @@ async function refreshAll(){
     api('/summary'), api('/branches'), api('/properties'), api('/buildings'), api('/units'),
     api('/staff').catch(()=>[]), api('/tenants'),
   ]);
-  BRANCHES = branches; PROPERTIES = properties; BUILDINGS = buildings; UNITS = units;
+  BRANCHES = branches; PROPERTIES = properties; BUILDINGS = buildings; UNITS = units; TENANTS = tenants;
 
   document.getElementById('statGrid').innerHTML = [
     ['Branches', summary.branches], ['Properties', summary.properties], ['Buildings', summary.buildings],
@@ -248,6 +307,99 @@ async function refreshAll(){
   fillSelect('un-property', properties, p=>p.id, p=>p.name);
   fillSelect('un-building', buildings, b=>b.id, b=>b.name, true);
   fillSelect('tn-unit', units, u=>u.id, u=>u.unit_number, true);
+  fillSelect('dc-tenant', tenants, t=>t.id, t=>t.name);
+  fillSelect('py-tenant', tenants, t=>t.id, t=>t.name);
+
+  await refreshMaintenance();
+  await refreshDocuments();
+  await refreshPayments();
+}
+
+function tenantName(id){ const t = TENANTS.find(x=>x.id===id); return t ? esc(t.name) : '—'; }
+
+// ═══════════════════════════════ MAINTENANCE ═══════════════════════════════
+async function refreshMaintenance(){
+  const rows = await api('/maintenance-requests').catch(()=>[]);
+  document.getElementById('mr-table').querySelector('tbody').innerHTML = rows.map(r=>`
+    <tr>
+      <td>${esc(r.tenant_name)}</td>
+      <td>${esc(r.unit_number||'—')}</td>
+      <td>${esc(r.category)}</td>
+      <td>${esc(r.priority)}</td>
+      <td style="max-width:260px">${esc(r.description)}</td>
+      <td><select onchange="updateMaintenance('${r.id}', this.value, null)">
+        ${['open','in_progress','resolved','closed'].map(s=>`<option value="${s}" ${s===r.status?'selected':''}>${s.replace('_',' ')}</option>`).join('')}
+      </select></td>
+      <td><input value="${escAttr(r.staff_notes||'')}" placeholder="Add a note…" onchange="updateMaintenance('${r.id}', null, this.value)" style="font-size:12px;padding:6px" /></td>
+    </tr>`).join('') || emptyRow(7);
+}
+async function updateMaintenance(id, status, staffNotes){
+  try{
+    const body = {};
+    if(status != null) body.status = status;
+    if(staffNotes != null) body.staffNotes = staffNotes;
+    await api(`/maintenance-requests/${id}`, { method:'PATCH', body: JSON.stringify(body) });
+  }catch(err){ alert(err.message); }
+}
+
+// ═══════════════════════════════ DOCUMENTS ═══════════════════════════════
+async function refreshDocuments(){
+  const rows = await api('/documents').catch(()=>[]);
+  document.getElementById('dc-table').querySelector('tbody').innerHTML = rows.map(d=>`
+    <tr>
+      <td>${esc(d.tenant_name)}</td>
+      <td>${esc(d.title)}</td>
+      <td>${esc(d.doc_type)}</td>
+      <td><span class="pill ${d.status==='signed'?'active':'invited'}">${d.status.replace('_',' ')}</span>${d.signed_name?` — signed by ${esc(d.signed_name)}`:''}</td>
+      <td><a href="/api/documents/${d.id}/file" target="_blank" style="color:var(--gold)">View</a></td>
+    </tr>`).join('') || emptyRow(5);
+}
+async function uploadDocument(){
+  const tenantId = document.getElementById('dc-tenant').value;
+  const title = document.getElementById('dc-title').value.trim();
+  const docType = document.getElementById('dc-type').value;
+  const requiresSignature = document.getElementById('dc-requires-sig').checked;
+  const fileInput = document.getElementById('dc-file');
+  const msg = document.getElementById('dc-msg');
+  if(!tenantId || !title || !fileInput.files.length){ msg.className='err'; msg.textContent='Tenant, title, and a file are all required.'; return; }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  fd.append('tenantId', tenantId); fd.append('title', title); fd.append('docType', docType); fd.append('requiresSignature', requiresSignature);
+  try{
+    const res = await fetch('/api/documents', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Upload failed');
+    document.getElementById('dc-title').value=''; fileInput.value='';
+    msg.className='ok'; msg.textContent='Sent to tenant.';
+    await refreshDocuments();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
+}
+
+// ═══════════════════════════════ PAYMENTS ═══════════════════════════════
+async function refreshPayments(){
+  const rows = await api('/payments').catch(()=>[]);
+  document.getElementById('py-table').querySelector('tbody').innerHTML = rows.map(p=>`
+    <tr>
+      <td>${esc(p.receipt_number)}</td>
+      <td>${esc(p.tenant_name)}</td>
+      <td>$${(p.amount_cents/100).toFixed(2)}</td>
+      <td>${esc(p.method)}</td>
+      <td><span class="pill ${p.status==='paid'?'active':'invited'}">${p.status}</span></td>
+      <td>${new Date(p.paid_at).toLocaleDateString()}</td>
+    </tr>`).join('') || emptyRow(6);
+}
+async function recordPayment(){
+  const tenantId = document.getElementById('py-tenant').value;
+  const amount = document.getElementById('py-amount').value;
+  const memo = document.getElementById('py-memo').value.trim();
+  const msg = document.getElementById('py-msg');
+  try{
+    if(!tenantId || !amount) throw new Error('Tenant and amount are required');
+    await api('/payments', { method:'POST', body: JSON.stringify({ tenantId, amount, memo }) });
+    document.getElementById('py-amount').value=''; document.getElementById('py-memo').value='';
+    msg.className='ok'; msg.textContent='Payment recorded.';
+    await refreshPayments();
+  }catch(err){ msg.className='err'; msg.textContent=err.message; }
 }
 
 function fillSelect(id, list, valFn, labelFn, keepFirst){

@@ -290,13 +290,89 @@ async function main() {
     `Re-uploading the same file finds everything already exists and skips all 3 units instead of duplicating (got ${JSON.stringify(commit2Data)})`
   );
 
+  console.log('\n── Maintenance requests ──');
+  const mrCreate = await residentSession('POST', '/api/tenant/maintenance-requests', { category: 'plumbing', priority: 'high', description: 'Kitchen sink leaking' });
+  ok(mrCreate.status === 200 && mrCreate.data.status === 'open', 'Tenant files a maintenance request');
+
+  const mrOwnList = await residentSession('GET', '/api/tenant/maintenance-requests');
+  ok(mrOwnList.status === 200 && mrOwnList.data.some(r => r.id === mrCreate.data.id), 'Tenant sees their own maintenance request');
+
+  const mrStaffList = await orgA('GET', '/api/maintenance-requests');
+  const mrStaffRow = mrStaffList.data.find(r => r.id === mrCreate.data.id);
+  ok(mrStaffList.status === 200 && mrStaffRow && mrStaffRow.tenant_name === 'Sara Kim', 'Staff sees the maintenance request with the tenant\'s name joined in');
+
+  const mrPriyaList = await priya('GET', '/api/maintenance-requests');
+  ok(mrPriyaList.data.some(r => r.id === mrCreate.data.id), 'Branch manager sees the request — it\'s under a property in their scope');
+
+  const mrUpdate = await orgA('PATCH', `/api/maintenance-requests/${mrCreate.data.id}`, { status: 'resolved', staffNotes: 'Replaced the trap, fixed.' });
+  ok(mrUpdate.status === 200 && mrUpdate.data.status === 'resolved' && mrUpdate.data.resolved_at, 'Staff resolves the request and resolved_at gets stamped');
+
+  console.log('\n── Documents (digital lease / e-signature) ──');
+  const leaseBoundary = '----smoketestleaseboundary';
+  const leaseBytes = 'PDF-ish lease content for testing';
+  const leaseUploadBody =
+    `--${leaseBoundary}\r\nContent-Disposition: form-data; name="tenantId"\r\n\r\n${tenant.data.id}\r\n` +
+    `--${leaseBoundary}\r\nContent-Disposition: form-data; name="title"\r\n\r\n2026 Lease Renewal\r\n` +
+    `--${leaseBoundary}\r\nContent-Disposition: form-data; name="docType"\r\n\r\nrenewal\r\n` +
+    `--${leaseBoundary}\r\nContent-Disposition: form-data; name="requiresSignature"\r\n\r\ntrue\r\n` +
+    `--${leaseBoundary}\r\nContent-Disposition: form-data; name="file"; filename="lease.pdf"\r\nContent-Type: application/pdf\r\n\r\n${leaseBytes}\r\n` +
+    `--${leaseBoundary}--\r\n`;
+  const leaseUpload = await fetch(base + '/api/documents', {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${leaseBoundary}`, Cookie: await sessionCookie(orgA, base) },
+    body: leaseUploadBody,
+  });
+  const leaseUploadData = await leaseUpload.json();
+  ok(leaseUpload.status === 200 && leaseUploadData.status === 'pending_signature', 'Staff sends a lease renewal to a tenant, marked pending signature');
+
+  const docTenantList = await residentSession('GET', '/api/tenant/documents');
+  ok(docTenantList.status === 200 && docTenantList.data.some(d => d.id === leaseUploadData.id && d.status === 'pending_signature'), 'Tenant sees the document waiting on their signature');
+
+  const docDownload = await residentSession('GET', `/api/tenant/documents/${leaseUploadData.id}/file`);
+  ok(docDownload.status === 200, 'Tenant can download the document file');
+
+  const docSign = await residentSession('POST', `/api/tenant/documents/${leaseUploadData.id}/sign`, { signedName: 'Sara Kim' });
+  ok(docSign.status === 200 && docSign.data.status === 'signed' && docSign.data.signed_name === 'Sara Kim', 'Tenant e-signs the document (typed name + timestamp audit trail)');
+
+  const docSignAgain = await residentSession('POST', `/api/tenant/documents/${leaseUploadData.id}/sign`, { signedName: 'Sara Kim' });
+  ok(docSignAgain.status === 400, 'Signing an already-signed document is rejected');
+
+  const docStaffFile = await fetch(base + `/api/documents/${leaseUploadData.id}/file`, { headers: { Cookie: await sessionCookie(orgA, base) } });
+  ok(docStaffFile.status === 200, 'Staff can also download the signed document on their end');
+
+  console.log('\n── Payments & receipts (manual + Stripe) ──');
+  const payRecord = await orgA('POST', '/api/payments', { tenantId: tenant.data.id, amount: 1450, memo: 'August rent, check #1042' });
+  ok(payRecord.status === 200 && payRecord.data.amount_cents === 145000 && payRecord.data.method === 'manual' && payRecord.data.receipt_number, 'Staff manually records a rent payment and gets a receipt number');
+
+  const payStaffList = await orgA('GET', '/api/payments');
+  ok(payStaffList.data.some(p => p.id === payRecord.data.id), 'Staff sees the recorded payment');
+
+  const payTenantList = await residentSession('GET', '/api/tenant/payments');
+  ok(payTenantList.status === 200 && payTenantList.data.some(p => p.id === payRecord.data.id), 'Tenant sees the payment on their own receipts list');
+
+  // No STRIPE_SECRET_KEY is set in this test environment (and shouldn't
+  // be — that's a real credential the org adds themselves in Render), so
+  // online checkout must degrade to a clear error, not crash.
+  const checkoutNoStripe = await residentSession('POST', '/api/tenant/payments/checkout', {});
+  ok(checkoutNoStripe.status === 503, 'Stripe checkout returns a clear "not set up yet" error when STRIPE_SECRET_KEY is unset, instead of crashing');
+
+  const confirmNoStripe = await residentSession('GET', '/api/tenant/payments/confirm?session_id=fake');
+  ok(confirmNoStripe.status === 503, 'Stripe confirm also degrades cleanly when unconfigured');
+
   console.log('\n── Cross-organization isolation (the critical check) ──');
   const bBranches = await orgB('GET', '/api/branches');
   const bProperties = await orgB('GET', '/api/properties');
   const bTenants = await orgB('GET', '/api/tenants');
+  const bMaintenance = await orgB('GET', '/api/maintenance-requests');
+  const bDocuments = await orgB('GET', '/api/documents');
+  const bPayments = await orgB('GET', '/api/payments');
   ok(bBranches.data.length === 0, 'Org B sees ZERO branches (Org A\'s branch is invisible)');
   ok(bProperties.data.length === 0, 'Org B sees ZERO properties (Org A\'s properties are invisible)');
   ok(bTenants.data.length === 0, 'Org B sees ZERO tenants (Org A\'s tenants, including the CSV-imported ones, are invisible)');
+  ok(bMaintenance.data.length === 0, 'Org B sees ZERO maintenance requests (Org A\'s are invisible)');
+  ok(bDocuments.data.length === 0, 'Org B sees ZERO documents (Org A\'s are invisible)');
+  ok(bPayments.data.length === 0, 'Org B sees ZERO payments (Org A\'s are invisible)');
+  ok((await orgB('GET', `/api/documents/${leaseUploadData.id}/file`)).status === 404, 'Org B cannot fetch Org A\'s document file by ID either');
 
   const summaryA = await orgA('GET', '/api/summary');
   ok(summaryA.data.branches === 2 && summaryA.data.properties === 4 && summaryA.data.units === 5 && summaryA.data.tenants === 3,

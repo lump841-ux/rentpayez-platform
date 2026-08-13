@@ -9,14 +9,15 @@
     "test": "node test/smoke.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-pg-simple": "^9.0.1",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
-    "connect-pg-simple": "^9.0.1",
-    "pg": "^8.11.5",
-    "bcryptjs": "^2.4.3",
     "multer": "^1.4.5-lts.1",
-    "csv-parse": "^5.5.6",
-    "dotenv": "^16.4.5"
+    "pg": "^8.11.5",
+    "stripe": "^22.5.0"
   },
   "devDependencies": {
     "pg-mem": "^2.8.1"

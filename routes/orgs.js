@@ -616,4 +616,190 @@ router.get('/summary', async (req, res) => {
   });
 });
 
+// ═══════════════════════════════ MAINTENANCE REQUESTS ═══════════════════════════════
+// Tenants file these from the portal (routes/tenant.js); staff triage/work
+// them here, scoped the same way as tenants/units (via scopedPropertyIds).
+router.get('/maintenance-requests', async (req, res) => {
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && scope.length === 0) return res.json([]);
+  const { rows } = scope === null
+    ? await db.query(
+        `SELECT mr.*, t.name AS tenant_name, t.email AS tenant_email, u.unit_number, p.name AS property_name
+         FROM maintenance_requests mr
+         JOIN tenants t ON t.id = mr.tenant_id
+         LEFT JOIN units u ON u.id = mr.unit_id
+         LEFT JOIN properties p ON p.id = mr.property_id
+         WHERE mr.organization_id = $1 ORDER BY mr.created_at DESC`,
+        [req.orgId]
+      )
+    : await db.query(
+        `SELECT mr.*, t.name AS tenant_name, t.email AS tenant_email, u.unit_number, p.name AS property_name
+         FROM maintenance_requests mr
+         JOIN tenants t ON t.id = mr.tenant_id
+         LEFT JOIN units u ON u.id = mr.unit_id
+         LEFT JOIN properties p ON p.id = mr.property_id
+         WHERE mr.organization_id = $1 AND mr.property_id IN (${inPlaceholders(scope, 2)})
+         ORDER BY mr.created_at DESC`,
+        [req.orgId, ...scope]
+      );
+  res.json(rows);
+});
+
+const MAINT_ROLES = ['org_admin', 'branch_manager', 'property_manager', 'maintenance_supervisor', 'maintenance_tech', 'super_admin'];
+const MAINT_STATUSES = ['open', 'in_progress', 'resolved', 'closed'];
+
+router.patch('/maintenance-requests/:id', requireRole(...MAINT_ROLES), async (req, res) => {
+  const { status, priority, staffNotes } = req.body || {};
+  if (status && !MAINT_STATUSES.includes(status)) return res.status(400).json({ error: `status must be one of: ${MAINT_STATUSES.join(', ')}` });
+
+  const scope = await scopedPropertyIds(req.session.user);
+  const { rows: existing } = await db.query(
+    `SELECT * FROM maintenance_requests WHERE id = $1 AND organization_id = $2`, [req.params.id, req.orgId]
+  );
+  if (!existing.length) return res.status(404).json({ error: 'Maintenance request not found' });
+  if (scope !== null && (!existing[0].property_id || !scope.includes(existing[0].property_id))) {
+    return res.status(403).json({ error: 'Outside your assigned properties' });
+  }
+
+  const { rows } = await db.query(
+    `UPDATE maintenance_requests SET
+       status = COALESCE($1, status),
+       priority = COALESCE($2, priority),
+       staff_notes = COALESCE($3, staff_notes),
+       updated_at = now(),
+       resolved_at = CASE WHEN $1 IN ('resolved','closed') THEN now() ELSE resolved_at END
+     WHERE id = $4 RETURNING *`,
+    [status || null, priority || null, staffNotes != null ? staffNotes : null, req.params.id]
+  );
+  await logAction(req, 'maintenance.update', 'maintenance_request', req.params.id, { status, priority });
+  res.json(rows[0]);
+});
+
+// ═══════════════════════════════ DOCUMENTS (digital lease / e-sign) ═══════════════════════════════
+// Staff push a document (lease, renewal, notice) to a specific tenant.
+// If requiresSignature is set, it shows as pending in the tenant portal
+// until the tenant e-signs it (typed name + timestamp + IP — see
+// routes/tenant.js POST /documents/:id/sign). This is NOT a DocuSign
+// integration; a real legally-binding e-signature vendor is a separate
+// paid third-party account the org would need to set up.
+const DOC_ROLES = ['org_admin', 'branch_manager', 'property_manager', 'office_staff', 'super_admin'];
+const DOC_TYPES = ['lease', 'renewal', 'notice', 'addendum', 'other'];
+
+router.post('/documents', requireRole(...DOC_ROLES), upload.single('file'), async (req, res) => {
+  const { tenantId, title, docType, requiresSignature } = req.body || {};
+  if (!req.file) return res.status(400).json({ error: 'File is required (field name "file")' });
+  if (!tenantId || !title) return res.status(400).json({ error: 'tenantId and title are required' });
+  if (docType && !DOC_TYPES.includes(docType)) return res.status(400).json({ error: `docType must be one of: ${DOC_TYPES.join(', ')}` });
+
+  const { rows: tenantRows } = await db.query(`SELECT id, unit_id FROM tenants WHERE id = $1 AND organization_id = $2`, [tenantId, req.orgId]);
+  if (!tenantRows.length) return res.status(404).json({ error: 'Tenant not found in this organization' });
+
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null) {
+    const { rows: unitRows } = await db.query(`SELECT property_id FROM units WHERE id = $1`, [tenantRows[0].unit_id]);
+    if (!unitRows.length || !scope.includes(unitRows[0].property_id)) return res.status(403).json({ error: 'Outside your assigned properties' });
+  }
+
+  const needsSig = requiresSignature === true || requiresSignature === 'true';
+  const { rows } = await db.query(
+    `INSERT INTO documents (organization_id, tenant_id, uploaded_by, title, doc_type, file_name, file_mime, file_data, requires_signature, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING id, organization_id, tenant_id, uploaded_by, title, doc_type, file_name, file_mime, requires_signature, status, signed_name, signed_at, created_at`,
+    [req.orgId, tenantId, req.session.user.id, title, docType || 'other', req.file.originalname, req.file.mimetype,
+     req.file.buffer.toString('base64'), needsSig, needsSig ? 'pending_signature' : 'active']
+  );
+  await logAction(req, 'document.upload', 'document', rows[0].id, { title, tenantId });
+  res.json(rows[0]);
+});
+
+router.get('/documents', async (req, res) => {
+  const { tenantId } = req.query;
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && scope.length === 0) return res.json([]);
+
+  const conditions = ['d.organization_id = $1'];
+  const params = [req.orgId];
+  if (tenantId) { params.push(tenantId); conditions.push(`d.tenant_id = $${params.length}`); }
+  if (scope !== null) { params.push(...scope); conditions.push(`u.property_id IN (${inPlaceholders(scope, params.length - scope.length + 1)})`); }
+
+  const { rows } = await db.query(
+    `SELECT d.id, d.organization_id, d.tenant_id, d.title, d.doc_type, d.file_name, d.file_mime,
+            d.requires_signature, d.status, d.signed_name, d.signed_at, d.created_at,
+            t.name AS tenant_name
+     FROM documents d
+     JOIN tenants t ON t.id = d.tenant_id
+     LEFT JOIN units u ON u.id = t.unit_id
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY d.created_at DESC`,
+    params
+  );
+  res.json(rows);
+});
+
+router.get('/documents/:id/file', async (req, res) => {
+  const scope = await scopedPropertyIds(req.session.user);
+  const { rows } = await db.query(
+    `SELECT d.*, u.property_id FROM documents d
+     JOIN tenants t ON t.id = d.tenant_id LEFT JOIN units u ON u.id = t.unit_id
+     WHERE d.id = $1 AND d.organization_id = $2`,
+    [req.params.id, req.orgId]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Document not found' });
+  if (scope !== null && (!rows[0].property_id || !scope.includes(rows[0].property_id))) return res.status(403).json({ error: 'Outside your assigned properties' });
+  res.setHeader('Content-Type', rows[0].file_mime);
+  res.setHeader('Content-Disposition', `inline; filename="${rows[0].file_name}"`);
+  res.send(Buffer.from(rows[0].file_data, 'base64'));
+});
+
+// ═══════════════════════════════ PAYMENTS / RECEIPTS ═══════════════════════════════
+// Staff can manually record a payment received off-platform (cash, check,
+// money order). Online Stripe payments are tenant-initiated from the
+// portal — see routes/tenant.js — and land here with method='stripe' once
+// confirmed. Every payment gets a receipt_number the tenant can reference.
+router.post('/payments', requireRole(...DOC_ROLES), async (req, res) => {
+  const { tenantId, amount, memo, paidAt } = req.body || {};
+  if (!tenantId || amount == null) return res.status(400).json({ error: 'tenantId and amount are required' });
+  const amountCents = Math.round(Number(amount) * 100);
+  if (!Number.isFinite(amountCents) || amountCents <= 0) return res.status(400).json({ error: 'amount must be a positive number' });
+
+  const { rows: tenantRows } = await db.query(`SELECT id, unit_id FROM tenants WHERE id = $1 AND organization_id = $2`, [tenantId, req.orgId]);
+  if (!tenantRows.length) return res.status(404).json({ error: 'Tenant not found in this organization' });
+
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null) {
+    const { rows: unitRows } = await db.query(`SELECT property_id FROM units WHERE id = $1`, [tenantRows[0].unit_id]);
+    if (!unitRows.length || !scope.includes(unitRows[0].property_id)) return res.status(403).json({ error: 'Outside your assigned properties' });
+  }
+
+  const receiptNumber = 'RCPT-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+  const { rows } = await db.query(
+    `INSERT INTO payments (organization_id, tenant_id, unit_id, amount_cents, method, status, receipt_number, memo, recorded_by, paid_at)
+     VALUES ($1, $2, $3, $4, 'manual', 'paid', $5, $6, $7, COALESCE($8, now())) RETURNING *`,
+    [req.orgId, tenantId, tenantRows[0].unit_id, amountCents, receiptNumber, memo || null, req.session.user.id, paidAt || null]
+  );
+  await logAction(req, 'payment.record', 'payment', rows[0].id, { amountCents });
+  res.json(rows[0]);
+});
+
+router.get('/payments', async (req, res) => {
+  const { tenantId } = req.query;
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && scope.length === 0) return res.json([]);
+
+  const conditions = ['py.organization_id = $1'];
+  const params = [req.orgId];
+  if (tenantId) { params.push(tenantId); conditions.push(`py.tenant_id = $${params.length}`); }
+  if (scope !== null) { params.push(...scope); conditions.push(`u.property_id IN (${inPlaceholders(scope, params.length - scope.length + 1)})`); }
+
+  const { rows } = await db.query(
+    `SELECT py.*, t.name AS tenant_name FROM payments py
+     JOIN tenants t ON t.id = py.tenant_id
+     LEFT JOIN units u ON u.id = py.unit_id
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY py.paid_at DESC`,
+    params
+  );
+  res.json(rows);
+});
+
 module.exports = router;

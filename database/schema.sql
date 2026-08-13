@@ -129,6 +129,70 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ── Maintenance requests ────────────────────────────────────────────────
+-- Filed by a tenant from the portal, worked by staff from the console.
+-- property_id is denormalized from unit_id at creation time so staff
+-- scoping (scopedPropertyIds) can filter directly without an extra join.
+CREATE TABLE IF NOT EXISTS maintenance_requests (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  unit_id         UUID REFERENCES units(id) ON DELETE SET NULL,
+  property_id     UUID REFERENCES properties(id) ON DELETE SET NULL,
+  category        TEXT NOT NULL DEFAULT 'other',   -- plumbing | electrical | appliance | hvac | pest | structural | other
+  priority        TEXT NOT NULL DEFAULT 'normal',  -- low | normal | high | emergency
+  description     TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'open',    -- open | in_progress | resolved | closed
+  staff_notes     TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at     TIMESTAMPTZ
+);
+
+-- ── Documents (digital lease / paperwork / e-signature) ─────────────────
+-- Staff upload a file for a tenant; if requires_signature is set, the
+-- tenant portal shows it as pending until the tenant signs. This is a
+-- lightweight typed-name + timestamp + IP audit trail, NOT a DocuSign
+-- integration — a real e-signature vendor is a separate paid account the
+-- org would need to set up (see chat for why).
+CREATE TABLE IF NOT EXISTS documents (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id     UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  tenant_id           UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  uploaded_by         UUID REFERENCES organization_users(id) ON DELETE SET NULL,
+  title               TEXT NOT NULL,
+  doc_type            TEXT NOT NULL DEFAULT 'other', -- lease | renewal | notice | addendum | other
+  file_name           TEXT NOT NULL,
+  file_mime           TEXT NOT NULL,
+  file_data           TEXT NOT NULL, -- base64-encoded file bytes (portable across real Postgres and the pg-mem test adapter, which doesn't support BYTEA)
+  requires_signature  BOOLEAN NOT NULL DEFAULT false,
+  status              TEXT NOT NULL DEFAULT 'active', -- active | pending_signature | signed
+  signed_name         TEXT,
+  signed_at           TIMESTAMPTZ,
+  signed_ip           TEXT,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ── Payments / receipts ──────────────────────────────────────────────────
+-- method='manual' rows are recorded by staff (cash/check/money order).
+-- method='stripe' rows are created when a tenant completes Stripe Checkout
+-- (see routes/tenant.js) — requires the org to set STRIPE_SECRET_KEY.
+CREATE TABLE IF NOT EXISTS payments (
+  id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id             UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  tenant_id                   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  unit_id                     UUID REFERENCES units(id) ON DELETE SET NULL,
+  amount_cents                INTEGER NOT NULL,
+  method                      TEXT NOT NULL DEFAULT 'manual', -- manual | stripe
+  status                      TEXT NOT NULL DEFAULT 'paid',   -- pending | paid | failed | refunded
+  stripe_checkout_session_id  TEXT,
+  receipt_number              TEXT NOT NULL,
+  memo                        TEXT,
+  recorded_by                 UUID REFERENCES organization_users(id) ON DELETE SET NULL,
+  paid_at                     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ── Sessions (express-session store) ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS sessions (
   sid    TEXT PRIMARY KEY,
@@ -150,3 +214,10 @@ CREATE INDEX IF NOT EXISTS idx_tenants_unit          ON tenants(unit_id);
 CREATE INDEX IF NOT EXISTS idx_staff_assign_user    ON staff_assignments(organization_user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_org            ON audit_logs(organization_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expire      ON sessions(expire);
+CREATE INDEX IF NOT EXISTS idx_maint_org            ON maintenance_requests(organization_id);
+CREATE INDEX IF NOT EXISTS idx_maint_tenant         ON maintenance_requests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_maint_property       ON maintenance_requests(property_id);
+CREATE INDEX IF NOT EXISTS idx_documents_org        ON documents(organization_id);
+CREATE INDEX IF NOT EXISTS idx_documents_tenant     ON documents(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_payments_org         ON payments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_payments_tenant      ON payments(tenant_id);
