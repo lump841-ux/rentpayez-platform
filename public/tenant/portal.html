@@ -9,6 +9,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<script>
+// iOS Safari's "Request Desktop Website" mode fakes window.innerWidth to a
+// desktop-class value (~980px+) AND spoofs navigator.userAgent to look like
+// Mac Safari, so neither the CSS @media(max-width:880px) rules below nor
+// user-agent sniffing can detect "this is actually a phone" in that mode.
+// window.screen.width, however, stays tied to the real physical screen
+// even when the layout viewport is faked — so a small screen.width paired
+// with a large window.innerWidth is a reliable signal that a phone is
+// rendering the page as if it were a desktop. When that mismatch is
+// detected we add .force-mobile to <html>, and every mobile layout rule
+// below has a matching html.force-mobile selector (higher specificity
+// than the unscoped desktop rules) so the compact layout applies
+// regardless of what the browser claims its viewport width is.
+(function () {
+  function applyForceMobile() {
+    try {
+      var screenW = window.screen && window.screen.width ? window.screen.width : 0;
+      var innerW = window.innerWidth || 0;
+      var mismatch = screenW > 0 && screenW <= 500 && innerW > 880;
+      document.documentElement.classList.toggle('force-mobile', mismatch);
+    } catch (e) { /* ignore */ }
+  }
+  applyForceMobile();
+  window.addEventListener('resize', applyForceMobile);
+  window.addEventListener('orientationchange', applyForceMobile);
+})();
+</script>
 <style>
 :root{
   --brick:#8b2424; --brick-2:#a32d2d; --brick-3:#c93e3e;
@@ -75,10 +102,22 @@ input,select,textarea{font-family:inherit}
   .sb-brand{padding-bottom:10px;margin-bottom:2px}
   .sb-foot{display:none}
 }
+/* Mirror of the @media(max-width:880px) block above, scoped to the
+   .force-mobile class set by the head script when it detects a phone
+   spoofing a desktop viewport (see comment there). Class selectors beat
+   the unscoped desktop rules on specificity, so these apply even though
+   the real @media query never matches in that scenario. */
+html.force-mobile body{flex-direction:column}
+html.force-mobile .sidebar{position:relative;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:12px}
+html.force-mobile .sb-nav{flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
+html.force-mobile .sb-nav button{flex-shrink:0;padding:7px 10px;font-size:12px;width:auto}
+html.force-mobile .sb-brand{padding-bottom:10px;margin-bottom:2px}
+html.force-mobile .sb-foot{display:none}
 
 /* main */
 .app-main{flex:1;min-width:0;padding:26px 30px 60px;max-width:100%}
 @media (max-width:880px){.app-main{padding:18px}}
+html.force-mobile .app-main{padding:18px}
 .app-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;gap:16px;flex-wrap:wrap}
 .app-head h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:25px;font-weight:800;letter-spacing:-0.5px;color:#fff;margin:0}
 .app-head .sub{color:var(--ink-3);font-size:13.5px;margin-top:3px}
@@ -86,6 +125,7 @@ input,select,textarea{font-family:inherit}
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
 @media (max-width:1050px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
+html.force-mobile .kpi-grid{grid-template-columns:1fr}
 .kpi{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden}
 .kpi .label{color:var(--ink-3);font-size:11px;letter-spacing:0.7px;text-transform:uppercase;font-weight:700}
 .kpi .val{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.6px;color:#fff;margin:6px 0 3px;line-height:1}
@@ -97,6 +137,7 @@ input,select,textarea{font-family:inherit}
 
 .dash-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
 @media (max-width:1050px){.dash-grid{grid-template-columns:1fr}}
+html.force-mobile .dash-grid{grid-template-columns:1fr}
 .panel{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:18px;padding:20px}
 .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap}
 .panel-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;color:#fff;margin:0}
