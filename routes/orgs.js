@@ -40,7 +40,22 @@ router.post('/branches', requireRole('org_admin', 'super_admin'), async (req, re
 });
 
 router.get('/branches', async (req, res) => {
-  const { rows } = await db.query(`SELECT * FROM branches WHERE organization_id = $1 ORDER BY name`, [req.orgId]);
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope === null) {
+    const { rows } = await db.query(`SELECT * FROM branches WHERE organization_id = $1 ORDER BY name`, [req.orgId]);
+    return res.json(rows);
+  }
+  if (scope.length === 0) return res.json([]);
+  // Scoped staff only see branches that have at least one property they're
+  // allowed to touch (a branch_manager's own branch expands to this via
+  // scopedPropertyIds already; a property_manager sees just their branch, if any).
+  const { rows } = await db.query(
+    `SELECT DISTINCT b.* FROM branches b
+     JOIN properties p ON p.branch_id = b.id
+     WHERE b.organization_id = $1 AND p.id IN (${inPlaceholders(scope, 2)})
+     ORDER BY b.name`,
+    [req.orgId, ...scope]
+  );
   res.json(rows);
 });
 
@@ -82,10 +97,23 @@ router.post('/buildings', requireRole('org_admin', 'branch_manager', 'property_m
 
 router.get('/buildings', async (req, res) => {
   const { propertyId } = req.query;
-  const params = propertyId ? [req.orgId, propertyId] : [req.orgId];
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && scope.length === 0) return res.json([]);
+  if (scope !== null && propertyId && !scope.includes(propertyId)) return res.json([]);
+
+  if (scope === null) {
+    const params = propertyId ? [req.orgId, propertyId] : [req.orgId];
+    const { rows } = await db.query(
+      `SELECT * FROM buildings WHERE organization_id = $1 ${propertyId ? 'AND property_id = $2' : ''} ORDER BY name`,
+      params
+    );
+    return res.json(rows);
+  }
+
+  const ids = propertyId ? [propertyId] : scope;
   const { rows } = await db.query(
-    `SELECT * FROM buildings WHERE organization_id = $1 ${propertyId ? 'AND property_id = $2' : ''} ORDER BY name`,
-    params
+    `SELECT * FROM buildings WHERE organization_id = $1 AND property_id IN (${inPlaceholders(ids, 2)}) ORDER BY name`,
+    [req.orgId, ...ids]
   );
   res.json(rows);
 });
@@ -105,10 +133,25 @@ router.post('/units', requireRole('org_admin', 'branch_manager', 'property_manag
 
 router.get('/units', async (req, res) => {
   const { propertyId } = req.query;
-  const params = propertyId ? [req.orgId, propertyId] : [req.orgId];
+  const scope = await scopedPropertyIds(req.session.user);
+  if (scope !== null && scope.length === 0) return res.json([]);
+  if (scope !== null && propertyId && !scope.includes(propertyId)) return res.json([]); // asked for a property outside their scope
+
+  if (scope === null) {
+    const params = propertyId ? [req.orgId, propertyId] : [req.orgId];
+    const { rows } = await db.query(
+      `SELECT * FROM units WHERE organization_id = $1 ${propertyId ? 'AND property_id = $2' : ''} ORDER BY unit_number`,
+      params
+    );
+    return res.json(rows);
+  }
+
+  // Scoped staff (below org_admin): restrict to properties they're assigned to,
+  // whether or not a specific propertyId was requested.
+  const ids = propertyId ? [propertyId] : scope;
   const { rows } = await db.query(
-    `SELECT * FROM units WHERE organization_id = $1 ${propertyId ? 'AND property_id = $2' : ''} ORDER BY unit_number`,
-    params
+    `SELECT * FROM units WHERE organization_id = $1 AND property_id IN (${inPlaceholders(ids, 2)}) ORDER BY unit_number`,
+    [req.orgId, ...ids]
   );
   res.json(rows);
 });

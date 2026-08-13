@@ -112,6 +112,28 @@ async function main() {
     'Branch manager sees ONLY the property under their assigned branch, not the branch-less one'
   );
 
+  const priyaUnits = await priya('GET', '/api/units');
+  const priyaUnitIds = (Array.isArray(priyaUnits.data) ? priyaUnits.data : []).map(u => u.id);
+  ok(
+    priyaUnits.status === 200 &&
+    priyaUnitIds.includes(unit.data.id) &&
+    !priyaUnitIds.includes(unit2.data.id),
+    'Branch manager sees ONLY units under their assigned branch\'s property, not the branch-less property\'s unit'
+  );
+
+  const priyaBranches = await priya('GET', '/api/branches');
+  const priyaBranchIds = (Array.isArray(priyaBranches.data) ? priyaBranches.data : []).map(b => b.id);
+  ok(
+    priyaBranches.status === 200 && priyaBranchIds.length === 1 && priyaBranchIds.includes(branch.data.id),
+    'Branch manager\'s branch list is scoped too — sees only their own branch, not a full org-wide list'
+  );
+
+  const priyaOtherUnitsAttempt = await priya('GET', `/api/units?propertyId=${property2.data.id}`);
+  ok(
+    Array.isArray(priyaOtherUnitsAttempt.data) && priyaOtherUnitsAttempt.data.length === 0,
+    'Branch manager cannot pull units for a property outside their scope by passing its propertyId directly'
+  );
+
   console.log('\n── Org A: tenants (individual + CSV import) ──');
   const tenant = await orgA('POST', '/api/tenants', { name: 'Sara Kim', email: 'sara.kim@email.com', unitId: unit.data.id });
   ok(tenant.status === 200 && tenant.data.unit_id === unit.data.id, 'Org A adds a tenant assigned directly to a unit');
