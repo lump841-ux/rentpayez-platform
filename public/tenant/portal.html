@@ -90,8 +90,21 @@ input,select,textarea{font-family:inherit}
 
 @media (max-width:880px){
   body{flex-direction:column}
-  .sidebar{position:relative;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:12px}
-  .sb-nav{flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
+  /* .sidebar's desktop rule sets overflow-y:auto to make the fixed
+     100vh column independently scrollable — with height:auto that
+     property has no scroll container to apply to, but leaving it
+     declared alongside a still-flex:1 .sb-nav (see below) compounds
+     the stretching bug, so it's explicitly cleared too. */
+  .sidebar{position:relative;width:100%;height:auto;overflow-y:visible;border-right:none;border-bottom:1px solid var(--line);padding:12px}
+  /* Desktop's .sb-nav rule sets flex:1 so the nav list fills whatever
+     vertical space is left in the 100vh sidebar column above .sb-foot.
+     Without resetting it here, .sb-nav keeps trying to grow to fill
+     leftover vertical space even in this horizontal pill-row layout,
+     which (combined with flex-wrap:wrap's multi-line stretch behavior)
+     pushes the wrapped rows apart with a large gap between them instead
+     of sitting compactly one below the other. flex:none stops it from
+     growing past its actual content height. */
+  .sb-nav{flex:none;flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
   /* Desktop's .sb-nav button rule sets width:100% so each item fills the
      vertical sidebar column — without resetting it here, every nav button
      still claims the full row width even in this horizontal pill-row
@@ -108,8 +121,8 @@ input,select,textarea{font-family:inherit}
    the unscoped desktop rules on specificity, so these apply even though
    the real @media query never matches in that scenario. */
 html.force-mobile body{flex-direction:column}
-html.force-mobile .sidebar{position:relative;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:12px}
-html.force-mobile .sb-nav{flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
+html.force-mobile .sidebar{position:relative;width:100%;height:auto;overflow-y:visible;border-right:none;border-bottom:1px solid var(--line);padding:12px}
+html.force-mobile .sb-nav{flex:none;flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
 html.force-mobile .sb-nav button{flex-shrink:0;padding:7px 10px;font-size:12px;width:auto}
 html.force-mobile .sb-brand{padding-bottom:10px;margin-bottom:2px}
 html.force-mobile .sb-foot{display:none}
