@@ -12,7 +12,7 @@
 <script>
 // iOS Safari's "Request Desktop Website" mode fakes window.innerWidth to a
 // desktop-class value (~980px+) AND spoofs navigator.userAgent to look like
-// Mac Safari, so neither the CSS @media(max-width:880px) rules below nor
+// Mac Safari, so neither the CSS @media(max-width:768px) rules below nor
 // user-agent sniffing can detect "this is actually a phone" in that mode.
 // window.screen.width, however, stays tied to the real physical screen
 // even when the layout viewport is faked — so a small screen.width paired
@@ -20,14 +20,15 @@
 // rendering the page as if it were a desktop. When that mismatch is
 // detected we add .force-mobile to <html>, and every mobile layout rule
 // below has a matching html.force-mobile selector (higher specificity
-// than the unscoped desktop rules) so the compact layout applies
-// regardless of what the browser claims its viewport width is.
+// than the unscoped desktop rules) so the compact drawer-based mobile
+// layout applies regardless of what the browser claims its viewport
+// width is.
 (function () {
   function applyForceMobile() {
     try {
       var screenW = window.screen && window.screen.width ? window.screen.width : 0;
       var innerW = window.innerWidth || 0;
-      var mismatch = screenW > 0 && screenW <= 500 && innerW > 880;
+      var mismatch = screenW > 0 && screenW <= 500 && innerW > 768;
       document.documentElement.classList.toggle('force-mobile', mismatch);
     } catch (e) { /* ignore */ }
   }
@@ -48,7 +49,7 @@
   --good:#3a9c3a; --bad:#a32d2d; --warn:#d4a247; --pending:#3e8ab4;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;min-height:100vh}
+html,body{margin:0;padding:0;min-height:100vh;width:100%;max-width:100%;overflow-x:hidden}
 body{
   background:
     radial-gradient(1200px 800px at 12% -10%, rgba(139,36,36,0.14), transparent 60%),
@@ -62,7 +63,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 input,select,textarea{font-family:inherit}
 
 /* sidebar */
-.sidebar{width:250px;background:linear-gradient(180deg,#08131f,#06101a);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:20}
+.sidebar{width:250px;background:linear-gradient(180deg,#08131f,#06101a);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:20;transition:transform .25s ease}
+.sb-close{display:none;margin-left:auto;width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);color:#fff;font-size:15px;align-items:center;justify-content:center;flex-shrink:0}
+.sb-close:hover{background:rgba(255,255,255,0.12)}
+/* mobile top bar (logo + hamburger) — hidden on desktop, shown only inside
+   the @media(max-width:768px) / html.force-mobile blocks below */
+.mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;height:56px;padding:0 16px;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#08131f,#06101a);border-bottom:1px solid var(--line);z-index:950}
+.mobile-topbar .mt-brand{display:flex;align-items:center;gap:9px;min-width:0}
+.mobile-topbar .brand-word{font-size:15px;white-space:nowrap}
+.mt-hamburger{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.06);color:#fff;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mt-hamburger:hover{background:rgba(255,255,255,0.12)}
+/* dark overlay behind the slide-out drawer — hidden on desktop */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:900}
+.drawer-overlay.open{opacity:1;pointer-events:auto}
 .sb-brand{display:flex;align-items:center;gap:11px;padding:6px 6px 20px;margin-bottom:6px;border-bottom:1px solid var(--line)}
 .brand-mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(140deg,#1a3552,#0b1a2a);display:flex;align-items:center;justify-content:center;border:1px solid var(--line-2);flex-shrink:0}
 .brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.4px}
@@ -88,58 +101,62 @@ input,select,textarea{font-family:inherit}
 .lang-toggle button.active{background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff}
 .lang-toggle button:not(.active):hover{background:rgba(255,255,255,0.06);color:#fff}
 
-@media (max-width:880px){
-  body{flex-direction:column}
-  /* .sidebar's desktop rule sets overflow-y:auto to make the fixed
-     100vh column independently scrollable — with height:auto that
-     property has no scroll container to apply to, but leaving it
-     declared alongside a still-flex:1 .sb-nav (see below) compounds
-     the stretching bug, so it's explicitly cleared too. */
-  .sidebar{position:relative;width:100%;height:auto;overflow-y:visible;border-right:none;border-bottom:1px solid var(--line);padding:12px}
-  /* Desktop's .sb-nav rule sets flex:1 so the nav list fills whatever
-     vertical space is left in the 100vh sidebar column above .sb-foot.
-     Without resetting it here, .sb-nav keeps trying to grow to fill
-     leftover vertical space even in this horizontal pill-row layout,
-     which (combined with flex-wrap:wrap's multi-line stretch behavior)
-     pushes the wrapped rows apart with a large gap between them instead
-     of sitting compactly one below the other. flex:none stops it from
-     growing past its actual content height. */
-  .sb-nav{flex:none;flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
-  /* Desktop's .sb-nav button rule sets width:100% so each item fills the
-     vertical sidebar column — without resetting it here, every nav button
-     still claims the full row width even in this horizontal pill-row
-     layout, so flex-wrap has nothing to wrap (each button is already
-     "100%") and every item stacks on its own line instead of forming a
-     compact row of pills. width:auto lets buttons size to their content. */
-  .sb-nav button{flex-shrink:0;padding:7px 10px;font-size:12px;width:auto}
-  .sb-brand{padding-bottom:10px;margin-bottom:2px}
-  .sb-foot{display:none}
+/* ── Mobile layout (<=768px): the sidebar becomes a fixed, off-canvas
+   slide-out drawer (position:fixed + transform:translateX) instead of a
+   squeezed-down column. Being position:fixed takes it completely out of
+   #appShell's flex flow, so .app-main (the only remaining flow child)
+   naturally gets the full phone width — no separate width/margin hacks
+   needed for the main content. The drawer keeps the exact same vertical
+   nav-list styling it already has on desktop; only its position, width,
+   and open/close transform change. A mobile-only top bar (logo +
+   hamburger) replaces the sidebar's old always-visible role, and a dark
+   overlay sits behind the open drawer. See toggleDrawer()/closeDrawer()
+   in the script below. */
+@media (max-width:768px){
+  .mobile-topbar{display:flex}
+  .drawer-overlay{display:block}
+  .sidebar{
+    position:fixed;top:0;left:0;height:100vh;width:280px;max-width:85vw;
+    transform:translateX(-100%);z-index:1000;
+    box-shadow:0 0 40px rgba(0,0,0,0.55)
+  }
+  .sidebar.open{transform:translateX(0)}
+  .sb-close{display:flex}
+  .sb-nav button{min-height:44px}
+  .btn{min-height:44px}
+  .app-main{padding:16px;padding-top:72px}
+  .app-head h1{font-size:21px}
 }
-/* Mirror of the @media(max-width:880px) block above, scoped to the
+/* Mirror of the @media(max-width:768px) block above, scoped to the
    .force-mobile class set by the head script when it detects a phone
    spoofing a desktop viewport (see comment there). Class selectors beat
    the unscoped desktop rules on specificity, so these apply even though
    the real @media query never matches in that scenario. */
-html.force-mobile body{flex-direction:column}
-html.force-mobile .sidebar{position:relative;width:100%;height:auto;overflow-y:visible;border-right:none;border-bottom:1px solid var(--line);padding:12px}
-html.force-mobile .sb-nav{flex:none;flex-direction:row;flex-wrap:wrap;overflow-x:auto;margin-top:8px}
-html.force-mobile .sb-nav button{flex-shrink:0;padding:7px 10px;font-size:12px;width:auto}
-html.force-mobile .sb-brand{padding-bottom:10px;margin-bottom:2px}
-html.force-mobile .sb-foot{display:none}
+html.force-mobile .mobile-topbar{display:flex}
+html.force-mobile .drawer-overlay{display:block}
+html.force-mobile .sidebar{
+  position:fixed;top:0;left:0;height:100vh;width:280px;max-width:85vw;
+  transform:translateX(-100%);z-index:1000;
+  box-shadow:0 0 40px rgba(0,0,0,0.55)
+}
+html.force-mobile .sidebar.open{transform:translateX(0)}
+html.force-mobile .sb-close{display:flex}
+html.force-mobile .sb-nav button{min-height:44px}
+html.force-mobile .btn{min-height:44px}
+html.force-mobile .app-main{padding:16px;padding-top:72px}
+html.force-mobile .app-head h1{font-size:21px}
 
 /* main */
-.app-main{flex:1;min-width:0;padding:26px 30px 60px;max-width:100%}
-@media (max-width:880px){.app-main{padding:18px}}
-html.force-mobile .app-main{padding:18px}
+.app-main{flex:1;min-width:0;width:100%;padding:26px 30px 60px;max-width:100%}
 .app-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;gap:16px;flex-wrap:wrap}
 .app-head h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:25px;font-weight:800;letter-spacing:-0.5px;color:#fff;margin:0}
 .app-head .sub{color:var(--ink-3);font-size:13.5px;margin-top:3px}
 
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
-@media (max-width:1050px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
-html.force-mobile .kpi-grid{grid-template-columns:1fr}
-.kpi{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}
+@media (max-width:992px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:360px){.kpi-grid{grid-template-columns:minmax(0,1fr)}}
+html.force-mobile .kpi-grid{grid-template-columns:minmax(0,1fr)}
+.kpi{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden;min-width:0;width:100%}
 .kpi .label{color:var(--ink-3);font-size:11px;letter-spacing:0.7px;text-transform:uppercase;font-weight:700}
 .kpi .val{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.6px;color:#fff;margin:6px 0 3px;line-height:1}
 .kpi .trend{color:var(--green-3);font-size:11.5px;font-weight:600}
@@ -148,10 +165,10 @@ html.force-mobile .kpi-grid{grid-template-columns:1fr}
 .kpi.gold .ic{background:rgba(212,162,71,0.15);color:var(--gold-2)}
 .kpi.blue .ic{background:rgba(62,138,180,0.15);color:#76b8e0}
 
-.dash-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
-@media (max-width:1050px){.dash-grid{grid-template-columns:1fr}}
-html.force-mobile .dash-grid{grid-template-columns:1fr}
-.panel{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:18px;padding:20px}
+.dash-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media (max-width:992px){.dash-grid{grid-template-columns:minmax(0,1fr)}}
+html.force-mobile .dash-grid{grid-template-columns:minmax(0,1fr)}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:18px;padding:20px;min-width:0}
 .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap}
 .panel-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;color:#fff;margin:0}
 .panel-sub{color:var(--ink-3);font-size:12px;margin-top:2px}
@@ -196,7 +213,7 @@ html.force-mobile .dash-grid{grid-template-columns:1fr}
   radial-gradient(400px 200px at 100% 0%, rgba(91,192,91,0.18), transparent 60%),
   radial-gradient(300px 200px at 0% 100%, rgba(212,162,71,0.1), transparent 60%),
   linear-gradient(160deg,#0f2922,#0a1726 60%);
-  border:1px solid rgba(91,192,91,0.22);position:relative
+  border:1px solid rgba(91,192,91,0.22);position:relative;overflow:hidden
 }
 .preview-ribbon{position:absolute;top:14px;right:-32px;background:linear-gradient(180deg,var(--gold-2),var(--gold));color:#1a1200;font-size:10.5px;font-weight:800;letter-spacing:1px;padding:5px 40px;transform:rotate(35deg);box-shadow:0 4px 10px rgba(0,0,0,0.3)}
 
@@ -242,7 +259,17 @@ html.force-mobile .dash-grid{grid-template-columns:1fr}
 <div id="loadingScreen" class="loading-screen">Loading your account…</div>
 
 <div id="appShell" style="display:none;width:100%">
-  <aside class="sidebar">
+  <header class="mobile-topbar" id="mobileTopbar">
+    <div class="mt-brand">
+      <img src="/assets/favicon-32.png" width="26" height="26" alt="" style="border-radius:7px;display:block;flex-shrink:0">
+      <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
+    </div>
+    <button class="mt-hamburger" onclick="toggleDrawer()" aria-label="Open menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </header>
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <aside class="sidebar" id="sidebar">
     <div class="sb-brand">
       <span class="brand-mark">
         <svg viewBox="0 0 100 100" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
@@ -259,6 +286,7 @@ html.force-mobile .dash-grid{grid-template-columns:1fr}
         </svg>
       </span>
       <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
+      <button class="sb-close" onclick="closeDrawer()" aria-label="Close menu">✕</button>
     </div>
     <nav class="sb-nav" id="sbNav"></nav>
     <div class="sb-foot">
@@ -462,9 +490,26 @@ async function boot(){
   }
 }
 
+// ── Mobile slide-out nav drawer ──────────────────────────────────────
+// The sidebar is reused as the drawer's content (see CSS: @media(max-width:768px)
+// and html.force-mobile turn .sidebar into a position:fixed off-canvas panel).
+// These two functions just toggle the .open class on the drawer + its overlay;
+// they're harmless no-ops visually at desktop widths since .sidebar isn't
+// position:fixed there and .drawer-overlay stays display:none.
+function toggleDrawer(){
+  const isOpen = document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('drawerOverlay').classList.toggle('open', isOpen);
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+function closeDrawer(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
 function renderSidebar(){
   document.getElementById('sbNav').innerHTML = NAV.map(n =>
-    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}')"><span class="ic">${n.ic}</span><span>${esc(t(n.key))}</span></button>`
+    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}');closeDrawer()"><span class="ic">${n.ic}</span><span>${esc(t(n.key))}</span></button>`
   ).join('');
   const initials = (T.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
   const av = T.has_avatar
