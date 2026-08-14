@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>rentpayez — Resident Portal</title>
+<title>RentPayEZ — Resident Portal</title>
 <link rel="icon" type="image/png" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -261,7 +261,18 @@ html.force-mobile .dash-grid{grid-template-columns:minmax(0,1fr)}
 <div id="appShell" style="display:none;width:100%">
   <header class="mobile-topbar" id="mobileTopbar">
     <div class="mt-brand">
-      <img src="/assets/favicon-32.png" width="26" height="26" alt="" style="border-radius:7px;display:block;flex-shrink:0">
+      <svg viewBox="0 0 100 100" width="26" height="26" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;display:block">
+        <defs>
+          <linearGradient id="mt-roof" x1="20" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c93e3e"/><stop offset="1" stop-color="#7a1f1f"/></linearGradient>
+          <linearGradient id="mt-smoke" x1="25" y1="4" x2="42" y2="34" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5bc05b"/><stop offset="1" stop-color="#2d7d2d"/></linearGradient>
+        </defs>
+        <path d="M22 30 C14 26 30 20 22 15 C15 11 28 6 22 3" stroke="url(#mt-smoke)" stroke-width="4.2" fill="none" stroke-linecap="round"/>
+        <path d="M34 26 C28 23 38 18 32 15" stroke="url(#mt-smoke)" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="0.85"/>
+        <rect x="24" y="10" width="15" height="27" fill="url(#mt-roof)"/>
+        <path d="M50 16 L86 47 L86 81 Q86 86 81 86 L19 86 Q14 86 14 81 L14 47 Z" fill="url(#mt-roof)"/>
+        <rect x="29" y="49" width="34" height="30" rx="6" fill="#f4f4f2"/>
+        <text x="46" y="73" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="30" fill="#111111" text-anchor="middle">R</text>
+      </svg>
       <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
     </div>
     <button class="mt-hamburger" onclick="toggleDrawer()" aria-label="Open menu">

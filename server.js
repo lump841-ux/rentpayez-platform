@@ -60,7 +60,7 @@ app.use((err, req, res, next) => {
 
 async function start() {
   await db.initDB();
-  app.listen(PORT, () => console.log(`Rent Pay Easy platform API listening on :${PORT}`));
+  app.listen(PORT, () => console.log(`RentPayEZ platform API listening on :${PORT}`));
 }
 
 if (require.main === module) {
