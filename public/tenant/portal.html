@@ -68,7 +68,7 @@ input,select,textarea{font-family:inherit}
 .sb-close:hover{background:rgba(255,255,255,0.12)}
 /* mobile top bar (logo + hamburger) — hidden on desktop, shown only inside
    the @media(max-width:768px) / html.force-mobile blocks below */
-.mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;height:56px;padding:0 16px;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#08131f,#06101a);border-bottom:1px solid var(--line);z-index:950}
+.mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;height:64px;padding:0 16px;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#08131f,#06101a);border-bottom:1px solid var(--line);z-index:950}
 .mobile-topbar .mt-brand{display:flex;align-items:center;gap:2px;min-width:0}
 .mobile-topbar .brand-word{font-size:15px;white-space:nowrap}
 .mt-hamburger{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.06);color:#fff;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -124,7 +124,7 @@ input,select,textarea{font-family:inherit}
   .sb-close{display:flex}
   .sb-nav button{min-height:44px}
   .btn{min-height:44px}
-  .app-main{padding:16px;padding-top:72px}
+  .app-main{padding:16px;padding-top:80px}
   .app-head h1{font-size:21px}
 }
 /* Mirror of the @media(max-width:768px) block above, scoped to the
@@ -143,7 +143,7 @@ html.force-mobile .sidebar.open{transform:translateX(0)}
 html.force-mobile .sb-close{display:flex}
 html.force-mobile .sb-nav button{min-height:44px}
 html.force-mobile .btn{min-height:44px}
-html.force-mobile .app-main{padding:16px;padding-top:72px}
+html.force-mobile .app-main{padding:16px;padding-top:80px}
 html.force-mobile .app-head h1{font-size:21px}
 
 /* main */
@@ -261,7 +261,7 @@ html.force-mobile .dash-grid{grid-template-columns:minmax(0,1fr)}
 <div id="appShell" style="display:none;width:100%">
   <header class="mobile-topbar" id="mobileTopbar">
     <div class="mt-brand">
-      <svg viewBox="0 0 100 100" width="26" height="26" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;display:block">
+      <svg viewBox="0 0 100 100" width="52" height="52" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;display:block">
         <defs>
           <linearGradient id="mt-roof" x1="20" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b23a1c"/><stop offset="1" stop-color="#6b1a0d"/></linearGradient>
           <linearGradient id="mt-smoke" x1="25" y1="4" x2="42" y2="34" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3f7a28"/><stop offset="1" stop-color="#1c3f13"/></linearGradient>
@@ -282,7 +282,7 @@ html.force-mobile .dash-grid{grid-template-columns:minmax(0,1fr)}
   <aside class="sidebar" id="sidebar">
     <div class="sb-brand">
       <span class="brand-mark">
-        <svg viewBox="0 0 100 100" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 100 100" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="pf-roof" x1="20" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b23a1c"/><stop offset="1" stop-color="#6b1a0d"/></linearGradient>
             <linearGradient id="pf-smoke" x1="25" y1="4" x2="42" y2="34" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3f7a28"/><stop offset="1" stop-color="#1c3f13"/></linearGradient>
