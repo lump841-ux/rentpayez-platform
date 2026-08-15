@@ -68,8 +68,9 @@ input,select,textarea{font-family:inherit}
 .sb-close:hover{background:rgba(255,255,255,0.12)}
 /* mobile top bar (logo + hamburger) — hidden on desktop, shown only inside
    the @media(max-width:768px) / html.force-mobile blocks below */
-.mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;height:64px;padding:0 16px;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#08131f,#06101a);border-bottom:1px solid var(--line);z-index:950}
+.mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;height:72px;padding:0 16px;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#08131f,#06101a);border-bottom:1px solid var(--line);z-index:950}
 .mobile-topbar .mt-brand{display:flex;align-items:center;gap:2px;min-width:0}
+.mobile-topbar .mt-brand svg{transform:translateY(-8.47px)}
 .mobile-topbar .brand-word{font-size:15px;white-space:nowrap}
 .mt-hamburger{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.06);color:#fff;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .mt-hamburger:hover{background:rgba(255,255,255,0.12)}
@@ -77,7 +78,7 @@ input,select,textarea{font-family:inherit}
 .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:900}
 .drawer-overlay.open{opacity:1;pointer-events:auto}
 .sb-brand{display:flex;align-items:center;gap:2px;padding:6px 6px 20px;margin-bottom:6px;border-bottom:1px solid var(--line)}
-.brand-mark{display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-mark{display:flex;align-items:center;justify-content:center;flex-shrink:0;transform:translateY(-7.67px)}
 .brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.4px}
 .brand-word .b1{color:var(--ink-2)}
 .brand-word .b2{color:#0b0b0b;background:#fff;border-radius:5px;padding:0 4px;margin-right:1px}
@@ -124,7 +125,7 @@ input,select,textarea{font-family:inherit}
   .sb-close{display:flex}
   .sb-nav button{min-height:44px}
   .btn{min-height:44px}
-  .app-main{padding:16px;padding-top:80px}
+  .app-main{padding:16px;padding-top:88px}
   .app-head h1{font-size:21px}
 }
 /* Mirror of the @media(max-width:768px) block above, scoped to the
@@ -143,7 +144,7 @@ html.force-mobile .sidebar.open{transform:translateX(0)}
 html.force-mobile .sb-close{display:flex}
 html.force-mobile .sb-nav button{min-height:44px}
 html.force-mobile .btn{min-height:44px}
-html.force-mobile .app-main{padding:16px;padding-top:80px}
+html.force-mobile .app-main{padding:16px;padding-top:88px}
 html.force-mobile .app-head h1{font-size:21px}
 
 /* main */
