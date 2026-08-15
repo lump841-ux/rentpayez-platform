@@ -40,6 +40,6 @@ th{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.5p
    colored brand name (white/ink "ent", red "pay", green "ez") instead of
    plain lowercase text. */
 .brand-word{white-space:nowrap}
-.brand-word .b1{color:var(--ink)}
-.brand-word .b3{color:var(--brick-3)}
-.brand-word .b4{color:var(--green-3)}
+.brand-word .b1{color:var(--ink-2)}
+.brand-word .b3{color:#a8341c}
+.brand-word .b4{color:var(--green)}
