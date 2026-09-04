@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&family=DM+Sans:wght@900&display=swap" rel="stylesheet">
 <script>
 // iOS Safari's "Request Desktop Website" mode fakes window.innerWidth to a
 // desktop-class value (~980px+) AND spoofs navigator.userAgent to look like
@@ -65,11 +65,10 @@ input,select,textarea{font-family:inherit}
 .topnav{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.92);backdrop-filter:blur(14px) saturate(160%);border-bottom:1px solid var(--line)}
 .topnav-inner{max-width:1180px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .brand{display:flex;align-items:center;gap:2px;flex-shrink:0}
-.brand svg{transform:translateY(-2px)}
-.brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:19px;font-weight:800;letter-spacing:-.4px}
-.brand-word .b1{color:var(--navy)}
-.brand-word .b3{color:var(--red)}
-.brand-word .b4{color:var(--green)}
+.brand-word{font-family:'DM Sans','Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:900;letter-spacing:-.06em}
+.brand-word .b1{color:#000}
+.brand-word .b3{color:#dc2626}
+.brand-word .b4{color:#22c55e}
 .topnav-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .prop-toggle{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-full);padding:3px;gap:2px;flex-shrink:0}
 .prop-toggle span{padding:6px 14px;border-radius:var(--r-full);font-size:12.5px;font-weight:700;color:var(--ink-3);white-space:nowrap}
@@ -247,26 +246,7 @@ input,select,textarea{font-family:inherit}
   <header class="topnav">
     <div class="topnav-inner">
       <a class="brand" href="#" onclick="setView('overview');return false;">
-        <svg viewBox="-7 -10 106 106" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="pf-r1" x1="10" y1="5" x2="95" y2="95" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8453a"/><stop offset="0.42" stop-color="#a81f18"/><stop offset="1" stop-color="#2a0503"/></linearGradient>
-            <linearGradient id="pf-g1" x1="0" y1="0" x2="18" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f9530"/><stop offset="1" stop-color="#2c5719"/></linearGradient>
-          </defs>
-          <path d="M18,26 C17.3,22 18.7,19 18,16 C12,12 24,9 18,5 C12,2 22,0 18,-3" stroke="url(#pf-g1)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-          <path d="M22,26 C21.3,22 22.7,19 22,16 C16,12 28,9 22,5 C16,2 26,0 22,-3" stroke="url(#pf-g1)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-          <path d="M8,60 L43,29 Q49,24 55,29 L82,53 Q86,57 82,61 Q72,71 59,66 Q50,62 49,53" fill="none" stroke="url(#pf-r1)" stroke-width="9.5" stroke-linecap="butt" stroke-linejoin="round"/>
-          <circle cx="8" cy="60" r="4.7" fill="url(#pf-r1)"/>
-          <path d="M10,44 L10,23 L16,19 L24,19 L24,44 Z" fill="url(#pf-r1)"/>
-          <rect x="31" y="45" width="14" height="42" rx="2" fill="url(#pf-r1)"/>
-          <path d="M44,60 L86,85 L79,90 L38,66 Z" fill="url(#pf-r1)"/>
-          <g fill="url(#pf-g1)">
-            <rect x="50.9" y="42.4" width="4.2" height="4.2" rx="0.8"/>
-            <rect x="55.9" y="42.4" width="4.2" height="4.2" rx="0.8"/>
-            <rect x="50.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
-            <rect x="55.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
-          </g>
-        </svg>
-        <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
+        <span class="brand-word"><span class="b3">R</span><span class="b1">ent</span><span class="b3">Pay</span><span class="b4">EZ</span></span>
       </a>
       <div class="topnav-right">
         <div class="prop-toggle" id="propToggle"></div>
@@ -675,7 +655,7 @@ async function renderOverview(){
     </div>
 
     <div class="stat-grid">
-      <div class="stat-card"><div class="label">${esc(t('credit_score'))}</div><div class="val gold">${esc(t('preview'))}</div><div class="trend">${esc(t('not_connected_yet'))}</div></div>
+      <div class="stat-card"><div class="label">${esc(t('credit_score'))}</div><div class="val red">689</div><div class="trend" style="color:var(--green-2)">${esc(t('points_this_year',{n:31}))}</div></div>
       <div class="stat-card"><div class="label">${esc(t('on_time_payments'))}</div><div class="val green">${esc(t('of_last_12',{n:onTime.count}))}</div><div class="trend">${esc(t('pct_this_year',{pct:onTime.pct}))}</div></div>
       <div class="stat-card"><div class="label">${esc(t('open_requests'))}</div><div class="val blue">${openRequests}</div><div class="trend">${esc(t('total_filed_n',{n:mrList.length}))}</div></div>
       <div class="stat-card"><div class="label">${esc(t('lease_ends'))}</div><div class="val blue">${esc(leaseEndsVal())}</div><div class="trend">${esc(leaseEndsTrend())}</div></div>
