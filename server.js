@@ -52,6 +52,11 @@ app.use('/api', require('./routes/orgs'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
+// Bare domain has no page of its own — send visitors straight to the
+// tenant sign-in screen instead of a raw 404 (matches the single-link
+// feel of the Figma prototype, which opened directly into the dashboard).
+app.get('/', (req, res) => res.redirect('/tenant/login.html'));
+
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err, req, res, next) => {
   console.error('[Error]', err);
