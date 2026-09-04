@@ -138,6 +138,17 @@ input,select,textarea{font-family:inherit}
 @media (max-width:900px){ .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:400px){ .stat-grid{grid-template-columns:minmax(0,1fr)} }
 .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 17px;box-shadow:var(--sh-sm)}
+.cb-table{width:100%;border-collapse:collapse}
+.cb-row{display:grid;grid-template-columns:1.4fr 1.2fr 1fr 1.4fr;align-items:center;gap:8px;padding:11px 0;border-top:1px solid var(--line)}
+.cb-row.cb-head{border-top:none;padding-top:0;padding-bottom:8px}
+.cb-head .cb-cell{font-size:11.5px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.3px}
+.cb-cell{font-size:13.5px;color:var(--ink-2)}
+.cb-action{text-align:right}
+@media (max-width:640px){
+  .cb-row{grid-template-columns:1fr 1fr;row-gap:4px}
+  .cb-row.cb-head{display:none}
+  .cb-action{grid-column:1/-1;text-align:left}
+}
 .stat-card .label{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;font-weight:700;color:var(--ink-3)}
 .stat-card .val{font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--ink);margin:5px 0 3px;line-height:1}
 .stat-card .val.red{color:var(--red)}
@@ -311,6 +322,17 @@ const I18N = {
     poor:'Poor', fair:'Fair', good:'Good', very_good:'Very Good', excellent:'Excellent',
     credit_boost_title:'Credit Boost', credit_boost_desc:'Give your score a one-time boost using your on-time rent payment history.',
     credit_boost_btn:'Credit Boost', credit_boost_pending:'Boosting…', credit_boost_success:'✓ Requested — your payment history will be submitted for a credit boost once reporting is enabled for your account.',
+    credit_building_title:'Credit', credit_building_sub:"Sample data — rent-payment credit reporting isn't connected to your account yet",
+    current_score_label:'CURRENT SCORE', points_this_year:'+{{n}} points this year (sample)',
+    poor_300:'300 · Poor', excellent_850:'850 · Excellent',
+    reporting_details_title:'Reporting Details', reporting_format_label:'Reporting Format',
+    reporting_format_val:'Sample preview', bureau_label:'Bureau', bureau_val:'Not yet connected (sample)',
+    last_submission_label:'Last Submission', not_yet_label:'Not yet — preview only',
+    on_time_streak_label:'On-Time Streak', n_consecutive_months:'{{n}} consecutive months',
+    next_submission_label:'Next Submission',
+    credit_boost_log_title:'Credit Boost Log', credit_boost_log_sub:'Boost individual on-time payments — sample feature, no bureau is connected yet',
+    col_payment_month:'Payment Month', col_pay_date:'Pay Date', col_amount:'Amount', col_boost:'Credit Boost',
+    already_boosted:'✓ Boosted',
     pay_rent_title:'Pay Rent', monthly_rent:'Monthly Rent', pay_online:'Pay {{amt}} Online', secured_by_stripe:'🔒 Secured by Stripe',
     prefer_another_way:'Prefer another way to pay?', online_payment_text:"Online payment goes through your property manager's Stripe account. If it isn't set up yet, or you'd rather pay another way, contact your property manager directly — payments they record manually will still show up below.",
     payment_history_title:'Payment History', total_on_record:'total on record',
@@ -381,6 +403,17 @@ const I18N = {
     poor:'Malo', fair:'Regular', good:'Bueno', very_good:'Muy bueno', excellent:'Excelente',
     credit_boost_title:'Impulso de Crédito', credit_boost_desc:'Dale a tu puntaje un impulso único usando tu historial de pagos de renta a tiempo.',
     credit_boost_btn:'Impulso de Crédito', credit_boost_pending:'Aplicando…', credit_boost_success:'✓ Solicitado — tu historial de pagos se enviará para un impulso de crédito cuando el reporte esté habilitado para tu cuenta.',
+    credit_building_title:'Crédito', credit_building_sub:'Datos de muestra — el reporte de crédito por pago de renta aún no está conectado a tu cuenta',
+    current_score_label:'PUNTAJE ACTUAL', points_this_year:'+{{n}} puntos este año (muestra)',
+    poor_300:'300 · Deficiente', excellent_850:'850 · Excelente',
+    reporting_details_title:'Detalles del Reporte', reporting_format_label:'Formato de Reporte',
+    reporting_format_val:'Vista previa de muestra', bureau_label:'Buró', bureau_val:'Aún no conectado (muestra)',
+    last_submission_label:'Último Envío', not_yet_label:'Aún no — solo vista previa',
+    on_time_streak_label:'Racha de Puntualidad', n_consecutive_months:'{{n}} meses consecutivos',
+    next_submission_label:'Próximo Envío',
+    credit_boost_log_title:'Registro de Impulso de Crédito', credit_boost_log_sub:'Impulsa pagos puntuales individuales — función de muestra, aún sin buró conectado',
+    col_payment_month:'Mes de Pago', col_pay_date:'Fecha de Pago', col_amount:'Monto', col_boost:'Impulso de Crédito',
+    already_boosted:'✓ Impulsado',
     pay_rent_title:'Pagar Renta', monthly_rent:'Renta Mensual', pay_online:'Pagar {{amt}} en línea', secured_by_stripe:'🔒 Protegido por Stripe',
     prefer_another_way:'¿Prefieres otra forma de pago?', online_payment_text:'El pago en línea se procesa a través de la cuenta de Stripe de tu administrador de propiedad. Si aún no está configurada, o prefieres pagar de otra manera, contacta directamente a tu administrador — los pagos que registre manualmente aparecerán igualmente abajo.',
     payment_history_title:'Historial de Pagos', total_on_record:'total registrado',
@@ -680,24 +713,70 @@ function scoreCardHtml(full){
   // Sample/demo numbers only — no real credit-bureau connection exists yet.
   // Clearly labeled PREVIEW per explicit product decision, never presented as real.
   return `
-    <div class="panel score-hero" style="${full?'padding:28px':''}">
+    <div class="panel score-hero" style="text-align:center;${full?'padding:32px 24px':''}">
       <div class="preview-ribbon">${esc(t('preview').toUpperCase())}</div>
-      <div class="panel-head">
-        <div><h3 class="panel-title">${esc(t('credit_score_title'))}</h3><div class="panel-sub">${esc(t('sample_data_sub'))}</div></div>
+      <div style="font-size:12.5px;font-weight:700;color:var(--ink-3);letter-spacing:.3px">${esc(t('current_score_label'))}</div>
+      <div style="font-family:'Plus Jakarta Sans';font-size:64px;line-height:1.05;font-weight:800;letter-spacing:-2px;color:var(--red);margin:6px 0">689</div>
+      <div style="color:var(--green-2);font-weight:700;font-size:13.5px;margin-bottom:16px">${esc(t('points_this_year',{n:31}))}</div>
+      <div style="height:9px;border-radius:99px;background:var(--line);overflow:hidden">
+        <div style="height:100%;width:56%;border-radius:99px;background:linear-gradient(90deg, var(--red) 0%, var(--gold) 45%, var(--green-2) 75%, var(--green) 100%)"></div>
       </div>
-      <div style="display:flex;align-items:flex-end;gap:14px;margin:10px 0 8px">
-        <div style="font-family:'Plus Jakarta Sans';font-size:${full?'70px':'58px'};line-height:0.95;font-weight:800;letter-spacing:-1.5px;color:var(--ink);opacity:0.4">689</div>
-        <div style="margin-bottom:8px">
-          <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:2px">${esc(t('sample_good_range'))}</div>
-          <div style="font-size:11.5px;color:var(--ink-3)">${esc(t('sample_card_desc'))}</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--ink-3)">
+        <span>${esc(t('poor_300'))}</span><span>${esc(t('excellent_850'))}</span>
+      </div>
+    </div>
+  `;
+}
+function reportingDetailsHtml(onTime, nextDate){
+  const rows = [
+    [t('reporting_format_label'), `<span style="color:var(--blue);font-weight:700">${esc(t('reporting_format_val'))}</span>`],
+    [t('bureau_label'), `<strong>${esc(t('bureau_val'))}</strong>`],
+    [t('last_submission_label'), `<span style="color:var(--ink-3)">${esc(t('not_yet_label'))}</span>`],
+    [t('on_time_streak_label'), `<strong style="color:var(--red)">${esc(t('n_consecutive_months',{n:onTime.count}))}</strong>`],
+    [t('next_submission_label'), `<span style="color:var(--ink-3)">${esc(t('not_yet_label'))}</span>`],
+  ];
+  return `
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-head"><div><h3 class="panel-title">${esc(t('reporting_details_title'))}</h3><div class="panel-sub">${esc(t('sample_data_sub'))}</div></div></div>
+      ${rows.map(([label,val],i)=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;${i?'border-top:1px solid var(--line)':''}">
+          <span style="color:var(--ink-2);font-size:13.5px">${esc(label)}</span>
+          <span style="font-size:13.5px">${val}</span>
+        </div>`).join('')}
+    </div>
+  `;
+}
+function creditBoostLogHtml(payments){
+  const rows = payments.slice(0,6).map(p => {
+    const d = new Date(p.paid_at);
+    const monthLabel = d.toLocaleDateString(undefined,{month:'short',year:'numeric'});
+    const dateLabel = d.toLocaleDateString(undefined,{month:'2-digit',day:'2-digit',year:'numeric'});
+    const boosted = BOOSTED_PAYMENTS.has(p.id);
+    return `
+      <div class="cb-row">
+        <div class="cb-cell cb-month">${esc(monthLabel)}</div>
+        <div class="cb-cell cb-date">${esc(dateLabel)}</div>
+        <div class="cb-cell cb-amt">${money(p.amount_cents)}</div>
+        <div class="cb-cell cb-action">
+          ${boosted
+            ? `<span class="pill paid">${esc(t('already_boosted'))}</span>`
+            : `<button class="btn btn-sm btn-green" onclick="boostCredit('${p.id}')">${esc(t('credit_boost_btn'))}</button>`}
         </div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-head"><div><h3 class="panel-title">${esc(t('credit_boost_log_title'))}</h3><div class="panel-sub">${esc(t('credit_boost_log_sub'))}</div></div></div>
+      <div class="cb-table">
+        <div class="cb-row cb-head">
+          <div class="cb-cell cb-month">${esc(t('col_payment_month'))}</div>
+          <div class="cb-cell cb-date">${esc(t('col_pay_date'))}</div>
+          <div class="cb-cell cb-amt">${esc(t('col_amount'))}</div>
+          <div class="cb-cell cb-action">${esc(t('col_boost'))}</div>
+        </div>
+        ${rows || `<div class="empty">${esc(t('no_payments_yet'))}</div>`}
       </div>
-      <div style="height:9px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px;opacity:0.6">
-        <div style="height:100%;width:62%;border-radius:99px;background:linear-gradient(90deg, var(--red) 0%, var(--gold) 35%, var(--green-2) 70%, var(--green) 100%)"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--ink-3);letter-spacing:0.5px;text-transform:uppercase">
-        <span>${esc(t('poor'))}</span><span>${esc(t('fair'))}</span><span>${esc(t('good'))}</span><span>${esc(t('very_good'))}</span><span>${esc(t('excellent'))}</span>
-      </div>
+      <div id="credit-boost-msg" class="msg"></div>
     </div>
   `;
 }
@@ -718,41 +797,30 @@ function streakStripHtml(payments){
 }
 
 /* ═══════════════════════════ CREDIT ═══════════════════════════ */
+const BOOSTED_PAYMENTS = new Set(); // session-only — no backend persistence for this preview action
+let CREDIT_PAYMENTS = [];
 async function renderCredit(){
   const payments = await fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]);
+  CREDIT_PAYMENTS = payments;
   const onTime = computeOnTime(payments);
-  const reportedTotal = payments.reduce((s,p)=>s+p.amount_cents,0);
   document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>${esc(t('nav_credit'))}</h1><div class="sub">${esc(t('sample_data_sub'))}</div></div></div>
+    <div class="app-head"><div><h1>${esc(t('credit_building_title'))}</h1><div class="sub">${esc(t('credit_building_sub'))}</div></div></div>
     ${scoreCardHtml(true)}
-    <div class="stat-grid" style="margin-top:16px">
-      <div class="stat-card"><div class="label">${esc(t('on_time_payments'))}</div><div class="val green">${esc(t('of_last_12',{n:onTime.count}))}</div><div class="trend">${esc(t('pct_this_year',{pct:onTime.pct}))}</div></div>
-      <div class="stat-card"><div class="label">${esc(t('total_paid_on_record'))}</div><div class="val">${money(reportedTotal)}</div><div class="trend">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))}</div></div>
-    </div>
-    <div class="panel" style="margin-top:16px">
-      <div class="panel-head">
-        <div><h3 class="panel-title">${esc(t('credit_boost_title'))}</h3><div class="panel-sub">${esc(t('credit_boost_desc'))}</div></div>
-      </div>
-      <button class="btn btn-green btn-lg" id="creditBoostBtn" onclick="boostCredit()">${esc(t('credit_boost_btn'))}</button>
-      <div id="credit-boost-msg" class="msg"></div>
-    </div>
+    ${reportingDetailsHtml(onTime)}
+    ${creditBoostLogHtml(payments)}
   `;
 }
-function boostCredit(){
-  const btn = document.getElementById('creditBoostBtn');
+function boostCredit(paymentId){
   const msg = document.getElementById('credit-boost-msg');
-  if(btn.disabled) return;
-  btn.disabled = true;
-  const original = btn.textContent;
-  btn.textContent = t('credit_boost_pending');
+  if(BOOSTED_PAYMENTS.has(paymentId)) return;
   msg.className = 'msg';
-  msg.textContent = '';
+  msg.textContent = t('credit_boost_pending');
   setTimeout(() => {
-    btn.textContent = original;
-    btn.disabled = false;
-    msg.className = 'msg ok';
-    msg.textContent = t('credit_boost_success');
-  }, 900);
+    BOOSTED_PAYMENTS.add(paymentId);
+    renderCredit();
+    const m2 = document.getElementById('credit-boost-msg');
+    if(m2){ m2.className = 'msg ok'; m2.textContent = t('credit_boost_success'); }
+  }, 700);
 }
 
 /* ═══════════════════════════ PAYMENTS (pay + history) ═══════════════════════════ */
