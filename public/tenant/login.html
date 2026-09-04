@@ -11,19 +11,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --brick:#8b2424; --brick-2:#a32d2d; --brick-3:#c93e3e;
-  --green:#2d7d2d; --green-2:#3a9c3a; --green-3:#5bc05b;
-  --gold:#d4a247; --gold-2:#e8c074;
-  --ink:#e9eef5; --ink-2:#b8c4d4; --ink-3:#7c8a9d;
-  --line:rgba(255,255,255,0.08); --line-2:rgba(255,255,255,0.14);
+  --red:#c93326; --red-dk:#a32d2d;
+  --green:#2d7d2d; --green-2:#3a9c3a;
+  --navy:#0f1626;
+  --ink:#14161c; --ink-2:#5c6270; --ink-3:#9096a3;
+  --line:#e8e9f0; --line-2:#d9dbe6;
+  --bg:#f5f6fa; --card:#ffffff;
+  --sh-md:0 8px 24px rgba(20,22,28,.06), 0 2px 6px rgba(20,22,28,.04);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;min-height:100vh}
 body{
-  background:
-    radial-gradient(1200px 800px at 12% -10%, rgba(139,36,36,0.16), transparent 60%),
-    radial-gradient(1200px 800px at 95% 5%, rgba(45,125,45,0.12), transparent 60%),
-    linear-gradient(180deg, #07121f 0%, #0a1a2c 35%, #07121f 100%);
+  background:var(--bg);
   color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   display:flex;align-items:center;justify-content:center
 }
@@ -32,26 +31,32 @@ a{color:inherit}
 .brand-row{display:flex;align-items:center;justify-content:center;gap:2px;margin-bottom:22px}
 .brand-mark{display:flex;align-items:center;justify-content:center;transform:translateY(-4px)}
 .brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:21px;font-weight:800;letter-spacing:-0.4px}
-.brand-word .b1{color:var(--ink-2)}
-.brand-word .b2{color:#0b0b0b;background:#fff;border-radius:5px;padding:0 4px;margin-right:1px}
-.brand-word .b3{color:#a8341c}
+.brand-word .b1{color:var(--navy)}
+.brand-word .b3{color:var(--red)}
 .brand-word .b4{color:var(--green)}
 .sub{color:var(--ink-3);font-size:13.5px;text-align:center;margin-bottom:26px;line-height:1.5}
-.card{background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border:1px solid var(--line);border-radius:18px;padding:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px 24px;box-shadow:var(--sh-md)}
+.card-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:var(--ink);text-align:center;margin:0 0 6px;letter-spacing:-.3px}
+.card-sub{color:var(--ink-3);font-size:13.5px;text-align:center;margin-bottom:22px}
 .field{margin-bottom:14px}
-.field label{display:block;color:var(--ink-3);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
-.field input{width:100%;background:rgba(0,0,0,0.25);border:1px solid var(--line-2);border-radius:10px;padding:11px 13px;color:#fff;font-size:14px;outline:none;font-family:inherit}
-.field input:focus{border-color:var(--brick-3)}
-.btn-primary{width:100%;padding:12px;border-radius:11px;font-weight:700;font-size:14.5px;background:linear-gradient(180deg,var(--brick-2),var(--brick));color:#fff;border:none;cursor:pointer;box-shadow:0 8px 22px rgba(139,36,36,0.4)}
+.field label{display:block;color:var(--ink);font-size:12.5px;font-weight:700;margin-bottom:6px}
+.field-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.field-head label{margin-bottom:0}
+.forgot-link{font-size:12px;font-weight:700;color:var(--red);cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
+.forgot-link:hover{text-decoration:underline}
+.field input{width:100%;background:var(--bg);border:1px solid var(--line-2);border-radius:10px;padding:11px 13px;color:var(--ink);font-size:14px;outline:none;font-family:inherit}
+.field input:focus{border-color:var(--red)}
+.btn-primary{width:100%;padding:13px;border-radius:11px;font-weight:700;font-size:14.5px;background:linear-gradient(180deg,var(--red),var(--red-dk));color:#fff;border:none;cursor:pointer;box-shadow:0 8px 22px rgba(201,51,38,0.3)}
 .btn-primary:hover{transform:translateY(-1px)}
 .msg{margin-top:12px;font-size:13px;text-align:center}
-.msg.err{color:#e76d6d}
+.msg.err{color:#c93326}
+.msg.info{color:var(--ink-2)}
 .foot{text-align:center;color:var(--ink-3);font-size:12.5px;margin-top:20px}
-.foot a{color:var(--gold-2)}
+.foot a{color:var(--red);font-weight:700}
 .lang-toggle{display:flex;justify-content:center;gap:6px;margin-bottom:18px}
-.lang-toggle button{padding:6px 14px;border-radius:99px;font-size:11.5px;font-weight:700;color:var(--ink-3);border:1px solid var(--line-2);background:rgba(255,255,255,0.02)}
+.lang-toggle button{padding:6px 14px;border-radius:99px;font-size:11.5px;font-weight:700;color:var(--ink-3);border:1px solid var(--line-2);background:var(--card)}
 .lang-toggle button.active{background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff;border-color:var(--green)}
-.lang-toggle button:not(.active):hover{background:rgba(255,255,255,0.06);color:#fff}
+.lang-toggle button:not(.active):hover{background:var(--line)}
 </style>
 </head>
 <body>
@@ -84,12 +89,16 @@ a{color:inherit}
     <button id="langBtnEn" onclick="setLang('en')">EN</button>
     <button id="langBtnEs" onclick="setLang('es')">ES</button>
   </div>
-  <div class="sub" id="loginSub">Sign in with the email and temporary password your property manager gave you</div>
 
   <div class="card">
-    <div class="field"><label id="lblEmail">Email</label><input id="li-email" type="email" placeholder="you@email.com" /></div>
-    <div class="field"><label id="lblPassword">Password</label><input id="li-password" type="password" placeholder="••••••••" /></div>
-    <button class="btn-primary" onclick="doLogin()" id="btnSignIn">Sign In</button>
+    <h1 class="card-title" id="cardTitle">Welcome back</h1>
+    <div class="card-sub" id="loginSub">Sign in to your RentPayEZ account</div>
+    <div class="field"><label id="lblEmail">Email Address</label><input id="li-email" type="email" placeholder="you@example.com" /></div>
+    <div class="field">
+      <div class="field-head"><label id="lblPassword">Password</label><button type="button" class="forgot-link" id="btnForgot" onclick="showForgot()">Forgot password?</button></div>
+      <input id="li-password" type="password" placeholder="Enter your password" />
+    </div>
+    <button class="btn-primary" onclick="doLogin()" id="btnSignIn">Sign In as Tenant</button>
     <div id="li-msg" class="msg"></div>
   </div>
 
@@ -98,15 +107,17 @@ a{color:inherit}
 
 <script>
 const I18N_LOGIN = {
-  en: { sub:'Sign in with the email and temporary password your property manager gave you', email:'Email', password:'Password', sign_in:'Sign In', login_failed:'Login failed', staff_prompt:'Property manager or staff? ', staff_link:'Sign in here instead' },
-  es: { sub:'Inicia sesión con el correo y la contraseña temporal que te dio tu administrador de propiedad', email:'Correo electrónico', password:'Contraseña', sign_in:'Iniciar Sesión', login_failed:'No se pudo iniciar sesión', staff_prompt:'¿Administrador de propiedad o personal? ', staff_link:'Inicia sesión aquí' }
+  en: { title:'Welcome back', sub:'Sign in to your RentPayEZ account', email:'Email Address', password:'Password', forgot:'Forgot password?', forgot_msg:'Password resets are handled by your property manager — contact their office and they can set you a new temporary password.', sign_in:'Sign In as Tenant', login_failed:'Login failed', staff_prompt:'Property manager or staff? ', staff_link:'Sign in here instead' },
+  es: { title:'Bienvenido de nuevo', sub:'Inicia sesión en tu cuenta de RentPayEZ', email:'Correo electrónico', password:'Contraseña', forgot:'¿Olvidaste tu contraseña?', forgot_msg:'Los restablecimientos de contraseña los gestiona tu administrador de propiedad — contacta su oficina y podrán asignarte una nueva contraseña temporal.', sign_in:'Iniciar Sesión como Inquilino', login_failed:'No se pudo iniciar sesión', staff_prompt:'¿Administrador de propiedad o personal? ', staff_link:'Inicia sesión aquí' }
 };
 let LANG = localStorage.getItem('rpz_lang') === 'es' ? 'es' : 'en';
 function applyLang(){
   const d = I18N_LOGIN[LANG];
+  document.getElementById('cardTitle').textContent = d.title;
   document.getElementById('loginSub').textContent = d.sub;
   document.getElementById('lblEmail').textContent = d.email;
   document.getElementById('lblPassword').textContent = d.password;
+  document.getElementById('btnForgot').textContent = d.forgot;
   document.getElementById('btnSignIn').textContent = d.sign_in;
   document.getElementById('footText').innerHTML = d.staff_prompt + '<a href="/admin/login.html">' + d.staff_link + '</a>';
   document.getElementById('langBtnEn').classList.toggle('active', LANG==='en');
@@ -114,6 +125,11 @@ function applyLang(){
 }
 function setLang(l){ LANG = l; localStorage.setItem('rpz_lang', l); applyLang(); }
 applyLang();
+function showForgot(){
+  const msg = document.getElementById('li-msg');
+  msg.className = 'msg info';
+  msg.textContent = I18N_LOGIN[LANG].forgot_msg;
+}
 async function doLogin(){
   const email = document.getElementById('li-email').value.trim();
   const password = document.getElementById('li-password').value;
