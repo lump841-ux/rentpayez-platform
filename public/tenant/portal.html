@@ -71,6 +71,9 @@ input,select,textarea{font-family:inherit}
 .brand-word .b3{color:var(--red)}
 .brand-word .b4{color:var(--green)}
 .topnav-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.prop-toggle{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-full);padding:3px;gap:2px;flex-shrink:0}
+.prop-toggle span{padding:6px 14px;border-radius:var(--r-full);font-size:12.5px;font-weight:700;color:var(--ink-3);white-space:nowrap}
+.prop-toggle span.active{background:#fff;color:var(--red);box-shadow:var(--sh-sm)}
 .unit-badge{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
 .unit-badge .u{font-size:12.5px;font-weight:700;color:var(--ink)}
 .unit-badge .a{font-size:11px;color:var(--ink-3)}
@@ -100,6 +103,7 @@ input,select,textarea{font-family:inherit}
 @media (max-width:640px){
   .topnav-inner{padding:12px 16px}
   .unit-badge{display:none}
+  .prop-toggle{display:none}
   .brand-word{font-size:17px}
   .tabbar{padding:0 12px}
   .tabbar button{padding:11px 10px;font-size:12.5px}
@@ -254,6 +258,7 @@ input,select,textarea{font-family:inherit}
         <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
       </a>
       <div class="topnav-right">
+        <div class="prop-toggle" id="propToggle"></div>
         <div class="unit-badge" id="unitBadge"></div>
         <div class="user-menu" id="userMenu">
           <button class="user-avatar-btn" id="userAvatarBtn" aria-label="Account menu"></button>
@@ -282,6 +287,7 @@ const I18N = {
   en: {
     nav_overview:'Overview', nav_payments:'Payments', nav_maintenance:'Maintenance',
     nav_inspections:'Inspections', nav_credit:'Credit', nav_office:'Office',
+    type_apartment:'Apartment', type_property:'Property',
     office_documents:'Documents', office_coach:'AI Coach', office_goals:'My Goals', office_settings:'Settings',
     sign_out:'Sign out', resident:'Resident', unit_n:'Unit {{n}}',
     loading_account:'Loading your account…', loading:'Loading…',
@@ -351,6 +357,7 @@ const I18N = {
   es: {
     nav_overview:'Resumen', nav_payments:'Pagos', nav_maintenance:'Mantenimiento',
     nav_inspections:'Inspecciones', nav_credit:'Crédito', nav_office:'Oficina',
+    type_apartment:'Apartamento', type_property:'Propiedad',
     office_documents:'Documentos', office_coach:'Asistente IA', office_goals:'Mis Metas', office_settings:'Configuración',
     sign_out:'Cerrar sesión', resident:'Residente', unit_n:'Unidad {{n}}',
     loading_account:'Cargando tu cuenta…', loading:'Cargando…',
@@ -497,6 +504,13 @@ function renderNav(){
   document.getElementById('unitBadge').innerHTML =
     `<span class="u">${esc(T.unit_number ? t('unit_n',{n:T.unit_number}) : t('resident'))}</span>
      <span class="a">${esc(T.property_address || T.property_name || '')}</span>`;
+  // Honest, data-driven label — not a functional switcher. A unit tied to a
+  // building record is classified "Apartment"; a standalone unit is
+  // classified "Property". Reflects real data, never toggled by a click.
+  const isApartment = !!T.building_id;
+  document.getElementById('propToggle').innerHTML =
+    `<span class="${isApartment?'active':''}">${esc(t('type_apartment'))}</span>
+     <span class="${isApartment?'':'active'}">${esc(t('type_property'))}</span>`;
   document.getElementById('langBtnEn').classList.toggle('active', LANG==='en');
   document.getElementById('langBtnEs').classList.toggle('active', LANG==='es');
   document.getElementById('signOutLabel').textContent = t('sign_out');
