@@ -100,16 +100,18 @@ CREATE TABLE IF NOT EXISTS units (
   unit_number     TEXT NOT NULL,
   monthly_rent    NUMERIC(10,2),
   rent_due_day    INTEGER CHECK (rent_due_day BETWEEN 1 AND 28), -- day of month rent is due; 1-28 to stay valid in every month. NULL = no reminder computed.
+  lease_end_date  DATE, -- current lease term end date, shown to the tenant on their Overview page. NULL = not set yet.
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Backfill for deployments where the units table already existed before
--- rent_due_day was added above: CREATE TABLE IF NOT EXISTS only runs on
--- first creation, so the inline column definition never reaches an
--- already-existing table (the exact bug that previously dropped
+-- rent_due_day/lease_end_date were added above: CREATE TABLE IF NOT EXISTS
+-- only runs on first creation, so the inline column definitions never reach
+-- an already-existing table (the exact bug that previously dropped
 -- maintenance_requests/documents/payments in production). ADD COLUMN IF
 -- NOT EXISTS is idempotent and safe to re-run on every boot.
 ALTER TABLE units ADD COLUMN IF NOT EXISTS rent_due_day INTEGER CHECK (rent_due_day BETWEEN 1 AND 28);
+ALTER TABLE units ADD COLUMN IF NOT EXISTS lease_end_date DATE;
 
 -- ── Tenants ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tenants (

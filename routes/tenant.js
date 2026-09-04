@@ -30,7 +30,7 @@ router.get('/me', async (req, res) => {
   const t = req.session.tenant;
   const { rows } = await db.query(
     `SELECT te.id, te.name, te.email, te.phone, te.status, (te.avatar_data IS NOT NULL) AS has_avatar,
-            u.id AS unit_id, u.unit_number, u.monthly_rent, u.rent_due_day,
+            u.id AS unit_id, u.unit_number, u.monthly_rent, u.rent_due_day, u.lease_end_date,
             p.id AS property_id, p.name AS property_name, p.address AS property_address,
             b.id AS building_id, b.name AS building_name,
             o.name AS organization_name, o.emergency_contact_name,

@@ -286,6 +286,11 @@ const I18N = {
     sign_out:'Sign out', resident:'Resident', unit_n:'Unit {{n}}',
     loading_account:'Loading your account…', loading:'Loading…',
     welcome_back:'Welcome back, {{name}} 👋', your_resident_portal:'Your resident portal',
+    greeting_morning:'Good morning, {{name}} 👋', greeting_afternoon:'Good afternoon, {{name}} 👋', greeting_evening:'Good evening, {{name}} 👋',
+    overview_snapshot_at:"Here's a snapshot of your rental at {{address}}, Unit {{unit}}.", overview_snapshot_plain:"Here's a snapshot of your rental.",
+    rent_due_eyebrow:'{{month}} Rent Due',
+    lease_ends:'Lease Ends', lease_not_set_sub:'Not set yet', lease_ended:'Lease ended', lease_ends_this_month:'Ends this month',
+    months_left:'{{n}} months left', month_left:'1 month left',
     credit_score:'Credit Score', preview:'Preview', not_connected_yet:'Not connected yet',
     on_time_payments:'On-Time Payments', of_last_12:'{{n}}/12 this year', pct_this_year:'{{pct}}% this year',
     total_paid_on_record:'Total Paid on Record', payment_n:'{{n}} payment', payments_n:'{{n}} payments',
@@ -350,6 +355,11 @@ const I18N = {
     sign_out:'Cerrar sesión', resident:'Residente', unit_n:'Unidad {{n}}',
     loading_account:'Cargando tu cuenta…', loading:'Cargando…',
     welcome_back:'Bienvenido de nuevo, {{name}} 👋', your_resident_portal:'Tu portal de residente',
+    greeting_morning:'Buenos días, {{name}} 👋', greeting_afternoon:'Buenas tardes, {{name}} 👋', greeting_evening:'Buenas noches, {{name}} 👋',
+    overview_snapshot_at:'Aquí tienes un resumen de tu alquiler en {{address}}, Unidad {{unit}}.', overview_snapshot_plain:'Aquí tienes un resumen de tu alquiler.',
+    rent_due_eyebrow:'Renta de {{month}} Pendiente',
+    lease_ends:'Fin del Contrato', lease_not_set_sub:'Aún no establecido', lease_ended:'Contrato vencido', lease_ends_this_month:'Termina este mes',
+    months_left:'{{n}} meses restantes', month_left:'1 mes restante',
     credit_score:'Puntaje de Crédito', preview:'Vista previa', not_connected_yet:'Aún no conectado',
     on_time_payments:'Pagos a Tiempo', of_last_12:'{{n}}/12 este año', pct_this_year:'{{pct}}% este año',
     total_paid_on_record:'Total Pagado Registrado', payment_n:'{{n}} pago', payments_n:'{{n}} pagos',
@@ -547,29 +557,58 @@ function reminderBannerHtml(){
 function ordinal(n){ if(!n) return ''; const s=['th','st','nd','rd'], v=n%100; return s[(v-20)%10]||s[v]||s[0]; }
 
 /* ═══════════════════════════ OVERVIEW ═══════════════════════════ */
+function greetingText(){
+  const hour = new Date().getHours();
+  const key = hour < 12 ? 'greeting_morning' : hour < 18 ? 'greeting_afternoon' : 'greeting_evening';
+  return t(key, {name:(T.name||'').split(' ')[0]});
+}
+function rentDueLineText(){
+  const r = T.rent_reminder;
+  if(!r || r.status === 'no_due_day') return '';
+  if(r.status === 'paid') return t('rent_paid_this_month');
+  const due = r.dueDay + ordinal(r.dueDay);
+  if(r.status === 'overdue') return t('rent_overdue', {days: Math.abs(r.daysUntilDue), s: Math.abs(r.daysUntilDue)===1?'':'s', due});
+  if(r.daysUntilDue === 0) return t('rent_due_today', {due});
+  return t('rent_due_in', {days: r.daysUntilDue, s: r.daysUntilDue===1?'':'s', due});
+}
+function leaseEndsVal(){
+  if(!T.lease_end_date) return t('lease_not_set_sub');
+  return fmtDate(T.lease_end_date);
+}
+function leaseEndsTrend(){
+  if(!T.lease_end_date) return '';
+  const end = new Date(T.lease_end_date+'T00:00:00');
+  const now = new Date();
+  const months = (end.getFullYear()-now.getFullYear())*12 + (end.getMonth()-now.getMonth());
+  if(months < 0) return t('lease_ended');
+  if(months === 0) return t('lease_ends_this_month');
+  if(months === 1) return t('month_left');
+  return t('months_left', {n: months});
+}
 async function renderOverview(){
   const [payments, mrList] = await Promise.all([
     fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]),
     fetch('/api/tenant/maintenance-requests').then(r=>r.ok?r.json():[]),
   ]);
-  const reportedTotal = payments.reduce((s,p)=>s+p.amount_cents,0);
   const onTime = computeOnTime(payments);
   const openRequests = mrList.filter(r=>r.status!=='resolved').length;
-  const paidThisMonth = T.rent_reminder && T.rent_reminder.status === 'paid';
+  const dueLine = rentDueLineText();
+  const dueIsOverdue = T.rent_reminder && T.rent_reminder.status === 'overdue';
+  const monthName = new Date().toLocaleDateString(LANG === 'es' ? 'es' : undefined, {month:'long'});
 
   document.getElementById('appMain').innerHTML = `
     <div class="app-head">
-      <div><h1>${esc(t('welcome_back',{name:(T.name||'').split(' ')[0]}))}</h1><div class="sub">${esc(T.property_name || t('your_resident_portal'))}${T.unit_number ? ' · ' + esc(t('unit_n',{n:T.unit_number})) : ''}</div></div>
+      <div><h1>${esc(greetingText())}</h1><div class="sub">${T.property_address ? esc(t('overview_snapshot_at',{address:T.property_address, unit:T.unit_number||'—'})) : esc(t('overview_snapshot_plain'))}</div></div>
     </div>
 
     ${reminderBannerHtml()}
 
     <div class="rent-hero">
       <div>
-        <div class="label">${esc(t('rent_due_title'))}</div>
+        <div class="label">${esc(t('rent_due_eyebrow',{month:monthName}))}</div>
         <div class="amt">${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}${T.monthly_rent?'<small>/mo</small>':''}</div>
-        <div class="due ${paidThisMonth?'ok':(T.rent_reminder&&T.rent_reminder.status==='overdue'?'overdue':'ok')}">
-          ${T.monthly_rent ? (paidThisMonth ? esc(t('rent_paid_this_month')) : '') : esc(t('no_rent_on_file'))}
+        <div class="due ${dueIsOverdue?'overdue':'ok'}">
+          ${T.monthly_rent ? dueLine : esc(t('no_rent_on_file'))}
         </div>
       </div>
       <button class="btn btn-primary btn-lg" onclick="setView('payments')" ${T.monthly_rent?'':'disabled'}>${esc(t('pay_now'))}</button>
@@ -579,24 +618,18 @@ async function renderOverview(){
       <div class="stat-card"><div class="label">${esc(t('credit_score'))}</div><div class="val gold">${esc(t('preview'))}</div><div class="trend">${esc(t('not_connected_yet'))}</div></div>
       <div class="stat-card"><div class="label">${esc(t('on_time_payments'))}</div><div class="val green">${esc(t('of_last_12',{n:onTime.count}))}</div><div class="trend">${esc(t('pct_this_year',{pct:onTime.pct}))}</div></div>
       <div class="stat-card"><div class="label">${esc(t('open_requests'))}</div><div class="val blue">${openRequests}</div><div class="trend">${esc(t('total_filed_n',{n:mrList.length}))}</div></div>
-      <div class="stat-card"><div class="label">${esc(t('total_paid_on_record'))}</div><div class="val">${money(reportedTotal)}</div><div class="trend">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))}</div></div>
+      <div class="stat-card"><div class="label">${esc(t('lease_ends'))}</div><div class="val blue">${esc(leaseEndsVal())}</div><div class="trend">${esc(leaseEndsTrend())}</div></div>
     </div>
 
-    <div class="two-col">
-      <div class="panel">
-        <div class="panel-head"><div><h3 class="panel-title">${esc(t('last_12_months'))}</h3><div class="panel-sub">${esc(t('months_with_payment'))}</div></div></div>
-        ${streakStripHtml(payments)}
+    <div class="panel">
+      <div class="panel-head"><div><h3 class="panel-title">${esc(t('recent_maintenance'))}</h3><div class="panel-sub">${esc(t(mrList.length===1?'request_n_filed':'requests_n_filed',{n:mrList.length}))}</div></div>
+        <button class="btn btn-sm btn-secondary" onclick="setView('maintenance')">${esc(t('view_all'))}</button>
       </div>
-      <div class="panel">
-        <div class="panel-head"><div><h3 class="panel-title">${esc(t('recent_maintenance'))}</h3><div class="panel-sub">${esc(t(mrList.length===1?'request_n_filed':'requests_n_filed',{n:mrList.length}))}</div></div>
-          <button class="btn btn-sm btn-secondary" onclick="setView('maintenance')">${esc(t('view_all'))}</button>
-        </div>
-        ${mrList.length ? mrList.slice(0,3).map(r=>`
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line)">
-            <div><div style="color:var(--ink);font-size:13px;font-weight:600">${esc(catLabel(r.category))}</div><div style="color:var(--ink-3);font-size:11.5px">${fmtDate(r.created_at)}</div></div>
-            <span class="pill ${esc(r.status)}">${esc(statusLabel(r.status))}</span>
-          </div>`).join('') : `<div class="empty">${esc(t('no_maintenance_yet'))}</div>`}
-      </div>
+      ${mrList.length ? mrList.slice(0,3).map(r=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line)">
+          <div><div style="color:var(--ink);font-size:13px;font-weight:600">${esc(catLabel(r.category))}</div><div style="color:var(--ink-3);font-size:11.5px">${fmtDate(r.created_at)}</div></div>
+          <span class="pill ${esc(r.status)}">${esc(statusLabel(r.status))}</span>
+        </div>`).join('') : `<div class="empty">${esc(t('no_maintenance_yet'))}</div>`}
     </div>
   `;
 }

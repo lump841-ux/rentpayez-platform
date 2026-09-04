@@ -129,13 +129,18 @@
         <div class="field"><label>Unit Number</label><input id="un-number" placeholder="101" /></div>
         <div class="field"><label>Monthly Rent</label><input id="un-rent" type="number" placeholder="1450" /></div>
       </div>
-      <div class="field"><label>Rent Due Day (optional)</label><input id="un-due-day" type="number" min="1" max="28" placeholder="1" />
-        <p style="color:var(--ink-3);font-size:12px;margin-top:4px">Day of the month rent is due (1–28). Powers the in-app Rent Reminders — no email/SMS is sent.</p>
+      <div class="form-row">
+        <div class="field"><label>Rent Due Day (optional)</label><input id="un-due-day" type="number" min="1" max="28" placeholder="1" />
+          <p style="color:var(--ink-3);font-size:12px;margin-top:4px">Day of the month rent is due (1–28). Powers the in-app Rent Reminders — no email/SMS is sent.</p>
+        </div>
+        <div class="field"><label>Lease End Date (optional)</label><input id="un-lease-end" type="date" />
+          <p style="color:var(--ink-3);font-size:12px;margin-top:4px">Shown to the tenant on their Overview page.</p>
+        </div>
       </div>
       <button class="btn btn-primary" onclick="createUnit()">Add Unit</button>
       <div id="un-msg"></div>
     </div>
-    <div class="card mt"><div class="section-title">Units</div><table id="un-table"><thead><tr><th>Unit #</th><th>Property</th><th>Rent</th><th>Due Day</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="card mt"><div class="section-title">Units</div><table id="un-table"><thead><tr><th>Unit #</th><th>Property</th><th>Rent</th><th>Due Day</th><th>Lease Ends</th><th></th></tr></thead><tbody></tbody></table></div>
   </div>
 
   <div class="panel" id="panel-staff">
@@ -382,13 +387,15 @@ async function refreshAll(){
     const occupant = tenants.find(t=>t.unit_id===u.id);
     return `<tr><td>${esc(u.unit_number)}</td><td>${propName(u.property_id)}</td><td>${u.monthly_rent ? '$'+Number(u.monthly_rent).toLocaleString() : '—'}</td>
      <td>${u.rent_due_day ? 'Day '+u.rent_due_day : '—'}</td>
+     <td>${u.lease_end_date ? new Date(u.lease_end_date+'T00:00:00').toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
      <td style="display:flex;gap:6px;flex-wrap:wrap">
        <button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="editUnitDueDay('${u.id}', ${u.rent_due_day||'null'})">Edit Due Day</button>
+       <button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="editUnitLeaseEnd('${u.id}', ${u.lease_end_date ? `'${u.lease_end_date}'` : 'null'})">Edit Lease End</button>
        ${occupant
          ? `<button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="viewTenantForUnit('${u.id}')">View Tenant →</button>`
          : `<span style="color:var(--ink-3);font-size:12px;padding:5px 10px">No tenant</span>`}
      </td></tr>`;
-  }).join('') || emptyRow(5);
+  }).join('') || emptyRow(6);
 
   document.getElementById('st-table').querySelector('tbody').innerHTML = staff.map(s=>
     `<tr><td>${esc(s.name)}</td><td>${esc(s.email)}</td><td>${s.role.replace('_',' ')}</td><td><span class="pill ${s.status}">${s.status}</span></td>
@@ -676,10 +683,11 @@ async function createUnit(){
   const unitNumber = document.getElementById('un-number').value.trim();
   const monthlyRent = document.getElementById('un-rent').value || null;
   const rentDueDay = document.getElementById('un-due-day').value || null;
+  const leaseEndDate = document.getElementById('un-lease-end').value || null;
   const msg = document.getElementById('un-msg');
   try{ if(!propertyId || !unitNumber) throw new Error('Property and unit number are required');
-    await api('/units', { method:'POST', body: JSON.stringify({propertyId,buildingId,unitNumber,monthlyRent,rentDueDay}) });
-    document.getElementById('un-number').value=''; document.getElementById('un-rent').value=''; document.getElementById('un-due-day').value='';
+    await api('/units', { method:'POST', body: JSON.stringify({propertyId,buildingId,unitNumber,monthlyRent,rentDueDay,leaseEndDate}) });
+    document.getElementById('un-number').value=''; document.getElementById('un-rent').value=''; document.getElementById('un-due-day').value=''; document.getElementById('un-lease-end').value='';
     msg.className='ok'; msg.textContent='Unit added.'; await refreshAll();
   }catch(err){ msg.className='err'; msg.textContent=err.message; }
 }
@@ -689,6 +697,15 @@ async function editUnitDueDay(unitId, current){
   const rentDueDay = input.trim() === '' ? null : input.trim();
   try{
     await api(`/units/${unitId}`, { method:'PATCH', body: JSON.stringify({ rentDueDay }) });
+    await refreshAll();
+  }catch(err){ alert(err.message); }
+}
+async function editUnitLeaseEnd(unitId, current){
+  const input = window.prompt('Lease end date (YYYY-MM-DD, blank to clear):', current == null ? '' : current);
+  if(input === null) return; // cancelled
+  const leaseEndDate = input.trim() === '' ? null : input.trim();
+  try{
+    await api(`/units/${unitId}`, { method:'PATCH', body: JSON.stringify({ leaseEndDate }) });
     await refreshAll();
   }catch(err){ alert(err.message); }
 }

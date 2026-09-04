@@ -127,24 +127,35 @@ function parseDueDay(v) {
   return n;
 }
 
+function parseLeaseEndDate(v) {
+  if (v === undefined) return undefined; // caller didn't touch it
+  if (v === null || v === '') return null; // explicit clear
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v))) return NaN; // sentinel for "invalid"
+  return v;
+}
+
 router.post('/units', requireRole('org_admin', 'branch_manager', 'property_manager', 'super_admin'), async (req, res) => {
-  const { unitNumber, propertyId, buildingId, monthlyRent, rentDueDay } = req.body || {};
+  const { unitNumber, propertyId, buildingId, monthlyRent, rentDueDay, leaseEndDate } = req.body || {};
   if (!unitNumber || !propertyId) return res.status(400).json({ error: 'unitNumber and propertyId are required' });
   const dueDay = parseDueDay(rentDueDay);
   if (Number.isNaN(dueDay)) return res.status(400).json({ error: 'rentDueDay must be an integer between 1 and 28' });
+  const leaseEnd = parseLeaseEndDate(leaseEndDate);
+  if (Number.isNaN(leaseEnd)) return res.status(400).json({ error: 'leaseEndDate must be a valid date (YYYY-MM-DD)' });
   const { rows } = await db.query(
-    `INSERT INTO units (organization_id, property_id, building_id, unit_number, monthly_rent, rent_due_day)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [req.orgId, propertyId, buildingId || null, unitNumber, monthlyRent || null, dueDay || null]
+    `INSERT INTO units (organization_id, property_id, building_id, unit_number, monthly_rent, rent_due_day, lease_end_date)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [req.orgId, propertyId, buildingId || null, unitNumber, monthlyRent || null, dueDay || null, leaseEnd || null]
   );
   await logAction(req, 'unit.create', 'unit', rows[0].id, { unitNumber });
   res.json(rows[0]);
 });
 
 router.patch('/units/:id', requireRole('org_admin', 'branch_manager', 'property_manager', 'super_admin'), async (req, res) => {
-  const { monthlyRent, rentDueDay } = req.body || {};
+  const { monthlyRent, rentDueDay, leaseEndDate } = req.body || {};
   const dueDay = parseDueDay(rentDueDay);
   if (Number.isNaN(dueDay)) return res.status(400).json({ error: 'rentDueDay must be an integer between 1 and 28' });
+  const leaseEnd = parseLeaseEndDate(leaseEndDate);
+  if (Number.isNaN(leaseEnd)) return res.status(400).json({ error: 'leaseEndDate must be a valid date (YYYY-MM-DD)' });
 
   const scope = await scopedPropertyIds(req.session.user);
   const { rows: existing } = await db.query(`SELECT * FROM units WHERE id = $1 AND organization_id = $2`, [req.params.id, req.orgId]);
@@ -154,11 +165,12 @@ router.patch('/units/:id', requireRole('org_admin', 'branch_manager', 'property_
   const { rows } = await db.query(
     `UPDATE units SET
        monthly_rent = COALESCE($1, monthly_rent),
-       rent_due_day = CASE WHEN $2::text IS NULL THEN rent_due_day ELSE $3 END
+       rent_due_day = CASE WHEN $2::text IS NULL THEN rent_due_day ELSE $3 END,
+       lease_end_date = CASE WHEN $5::text IS NULL THEN lease_end_date ELSE $6 END
      WHERE id = $4 RETURNING *`,
-    [monthlyRent != null ? monthlyRent : null, rentDueDay !== undefined ? 'set' : null, dueDay === undefined ? null : dueDay, req.params.id]
+    [monthlyRent != null ? monthlyRent : null, rentDueDay !== undefined ? 'set' : null, dueDay === undefined ? null : dueDay, req.params.id, leaseEndDate !== undefined ? 'set' : null, leaseEnd === undefined ? null : leaseEnd]
   );
-  await logAction(req, 'unit.update', 'unit', rows[0].id, { monthlyRent, rentDueDay: dueDay });
+  await logAction(req, 'unit.update', 'unit', rows[0].id, { monthlyRent, rentDueDay: dueDay, leaseEndDate: leaseEnd });
   res.json(rows[0]);
 });
 
