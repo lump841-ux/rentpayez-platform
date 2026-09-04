@@ -4,283 +4,294 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>RentPayEZ — Rent Made Simple. Life Made Easy.</title>
-<meta name="description" content="Pay rent online, request maintenance, track inspections and build your credit — all in one place. Free for tenants. Simple for property managers.">
+<meta name="description" content="Pay rent online, request maintenance, track inspections and build your credit — all in one place.">
 <link rel="icon" type="image/png" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{
-  --brick:#8b2424; --brick-2:#a32d2d; --brick-3:#c93e3e;
-  --green:#2d7d2d; --green-2:#3a9c3a; --green-3:#5bc05b; --green-lt:#e9f6e9;
-  --gold:#b9822c; --gold-2:#d4a247;
-  --ink:#14161c; --ink-2:#5c6270; --ink-3:#9096a3;
-  --line:#e8e9f0; --line-2:#d9dbe6;
-  --bg:#f5f6fa; --card:#ffffff;
-}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
 html,body{margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}
-button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
-img{max-width:100%;display:block}
-.container{max-width:1180px;margin:0 auto;padding:0 24px}
+body{font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif;color:#000;background:#fff}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer}
+img{display:block;max-width:100%}
+.logo{display:inline-flex;align-items:baseline;font-family:'DM Sans',sans-serif;letter-spacing:-0.085em;line-height:0.9;white-space:nowrap}
+.logo .r{color:#dc2626}
+.logo .p{color:#dc2626}
+.logo .ez{color:#22c55e}
 
-/* Nav */
-.nav{position:sticky;top:0;z-index:100;background:rgba(245,246,250,.9);backdrop-filter:saturate(160%) blur(12px);border-bottom:1px solid var(--line)}
-.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
-.brand-row{display:flex;align-items:center;gap:2px}
-.brand-mark{display:flex;align-items:center;justify-content:center}
-.brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:19px;font-weight:800;letter-spacing:-.3px}
-.brand-word .b1{color:var(--ink-2)}
-.brand-word .b3{color:#a8341c}
-.brand-word .b4{color:var(--green)}
-.nav-links{display:flex;align-items:center;gap:26px}
-.nav-links a{font-size:14px;font-weight:600;color:var(--ink-2)}
-.nav-links a:hover{color:var(--ink)}
-.nav-actions{display:flex;align-items:center;gap:10px}
-.nav-toggle{display:none}
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:68px;display:flex;align-items:center;padding:0 48px;background-color:transparent;box-shadow:none;transition:background-color .3s,box-shadow .3s}
+nav.scrolled{background-color:rgba(255,255,255,.96);backdrop-filter:blur(8px);box-shadow:0 1px 0 rgba(0,0,0,.06)}
+nav .logo{font-size:34px;font-weight:900}
+nav .logo .ent-dark{color:#000}
+nav.scrolled .logo .ent-light{color:#000}
+.nav-links{display:flex;gap:28px;flex:1;align-items:center;margin-left:40px}
+.nav-links a{font-size:14px;font-weight:500;color:rgba(255,255,255,.92);transition:color .2s}
+nav.scrolled .nav-links a{color:#333}
+.nav-signup{flex-shrink:0}
+.nav-signup button{background:#dc2626;color:#fff;padding:10px 24px;border-radius:24px;font-weight:600;font-size:14px;border:none}
+.nav-toggle{display:none;margin-left:auto;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px}
+.nav-toggle span{display:block;width:22px;height:2px;background:#fff;border-radius:2px}
+nav.scrolled .nav-toggle span{background:#000}
 
-/* Buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:10px;font-weight:700;font-size:14px;transition:.15s ease;border:1px solid transparent;white-space:nowrap}
-.btn-primary{background:linear-gradient(180deg,var(--brick-2),var(--brick));color:#fff;box-shadow:0 8px 20px rgba(139,36,36,.28)}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(139,36,36,.36)}
-.btn-secondary{background:#fff;border:1px solid var(--line-2);color:var(--ink)}
-.btn-secondary:hover{border-color:var(--ink-3)}
-.btn-ghost{background:transparent;color:var(--ink-2);padding:12px 8px}
-.btn-ghost:hover{color:var(--ink)}
-.btn-lg{padding:15px 30px;font-size:15.5px;border-radius:12px}
+/* HERO */
+.hero{position:relative;width:100%;height:88vh;min-height:620px;overflow:hidden}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 46%}
+.hero-overlay{position:absolute;inset:0;background:
+  linear-gradient(90deg, rgba(0,0,0,.3) 0%, rgba(0,0,0,.18) 40%, rgba(0,0,0,.02) 72%, rgba(0,0,0,0) 100%),
+  linear-gradient(rgba(0,0,0,.14) 0%, rgba(0,0,0,.04) 44%, rgba(0,0,0,0) 100%)}
+.hero-content{position:absolute;bottom:16%;left:0;right:0;padding:0 80px;max-width:760px}
+.eyebrow{display:inline-block;background:rgba(220,38,38,.18);backdrop-filter:blur(8px);color:#fff;font-size:12px;font-weight:600;padding:5px 16px;border-radius:20px;margin-bottom:18px;letter-spacing:.8px;border:1px solid rgba(255,255,255,.3)}
+.hero h1{font-size:58px;font-weight:700;color:#fff;line-height:1.1;margin:0 0 18px;text-shadow:0 2px 12px rgba(0,0,0,.55), 0 4px 28px rgba(0,0,0,.35)}
+.hero h1 .accent{color:#22c55e}
+.hero p{font-size:18px;color:rgba(255,255,255,.88);margin:0 0 30px;line-height:1.65;text-shadow:0 1px 8px rgba(0,0,0,.3);max-width:540px}
+.hero-ctas{display:flex;gap:14px}
+.btn-primary{background:#dc2626;color:#fff;padding:15px 32px;border-radius:30px;font-weight:700;font-size:16px;border:none;box-shadow:0 4px 24px rgba(220,38,38,.4)}
+.btn-glass{background:rgba(255,255,255,.18);color:#fff;padding:15px 32px;border-radius:30px;font-weight:600;font-size:16px;border:1.5px solid rgba(255,255,255,.5);backdrop-filter:blur(6px)}
 
-/* Hero */
-.hero{position:relative;overflow:hidden}
-.hero-bg{position:absolute;inset:0;background-image:linear-gradient(90deg, rgba(10,14,20,.72) 0%, rgba(10,14,20,.44) 45%, rgba(10,14,20,.12) 75%),url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="%23a9bfd1"/><rect x="640" y="60" width="420" height="740" fill="%23c7d2dc"/><rect x="680" y="100" width="40" height="40" fill="%237d93a8"/><rect x="740" y="100" width="40" height="40" fill="%237d93a8"/><rect x="800" y="100" width="40" height="40" fill="%237d93a8"/><rect x="680" y="170" width="40" height="40" fill="%237d93a8"/><rect x="740" y="170" width="40" height="40" fill="%237d93a8"/><rect x="800" y="170" width="40" height="40" fill="%237d93a8"/><rect x="0" y="600" width="1200" height="200" fill="%237e9b6f"/></svg>');background-size:cover;background-position:center}
-.hero-inner{position:relative;padding:96px 0 120px;max-width:600px}
-.eyebrow{display:inline-block;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.28);padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;letter-spacing:.3px;margin-bottom:22px}
-.hero h1{color:#fff;font-size:46px;line-height:1.12;font-weight:800;letter-spacing:-1px;margin:0 0 18px}
-.hero h1 .accent{color:var(--green-3)}
-.hero p{color:rgba(255,255,255,.86);font-size:16.5px;line-height:1.6;margin:0 0 30px;max-width:460px}
-.hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
-.hero .btn-secondary{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);color:#fff}
-.hero .btn-secondary:hover{background:rgba(255,255,255,.16)}
+/* FEATURES */
+.features{padding:20px 80px 72px;background:#fff}
+.section-kicker{text-align:center;font-size:12px;font-weight:700;color:#dc2626;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 12px}
+.section-h2{text-align:center;font-size:34px;font-weight:700;color:#000;margin:0 0 40px}
+.feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.feat-card{background:#fafafa;border-radius:16px;padding:28px 24px;border:1px solid #e5e5e5}
+.feat-icon{width:50px;height:50px;background:#dcfce7;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px}
+.feat-card h3{font-weight:700;font-size:16px;color:#000;margin:0 0 8px}
+.feat-card p{font-size:14px;color:#525252;line-height:1.6;margin:0}
 
-/* Section shared */
-.section{padding:72px 0}
-.section-head{text-align:center;max-width:640px;margin:0 auto 46px}
-.kicker{color:var(--brick-2);font-weight:800;font-size:12.5px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
-.section-head h2{font-size:32px;font-weight:800;letter-spacing:-.6px;margin:0 0 12px}
-.section-head p{color:var(--ink-2);font-size:15.5px;line-height:1.6;margin:0}
+/* ROLES */
+.roles{padding:60px 80px 80px;background:#fafafa}
+.roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.role-card{background:#fff;border-radius:20px;overflow:hidden;border:1px solid #e5e5e5;box-shadow:0 2px 16px rgba(0,0,0,.04)}
+.role-card img{width:100%;height:200px;object-fit:cover}
+.role-body{padding:24px 24px 28px}
+.role-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.role-icon{width:36px;height:36px;background:#dcfce7;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.role-head .name{font-weight:700;font-size:18px;color:#000}
+.role-body p{font-size:14px;color:#525252;line-height:1.7;margin:0 0 18px}
+.btn-outline{background:transparent;color:#dc2626;font-weight:600;font-size:14px;border:1.5px solid #dc2626;padding:8px 20px;border-radius:20px}
 
-/* Feature grid */
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.feature{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px}
-.feature-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;background:var(--green-lt)}
-.feature-icon svg{width:22px;height:22px}
-.feature h3{font-size:16.5px;font-weight:700;margin:0 0 8px}
-.feature p{font-size:14px;color:var(--ink-2);line-height:1.55;margin:0}
+/* STATS */
+.stats{padding:56px 80px;background:#dc2626}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{text-align:center;border-right:1px solid rgba(255,255,255,.2)}
+.stat:last-child{border-right:none}
+.stat .num{font-size:42px;font-weight:800;color:#fff;margin-bottom:6px}
+.stat .label{font-size:15px;color:rgba(255,255,255,.75)}
 
-/* How it works */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-.step{text-align:center;padding:0 12px}
-.step-num{width:38px;height:38px;border-radius:50%;background:var(--brick-2);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
-.step h3{font-size:16px;font-weight:700;margin:0 0 8px}
-.step p{font-size:14px;color:var(--ink-2);line-height:1.55;margin:0}
+/* CTA */
+.cta{padding:88px 80px;background:#fff;text-align:center}
+.cta h2{font-size:36px;font-weight:700;color:#000;margin:0 0 14px}
+.cta p{font-size:16px;color:#525252;margin:0 auto 36px;max-width:500px}
+.cta-form{display:flex;gap:12px;justify-content:center}
+.cta-form input{padding:14px 22px;border-radius:30px;border:1.5px solid #e5e5e5;font-size:15px;width:320px;font-family:inherit;outline:none;color:#000}
+.cta-form button{background:#dc2626;color:#fff;padding:14px 30px;border-radius:30px;font-weight:700;font-size:15px;border:none}
 
-/* Split CTA */
-.split{background:#0f1626;border-radius:22px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr}
-.split-panel{padding:46px 40px;position:relative}
-.split-panel.tenant{background:linear-gradient(155deg,rgba(139,36,36,.9),rgba(42,5,3,.95))}
-.split-panel.landlord{background:linear-gradient(155deg,rgba(45,125,45,.85),rgba(15,26,15,.95))}
-.split-panel .tag{color:rgba(255,255,255,.7);font-weight:700;font-size:12px;letter-spacing:.6px;text-transform:uppercase;margin-bottom:10px}
-.split-panel h3{color:#fff;font-size:23px;font-weight:800;margin:0 0 10px;letter-spacing:-.3px}
-.split-panel p{color:rgba(255,255,255,.82);font-size:14.5px;line-height:1.6;margin:0 0 22px}
-.split-panel .btn-secondary{background:#fff;color:var(--ink);border-color:transparent}
-.split-panel .btn-secondary:hover{background:#f0f0f0}
+/* FOOTER */
+footer{background:#000;padding:56px 80px 32px}
+.footer-top{display:flex;gap:60px;margin-bottom:48px;flex-wrap:wrap}
+.footer-brand{flex:0 0 240px}
+.footer-brand .logo{font-size:38px;margin-bottom:14px}
+.footer-brand .ent-dark{color:#fff}
+.footer-brand p{font-size:13px;color:#525252;line-height:1.7;max-width:220px;margin:0}
+.footer-cols{flex:1;display:flex;gap:48px;flex-wrap:wrap}
+.footer-col-h{font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.footer-col{display:flex;flex-direction:column;gap:10px}
+.footer-col a{font-size:14px;color:#475569}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid rgba(255,255,255,.08);padding-top:24px}
+.footer-bottom p{font-size:13px;color:#525252;margin:0}
+.footer-bottom-links{display:flex;gap:20px}
+.footer-bottom-links a{font-size:13px;color:#525252}
 
-/* Footer */
-.footer{border-top:1px solid var(--line);padding:44px 0 30px;margin-top:20px}
-.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
-.footer-links{display:flex;gap:22px;flex-wrap:wrap}
-.footer-links a{font-size:13.5px;color:var(--ink-2);font-weight:600}
-.footer-links a:hover{color:var(--ink)}
-.footer-note{font-size:12.5px;color:var(--ink-3);margin-top:20px}
-
-@media (max-width: 880px){
+@media (max-width: 900px){
+  nav{padding:0 20px}
   .nav-links{display:none}
-  .grid{grid-template-columns:1fr}
-  .steps{grid-template-columns:1fr}
-  .split{grid-template-columns:1fr}
-  .hero h1{font-size:34px}
-  .hero-inner{padding:70px 0 80px}
+  .nav-signup{display:none}
+  .nav-toggle{display:flex}
+  .hero-content{padding:0 24px}
+  .hero h1{font-size:38px}
+  .features,.roles,.stats,.cta{padding-left:24px;padding-right:24px}
+  .feat-grid{grid-template-columns:1fr 1fr}
+  .roles-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr;row-gap:24px}
+  .stat:nth-child(2){border-right:none}
+  .cta-form{flex-direction:column;align-items:center}
+  .cta-form input{width:100%;max-width:320px}
+  footer{padding:40px 24px 24px}
 }
 </style>
 </head>
 <body>
 
-<nav class="nav">
-  <div class="container nav-inner">
-    <a href="/" class="brand-row">
-      <span class="brand-mark">
-        <svg viewBox="-7 -10 106 106" width="34" height="34" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="hd-r1" x1="10" y1="5" x2="95" y2="95" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8453a"/><stop offset="0.42" stop-color="#a81f18"/><stop offset="1" stop-color="#2a0503"/></linearGradient>
-            <linearGradient id="hd-g1" x1="0" y1="0" x2="18" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f9530"/><stop offset="1" stop-color="#2c5719"/></linearGradient>
-          </defs>
-          <path d="M18,26 C17.3,22 18.7,19 18,16 C12,12 24,9 18,5 C12,2 22,0 18,-3" stroke="url(#hd-g1)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-          <path d="M22,26 C21.3,22 22.7,19 22,16 C16,12 28,9 22,5 C16,2 26,0 22,-3" stroke="url(#hd-g1)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-          <path d="M8,60 L43,29 Q49,24 55,29 L82,53 Q86,57 82,61 Q72,71 59,66 Q50,62 49,53" fill="none" stroke="url(#hd-r1)" stroke-width="9.5" stroke-linecap="butt" stroke-linejoin="round"/>
-          <circle cx="8" cy="60" r="4.7" fill="url(#hd-r1)"/>
-          <path d="M10,44 L10,23 L16,19 L24,19 L24,44 Z" fill="url(#hd-r1)"/>
-          <rect x="31" y="45" width="14" height="42" rx="2" fill="url(#hd-r1)"/>
-          <path d="M44,60 L86,85 L79,90 L38,66 Z" fill="url(#hd-r1)"/>
-          <g fill="url(#hd-g1)">
-            <rect x="50.9" y="42.4" width="4.2" height="4.2" rx="0.8"/>
-            <rect x="55.9" y="42.4" width="4.2" height="4.2" rx="0.8"/>
-            <rect x="50.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
-            <rect x="55.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
-          </g>
-        </svg>
-      </span>
-      <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
-    </a>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="/tenant/login.html">For Tenants</a>
-      <a href="/admin/login.html">For Landlords</a>
-      <a href="#how">How It Works</a>
-    </div>
-    <div class="nav-actions">
-      <a href="/tenant/login.html" class="btn btn-ghost">Login</a>
-      <a href="/admin/login.html" class="btn btn-primary">Sign Up Free</a>
-    </div>
+<nav id="siteNav">
+  <a aria-label="RentPayEZ home" href="/">
+    <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="/tenant/login.html">For Tenants</a>
+    <a href="/admin/login.html">For Landlords</a>
+    <a href="#roles">Pricing</a>
+    <a href="/tenant/login.html">Login</a>
   </div>
+  <a class="nav-signup" href="/admin/login.html"><button>Sign Up Free</button></a>
+  <button class="nav-toggle" aria-label="Toggle menu" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
 
+<div id="mobileMenu" style="display:none;position:fixed;top:68px;left:0;right:0;background:#fff;z-index:99;padding:20px 24px;box-shadow:0 8px 20px rgba(0,0,0,.1)">
+  <a href="#features" style="display:block;padding:10px 0;font-weight:600">Features</a>
+  <a href="/tenant/login.html" style="display:block;padding:10px 0;font-weight:600">For Tenants</a>
+  <a href="/admin/login.html" style="display:block;padding:10px 0;font-weight:600">For Landlords</a>
+  <a href="/tenant/login.html" style="display:block;padding:10px 0;font-weight:600">Login</a>
+  <a href="/admin/login.html" style="display:block;padding:10px 0;font-weight:700;color:#dc2626">Sign Up Free</a>
+</div>
+
 <header class="hero">
-  <div class="hero-bg"></div>
-  <div class="container hero-inner">
-    <span class="eyebrow">The all-in-one rent platform</span>
-    <h1>Rent Made <span class="accent">Simple</span>.<br>Life Made Easy.</h1>
+  <img alt="Modern apartment building with curved white balconies and glass facade" src="https://images.unsplash.com/photo-1747361894405-e08695677fd6?w=1600&h=900&fit=crop&auto=format&q=85">
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <span class="eyebrow">THE ALL-IN-ONE RENT PLATFORM</span>
+    <h1>Rent Made <span class="accent">Simple.</span><br>Life Made Easy.</h1>
     <p>Pay rent online, request maintenance, track inspections and build your credit — all in one place.</p>
     <div class="hero-ctas">
-      <a href="/admin/login.html" class="btn btn-primary btn-lg">Get Started Free</a>
-      <a href="#features" class="btn btn-secondary btn-lg">See Features</a>
+      <a href="/admin/login.html"><button class="btn-primary">Get Started Free</button></a>
+      <a href="#features"><button class="btn-glass">See Features</button></a>
     </div>
   </div>
 </header>
 
-<section class="section" id="features">
-  <div class="container">
-    <div class="section-head">
-      <div class="kicker">Everything You Need</div>
-      <h2>One place for rent, maintenance &amp; more</h2>
-      <p>Whether you're paying rent or managing a portfolio, RentPayEZ keeps everything organized and moving.</p>
+<section class="features" id="features">
+  <p class="section-kicker">Everything You Need</p>
+  <h2 class="section-h2">One Platform. Total Control.</h2>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">💳</div>
+      <h3>Pay Rent Online</h3>
+      <p>Fast, secure, and convenient rent payments from any device, any time.</p>
     </div>
-    <div class="grid">
-      <div class="feature">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2d7d2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
-        <h3>Pay Rent Online</h3>
-        <p>Secure card and bank payments with instant confirmation — no more checks or money orders.</p>
+    <div class="feat-card">
+      <div class="feat-icon">🔧</div>
+      <h3>Request Maintenance</h3>
+      <p>Submit and track maintenance requests with real-time status updates.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔍</div>
+      <h3>Digital Inspections</h3>
+      <p>Move-in and move-out digital reports stored securely in one place.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⭐</div>
+      <h3>Build Your Credit</h3>
+      <p>On-time rent payments reported to major bureaus to boost your score.</p>
+    </div>
+  </div>
+</section>
+
+<section class="roles" id="roles">
+  <p class="section-kicker">Built for Everyone</p>
+  <h2 class="section-h2">The Right Tools for Every Role</h2>
+  <div class="roles-grid">
+    <div class="role-card">
+      <img alt="Tenants" src="https://images.unsplash.com/photo-1758523670960-eb5512da12e8?w=500&h=300&fit=crop&auto=format">
+      <div class="role-body">
+        <div class="role-head"><div class="role-icon">🏠</div><div class="name">Tenants</div></div>
+        <p>Pay rent, submit requests, track inspections and build credit from one easy dashboard.</p>
+        <a href="/tenant/login.html"><button class="btn-outline">Learn More →</button></a>
       </div>
-      <div class="feature">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2d7d2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
-        <h3>Maintenance Requests</h3>
-        <p>Submit repair requests with photos and track status from open to resolved.</p>
+    </div>
+    <div class="role-card">
+      <img alt="Landlords" src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=500&h=300&fit=crop&auto=format">
+      <div class="role-body">
+        <div class="role-head"><div class="role-icon">🏢</div><div class="name">Landlords</div></div>
+        <p>Collect rent on time, review maintenance requests, and manage properties without the hassle.</p>
+        <a href="/admin/login.html"><button class="btn-outline">Learn More →</button></a>
       </div>
-      <div class="feature">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2d7d2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-        <h3>Digital Inspections</h3>
-        <p>Move-in and periodic inspections, documented and stored where you can find them.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2d7d2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg></div>
-        <h3>Build Your Credit</h3>
-        <p>Track your on-time payment streak, with credit-building tools on the way.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2d7d2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
-        <h3>Documents &amp; E-Sign</h3>
-        <p>Leases and paperwork, signed and stored digitally — available anytime.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#2d7d2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-        <h3>English &amp; Español</h3>
-        <p>The tenant portal and maintenance requests work seamlessly in both languages.</p>
+    </div>
+    <div class="role-card">
+      <img alt="Property Managers" src="https://images.unsplash.com/photo-1775163024488-e88e4a71179f?w=500&h=300&fit=crop&auto=format">
+      <div class="role-body">
+        <div class="role-head"><div class="role-icon">📋</div><div class="name">Property Managers</div></div>
+        <p>Oversee your entire portfolio — payments, inspections, and tenant communications — in one platform.</p>
+        <a href="/admin/login.html"><button class="btn-outline">Learn More →</button></a>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="how" style="background:#eef0f6">
-  <div class="container">
-    <div class="section-head">
-      <div class="kicker">How It Works</div>
-      <h2>Up and running in minutes</h2>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>Get your account</h3>
-        <p>Property managers create your login and add your unit — no paperwork on your end.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>Log in and pay</h3>
-        <p>Sign in to your tenant portal and pay rent securely in a couple of clicks.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>Manage everything</h3>
-        <p>Request maintenance, view documents, and track your payment history — all in one dashboard.</p>
-      </div>
-    </div>
+<section class="stats">
+  <div class="stats-grid">
+    <div class="stat"><div class="num">10K+</div><div class="label">Active Tenants</div></div>
+    <div class="stat"><div class="num">5K+</div><div class="label">Properties Managed</div></div>
+    <div class="stat"><div class="num">98%</div><div class="label">On-Time Payments</div></div>
+    <div class="stat"><div class="num">24/7</div><div class="label">Support Available</div></div>
   </div>
 </section>
 
-<section class="section">
-  <div class="container">
-    <div class="split">
-      <div class="split-panel tenant">
-        <div class="tag">For Tenants</div>
-        <h3>Already have an account?</h3>
-        <p>Sign in with the email and password your property manager gave you.</p>
-        <a href="/tenant/login.html" class="btn btn-secondary">Tenant Login</a>
+<section class="cta">
+  <h2>Ready to simplify your rent?</h2>
+  <p>Join thousands of tenants, landlords and property managers who trust RentPayEZ.</p>
+  <form class="cta-form" onsubmit="event.preventDefault(); window.location.href='/admin/login.html';">
+    <input type="email" placeholder="Enter your email address" required>
+    <button type="submit">Get Started Free</button>
+  </form>
+</section>
+
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+      <p>The all-in-one platform for rent payments, maintenance, inspections and credit building.</p>
+    </div>
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-h">Product</div>
+        <div class="footer-col">
+          <a href="#features">Features</a>
+          <a href="#roles">Pricing</a>
+          <a href="/tenant/login.html">For Tenants</a>
+          <a href="/admin/login.html">For Landlords</a>
+        </div>
       </div>
-      <div class="split-panel landlord">
-        <div class="tag">For Landlords &amp; Property Managers</div>
-        <h3>Run your properties in one place.</h3>
-        <p>Create your organization, add units and invite tenants — free to get started.</p>
-        <a href="/admin/login.html" class="btn btn-secondary">Sign Up Free</a>
+      <div>
+        <div class="footer-col-h">Company</div>
+        <div class="footer-col">
+          <a href="/">About Us</a>
+          <a href="/">Blog</a>
+          <a href="/">Careers</a>
+          <a href="/">Press</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-h">Support</div>
+        <div class="footer-col">
+          <a href="/">Help Center</a>
+          <a href="/">Contact Us</a>
+          <a href="/">Privacy Policy</a>
+          <a href="/">Terms of Service</a>
+        </div>
       </div>
     </div>
   </div>
-</section>
-
-<footer class="footer">
-  <div class="container">
-    <div class="footer-inner">
-      <div class="brand-row">
-        <span class="brand-mark">
-          <svg viewBox="-7 -10 106 106" width="26" height="26" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8,60 L43,29 Q49,24 55,29 L82,53 Q86,57 82,61 Q72,71 59,66 Q50,62 49,53" fill="none" stroke="#a32d2d" stroke-width="9.5" stroke-linecap="butt" stroke-linejoin="round"/>
-            <circle cx="8" cy="60" r="4.7" fill="#a32d2d"/>
-            <path d="M10,44 L10,23 L16,19 L24,19 L24,44 Z" fill="#a32d2d"/>
-            <rect x="31" y="45" width="14" height="42" rx="2" fill="#a32d2d"/>
-            <path d="M44,60 L86,85 L79,90 L38,66 Z" fill="#a32d2d"/>
-          </svg>
-        </span>
-        <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
-      </div>
-      <div class="footer-links">
-        <a href="/tenant/login.html">Tenant Login</a>
-        <a href="/admin/login.html">Landlord Login</a>
-        <a href="/admin/login.html">Create Organization</a>
-      </div>
+  <div class="footer-bottom">
+    <p>© 2026 RentPayEZ. All rights reserved.</p>
+    <div class="footer-bottom-links">
+      <a href="/">Privacy</a>
+      <a href="/">Terms</a>
+      <a href="/">Contact</a>
     </div>
-    <div class="footer-note">© 2026 RentPayEZ. All rights reserved.</div>
   </div>
 </footer>
+
+<script>
+window.addEventListener('scroll', function(){
+  document.getElementById('siteNav').classList.toggle('scrolled', window.scrollY > 10);
+});
+</script>
 
 </body>
 </html>
