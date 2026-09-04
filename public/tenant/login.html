@@ -48,6 +48,8 @@ a{color:inherit}
 .field input:focus{border-color:var(--red)}
 .btn-primary{width:100%;padding:13px;border-radius:11px;font-weight:700;font-size:14.5px;background:linear-gradient(180deg,var(--red),var(--red-dk));color:#fff;border:none;cursor:pointer;box-shadow:0 8px 22px rgba(201,51,38,0.3)}
 .btn-primary:hover{transform:translateY(-1px)}
+.btn-secondary{width:100%;padding:13px;border-radius:11px;font-weight:700;font-size:14.5px;background:var(--navy);color:#fff;border:none;cursor:pointer;margin-top:10px}
+.btn-secondary:hover{transform:translateY(-1px)}
 .msg{margin-top:12px;font-size:13px;text-align:center}
 .msg.err{color:#c93326}
 .msg.info{color:var(--ink-2)}
@@ -99,16 +101,15 @@ a{color:inherit}
       <input id="li-password" type="password" placeholder="Enter your password" />
     </div>
     <button class="btn-primary" onclick="doLogin()" id="btnSignIn">Sign In as Tenant</button>
+    <button type="button" class="btn-secondary" id="btnLandlord" onclick="window.location.href='/admin/login.html'">Sign In as Landlord</button>
     <div id="li-msg" class="msg"></div>
   </div>
-
-  <p class="foot" id="footText">Property manager or staff? <a href="/admin/login.html">Sign in here instead</a></p>
 </div>
 
 <script>
 const I18N_LOGIN = {
-  en: { title:'Welcome back', sub:'Sign in to your RentPayEZ account', email:'Email Address', password:'Password', forgot:'Forgot password?', forgot_msg:'Password resets are handled by your property manager — contact their office and they can set you a new temporary password.', sign_in:'Sign In as Tenant', login_failed:'Login failed', staff_prompt:'Property manager or staff? ', staff_link:'Sign in here instead' },
-  es: { title:'Bienvenido de nuevo', sub:'Inicia sesión en tu cuenta de RentPayEZ', email:'Correo electrónico', password:'Contraseña', forgot:'¿Olvidaste tu contraseña?', forgot_msg:'Los restablecimientos de contraseña los gestiona tu administrador de propiedad — contacta su oficina y podrán asignarte una nueva contraseña temporal.', sign_in:'Iniciar Sesión como Inquilino', login_failed:'No se pudo iniciar sesión', staff_prompt:'¿Administrador de propiedad o personal? ', staff_link:'Inicia sesión aquí' }
+  en: { title:'Welcome back', sub:'Sign in to your RentPayEZ account', email:'Email Address', password:'Password', forgot:'Forgot password?', forgot_msg:'Password resets are handled by your property manager — contact their office and they can set you a new temporary password.', sign_in:'Sign In as Tenant', sign_in_landlord:'Sign In as Landlord', login_failed:'Login failed' },
+  es: { title:'Bienvenido de nuevo', sub:'Inicia sesión en tu cuenta de RentPayEZ', email:'Correo electrónico', password:'Contraseña', forgot:'¿Olvidaste tu contraseña?', forgot_msg:'Los restablecimientos de contraseña los gestiona tu administrador de propiedad — contacta su oficina y podrán asignarte una nueva contraseña temporal.', sign_in:'Iniciar Sesión como Inquilino', sign_in_landlord:'Iniciar Sesión como Propietario', login_failed:'No se pudo iniciar sesión' }
 };
 let LANG = localStorage.getItem('rpz_lang') === 'es' ? 'es' : 'en';
 function applyLang(){
@@ -119,7 +120,7 @@ function applyLang(){
   document.getElementById('lblPassword').textContent = d.password;
   document.getElementById('btnForgot').textContent = d.forgot;
   document.getElementById('btnSignIn').textContent = d.sign_in;
-  document.getElementById('footText').innerHTML = d.staff_prompt + '<a href="/admin/login.html">' + d.staff_link + '</a>';
+  document.getElementById('btnLandlord').textContent = d.sign_in_landlord;
   document.getElementById('langBtnEn').classList.toggle('active', LANG==='en');
   document.getElementById('langBtnEs').classList.toggle('active', LANG==='es');
 }
