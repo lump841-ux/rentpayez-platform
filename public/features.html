@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RentPayEZ — Powerful Tools for Modern Renting</title>
+<meta name="description" content="Everything tenants, landlords, and property managers need — in one beautifully simple platform.">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif;color:#000;background:#fff}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer}
+img{display:block;max-width:100%}
+.logo{display:inline-flex;align-items:baseline;font-family:'DM Sans',sans-serif;letter-spacing:-0.085em;line-height:0.9;white-space:nowrap}
+.logo .r{color:#dc2626}
+.logo .p{color:#dc2626}
+.logo .ez{color:#22c55e}
+
+/* NAV — interior pages are always opaque (not transparent-over-hero like the homepage) */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:68px;display:flex;align-items:center;padding:0 48px;background-color:rgba(255,255,255,.97);backdrop-filter:blur(14px);box-shadow:0 1px 20px rgba(0,0,0,.08)}
+nav .logo{font-size:34px;font-weight:900}
+nav .logo .ent-dark{color:#000}
+.nav-links{display:flex;gap:28px;flex:1;align-items:center;margin-left:40px}
+.nav-links a{font-size:14px;font-weight:500;color:#334155;transition:color .2s}
+.nav-links a.active{color:#dc2626;font-weight:700}
+.nav-signup{flex-shrink:0}
+.nav-signup button{background:#dc2626;color:#fff;padding:10px 24px;border-radius:24px;font-weight:600;font-size:14px;border:none}
+.nav-toggle{display:none;margin-left:auto;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px}
+.nav-toggle span{display:block;width:22px;height:2px;background:#334155;border-radius:2px}
+
+/* HERO */
+.feat-hero{position:relative;width:100%;height:75vh;min-height:540px;overflow:hidden}
+.feat-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%}
+.feat-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,.7) 0%, rgba(0,0,0,.4) 35%, rgba(0,0,0,0) 55%, rgba(255,255,255,0) 88%, rgba(255,255,255,.97) 96%, #fff 100%)}
+.feat-hero-content{position:absolute;bottom:18%;left:0;right:0;padding:0 24px;max-width:672px}
+.feat-eyebrow{display:inline-block;background:rgba(37,99,235,.2);backdrop-filter:blur(8px);color:#fff;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,255,255,.3)}
+.feat-hero-content h1{font-size:30px;font-weight:700;color:#fff;line-height:1.1;margin:0 0 10px;text-shadow:0 2px 16px rgba(0,0,0,.35)}
+.feat-hero-content h1 .accent{color:#22c55e}
+.feat-hero-content p{font-size:14px;color:rgba(255,255,255,.85);line-height:1.65;margin:0;text-shadow:0 1px 8px rgba(0,0,0,.3)}
+
+/* FEATURE BLOCKS */
+.feat-blocks{padding-top:32px}
+.feat-block{padding:56px 24px;display:flex;flex-direction:column;gap:40px;align-items:center}
+.feat-block.white{background:#fff}
+.feat-block.gray{background:#fafafa}
+.feat-block-text{flex:1}
+.feat-badge{display:inline-block;background:#dcfce7;color:#dc2626;font-size:12px;font-weight:700;padding:4px 14px;border-radius:20px;margin-bottom:16px;letter-spacing:.5px}
+.feat-block-text h2{font-size:24px;font-weight:700;color:#000;line-height:1.2;margin:0 0 16px}
+.feat-block-text h2 .accent{color:#dc2626}
+.feat-block-text p{font-size:16px;color:#525252;line-height:1.75;margin:0 0 24px}
+.feat-checklist{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+.feat-checklist li{display:flex;align-items:center;gap:10px;font-size:15px;color:#334155}
+.feat-check{width:20px;height:20px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;color:#dc2626;font-weight:700}
+.feat-mockup-wrap{width:100%;display:flex;justify-content:center}
+.feat-mockup{background:#fff;border-radius:18px;padding:24px;box-shadow:0 8px 40px rgba(37,99,235,.12);border:1px solid #e5e5e5;max-width:340px;width:100%}
+.feat-mockup-title{font-size:13px;font-weight:700;color:#000;margin-bottom:18px}
+
+/* mockup 1: pay rent */
+.mock-amount-label{font-size:11px;color:#94a3b8;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.mock-amount{font-size:32px;font-weight:800;color:#000}
+.mock-amount-sub{font-size:12px;color:#525252}
+.mock-row-block{margin-bottom:14px}
+.mock-select{border:1.5px solid #e5e5e5;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#334155}
+.mock-select span:last-child{color:#94a3b8}
+.mock-btn-red{width:100%;background:#dc2626;color:#fff;padding:14px;border-radius:12px;font-weight:700;font-size:15px;border:none;font-family:inherit}
+.mock-lock{text-align:center;margin-top:12px;font-size:11px;color:#94a3b8}
+
+/* mockup 2: maintenance */
+.mock-req{border-bottom:1px solid #f1f5f9;padding-bottom:14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start}
+.mock-req:last-of-type{border-bottom:none;padding-bottom:0;margin-bottom:18px}
+.mock-req .icon{font-size:18px}
+.mock-req-title{font-size:13px;font-weight:600;color:#000;margin-bottom:4px}
+.mock-req-meta{display:flex;gap:8px;align-items:center}
+.mock-req-loc{font-size:11px;color:#94a3b8}
+.mock-pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
+.mock-pill.progress{color:#f59e0b;background:rgba(245,158,11,.094)}
+.mock-pill.done{color:#22c55e;background:rgba(34,197,94,.094)}
+.mock-pill.pending{color:#94a3b8;background:rgba(148,163,184,.094)}
+.mock-btn-outline{width:100%;background:#fafafa;color:#dc2626;padding:12px;border-radius:10px;font-weight:600;font-size:13px;border:1.5px solid #dc2626;font-family:inherit}
+
+/* mockup 3: inspections */
+.mock-sub{font-size:12px;color:#94a3b8;margin-bottom:18px;margin-top:-14px}
+.mock-insp-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155}
+.mock-insp-row:last-of-type{border-bottom:none}
+.mock-insp-status{font-size:12px;font-weight:600}
+.mock-insp-status.good{color:#22c55e}
+.mock-insp-status.note{color:#f59e0b}
+
+/* mockup 4: credit */
+.mock-score-wrap{text-align:center;margin-bottom:20px}
+.mock-score-label{font-size:13px;color:#94a3b8;margin-bottom:4px}
+.mock-score{font-size:52px;font-weight:800;color:#dc2626;line-height:1}
+.mock-score-delta{font-size:13px;color:#22c55e;font-weight:600;margin-top:4px}
+.mock-bar-track{background:#fafafa;border-radius:10px;height:10px;margin-bottom:8px;overflow:hidden}
+.mock-bar-fill{height:100%;width:72%;background:linear-gradient(to right,#dcfce7,#dc2626);border-radius:10px}
+.mock-bar-labels{display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:20px}
+.mock-fact-row{display:flex;justify-content:space-between;font-size:13px}
+.mock-fact-list{display:flex;flex-direction:column;gap:10px}
+.mock-fact-row span:first-child{color:#525252}
+.mock-fact-row span.good{color:#22c55e;font-weight:600}
+.mock-fact-row span.red{color:#dc2626;font-weight:600}
+.mock-fact-row span.gray{color:#525252;font-weight:600}
+
+/* CTA */
+.feat-cta{padding:56px 24px;background:#dc2626;text-align:center}
+.feat-cta h2{font-size:28px;font-weight:700;color:#fff;margin:0 0 12px}
+.feat-cta p{font-size:16px;color:rgba(255,255,255,.8);margin:0 0 28px}
+.feat-cta button{background:#fff;color:#dc2626;padding:14px 36px;border-radius:30px;font-weight:700;font-size:16px;border:none}
+
+/* FOOTER (identical to homepage) */
+footer{background:#000;padding:56px 80px 32px}
+.footer-top{display:flex;gap:60px;margin-bottom:48px;flex-wrap:wrap}
+.footer-brand{flex:0 0 240px}
+.footer-brand .logo{font-size:38px;margin-bottom:14px}
+.footer-brand .ent-dark{color:#fff}
+.footer-brand p{font-size:13px;color:#525252;line-height:1.7;max-width:220px;margin:0}
+.footer-cols{flex:1;display:flex;gap:48px;flex-wrap:wrap}
+.footer-col-h{font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.footer-col{display:flex;flex-direction:column;gap:10px}
+.footer-col a{font-size:14px;color:#475569}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid rgba(255,255,255,.08);padding-top:24px}
+.footer-bottom p{font-size:13px;color:#525252;margin:0}
+.footer-bottom-links{display:flex;gap:20px}
+.footer-bottom-links a{font-size:13px;color:#525252}
+
+@media (min-width: 900px){
+  .feat-hero{height:86vh;min-height:660px}
+  .feat-hero-content{padding:0 80px}
+  .feat-hero-content h1{font-size:44px}
+  .feat-hero-content p{font-size:16px}
+  .nav-links{display:flex}
+  .nav-signup{display:block}
+  .nav-toggle{display:none}
+  .feat-block{padding:80px 80px;flex-direction:row;gap:80px}
+  .feat-block.reverse{flex-direction:row-reverse}
+  .feat-block-text h2{font-size:36px}
+  .feat-mockup-wrap{width:auto}
+  .feat-cta{padding:80px 80px}
+  .feat-cta h2{font-size:32px}
+}
+@media (max-width: 899px){
+  .nav-links{display:none}
+  .nav-signup{display:none}
+  .nav-toggle{display:flex}
+  footer{padding:40px 24px 24px}
+}
+</style>
+</head>
+<body>
+
+<nav id="siteNav">
+  <a aria-label="RentPayEZ home" href="/">
+    <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+  </a>
+  <div class="nav-links">
+    <a class="active" href="/features.html">Features</a>
+    <a href="/tenant/login.html">For Tenants</a>
+    <a href="/admin/login.html">For Landlords</a>
+    <a href="/#roles">Pricing</a>
+    <a href="/tenant/login.html">Login</a>
+  </div>
+  <a class="nav-signup" href="/admin/login.html"><button>Sign Up Free</button></a>
+  <button class="nav-toggle" aria-label="Toggle menu" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div id="mobileMenu" style="display:none;position:fixed;top:68px;left:0;right:0;background:#fff;z-index:99;padding:20px 24px;box-shadow:0 8px 20px rgba(0,0,0,.1)">
+  <a href="/features.html" style="display:block;padding:10px 0;font-weight:700;color:#dc2626">Features</a>
+  <a href="/tenant/login.html" style="display:block;padding:10px 0;font-weight:600">For Tenants</a>
+  <a href="/admin/login.html" style="display:block;padding:10px 0;font-weight:600">For Landlords</a>
+  <a href="/tenant/login.html" style="display:block;padding:10px 0;font-weight:600">Login</a>
+  <a href="/admin/login.html" style="display:block;padding:10px 0;font-weight:700;color:#dc2626">Sign Up Free</a>
+</div>
+
+<header class="feat-hero">
+  <img alt="Modern apartment building" src="https://images.unsplash.com/photo-1786609836782-fafdcd51d8d8?w=1600&h=700&fit=crop&auto=format&q=85">
+  <div class="feat-hero-overlay"></div>
+  <div class="feat-hero-content">
+    <span class="feat-eyebrow">Platform Features</span>
+    <h1>Powerful Tools for<span class="accent"> Modern Renting.</span></h1>
+    <p>Everything tenants, landlords, and property managers need — in one beautifully simple platform.</p>
+  </div>
+</header>
+
+<div class="feat-blocks">
+
+  <section class="feat-block white">
+    <div class="feat-block-text">
+      <span class="feat-badge">Pay Rent</span>
+      <h2>Pay Rent from Anywhere,<br><span class="accent">Any Time.</span></h2>
+      <p>No more checks or money orders. RentPayEZ lets you pay rent securely via bank transfer, credit or debit card — all from your phone or computer. Set up auto-pay once and never miss a due date again.</p>
+      <ul class="feat-checklist">
+        <li><span class="feat-check">✓</span>Multiple payment methods accepted</li>
+        <li><span class="feat-check">✓</span>Scheduled &amp; automatic payments</li>
+        <li><span class="feat-check">✓</span>Instant confirmation &amp; receipts</li>
+        <li><span class="feat-check">✓</span>Full payment history archive</li>
+      </ul>
+    </div>
+    <div class="feat-mockup-wrap">
+      <div class="feat-mockup">
+        <div class="feat-mockup-title">💳 Pay Rent</div>
+        <div class="mock-row-block">
+          <div class="mock-amount-label">Amount Due</div>
+          <div class="mock-amount">$1,250.00</div>
+          <div class="mock-amount-sub">Due Aug 1, 2026 · Unit 4B</div>
+        </div>
+        <div class="mock-row-block">
+          <div class="mock-amount-label">Payment Method</div>
+          <div class="mock-select"><span>🏦 Bank Transfer (ACH)</span><span>▼</span></div>
+        </div>
+        <div class="mock-row-block">
+          <div class="mock-amount-label">Schedule</div>
+          <div class="mock-select"><span>📅 Aug 1, 2026</span><span>▼</span></div>
+        </div>
+        <button class="mock-btn-red">Pay Now</button>
+        <div class="mock-lock">🔒 Protected by 256-bit encryption</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="feat-block gray reverse">
+    <div class="feat-block-text">
+      <span class="feat-badge">Maintenance</span>
+      <h2>Get Maintenance Issues<br><span class="accent">Resolved Faster.</span></h2>
+      <p>Submit maintenance requests in seconds with photos attached. Track the status in real-time, message your property manager directly, and receive push notifications every step of the way.</p>
+      <ul class="feat-checklist">
+        <li><span class="feat-check">✓</span>Photo &amp; video uploads</li>
+        <li><span class="feat-check">✓</span>Priority level selection</li>
+        <li><span class="feat-check">✓</span>Real-time status tracking</li>
+        <li><span class="feat-check">✓</span>Direct in-app messaging</li>
+      </ul>
+    </div>
+    <div class="feat-mockup-wrap">
+      <div class="feat-mockup">
+        <div class="feat-mockup-title">🔧 Maintenance Requests</div>
+        <div class="mock-req">
+          <span class="icon">🔧</span>
+          <div>
+            <div class="mock-req-title">Leaky Kitchen Faucet</div>
+            <div class="mock-req-meta"><span class="mock-req-loc">📍 Unit 4B</span><span class="mock-pill progress">In Progress</span></div>
+          </div>
+        </div>
+        <div class="mock-req">
+          <span class="icon">🔌</span>
+          <div>
+            <div class="mock-req-title">Broken Outlet — Bedroom</div>
+            <div class="mock-req-meta"><span class="mock-req-loc">📍 Unit 4B</span><span class="mock-pill done">Completed</span></div>
+          </div>
+        </div>
+        <div class="mock-req">
+          <span class="icon">🌡️</span>
+          <div>
+            <div class="mock-req-title">AC Not Cooling</div>
+            <div class="mock-req-meta"><span class="mock-req-loc">📍 Unit 4B</span><span class="mock-pill pending">Pending</span></div>
+          </div>
+        </div>
+        <button class="mock-btn-outline">+ Submit New Request</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="feat-block white">
+    <div class="feat-block-text">
+      <span class="feat-badge">Inspections</span>
+      <h2>Move-In &amp; Move-Out Inspections,<br><span class="accent">Gone Paperless.</span></h2>
+      <p>Complete digital inspections with photo documentation and digital signatures. Both tenant and landlord get a timestamped copy, stored securely in your account forever.</p>
+      <ul class="feat-checklist">
+        <li><span class="feat-check">✓</span>Room-by-room digital checklists</li>
+        <li><span class="feat-check">✓</span>Photo documentation</li>
+        <li><span class="feat-check">✓</span>Digital signatures for both parties</li>
+        <li><span class="feat-check">✓</span>Stored inspection history</li>
+      </ul>
+    </div>
+    <div class="feat-mockup-wrap">
+      <div class="feat-mockup">
+        <div class="feat-mockup-title">🔍 Move-In Inspection</div>
+        <div class="mock-sub">Unit 4B · Jun 1, 2026</div>
+        <div class="mock-insp-row"><span>Living Room</span><span class="mock-insp-status good">✅ Good</span></div>
+        <div class="mock-insp-row"><span>Kitchen</span><span class="mock-insp-status good">✅ Good</span></div>
+        <div class="mock-insp-row"><span>Bathroom</span><span class="mock-insp-status note">⚠️ Note Added</span></div>
+        <div class="mock-insp-row"><span>Bedroom</span><span class="mock-insp-status good">✅ Good</span></div>
+        <button class="mock-btn-red" style="margin-top:18px">✍ Sign &amp; Submit</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="feat-block gray reverse">
+    <div class="feat-block-text">
+      <span class="feat-badge">Credit Building</span>
+      <h2>Make Rent Work<br><span class="accent">For Your Credit.</span></h2>
+      <p>Every on-time rent payment is automatically reported to major credit bureaus at no extra cost. Watch your score grow and build the credit history you deserve — just by paying rent.</p>
+      <ul class="feat-checklist">
+        <li><span class="feat-check">✓</span>Reports to Equifax &amp; TransUnion</li>
+        <li><span class="feat-check">✓</span>Automatic — no extra steps</li>
+        <li><span class="feat-check">✓</span>Track score improvement over time</li>
+        <li><span class="feat-check">✓</span>No credit card required</li>
+      </ul>
+    </div>
+    <div class="feat-mockup-wrap">
+      <div class="feat-mockup">
+        <div class="feat-mockup-title">⭐ Your Credit Score</div>
+        <div class="mock-score-wrap">
+          <div class="mock-score-label">Current Score</div>
+          <div class="mock-score">724</div>
+          <div class="mock-score-delta">↑ +44 points this year</div>
+        </div>
+        <div class="mock-bar-track"><div class="mock-bar-fill"></div></div>
+        <div class="mock-bar-labels"><span>Poor 300</span><span>Excellent 850</span></div>
+        <div class="mock-fact-list">
+          <div class="mock-fact-row"><span>Last payment reported</span><span class="good">✅ Jun 1, 2026</span></div>
+          <div class="mock-fact-row"><span>On-time payments</span><span class="red">12 months</span></div>
+          <div class="mock-fact-row"><span>Bureaus reporting</span><span class="gray">Equifax, TransUnion</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<section class="feat-cta">
+  <h2>Ready to experience all of this?</h2>
+  <p>Join RentPayEZ today — it's free to get started.</p>
+  <a href="/admin/login.html"><button>Get Started Free</button></a>
+</section>
+
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+      <p>The all-in-one platform for rent payments, maintenance, inspections and credit building.</p>
+    </div>
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-h">Product</div>
+        <div class="footer-col">
+          <a href="/features.html">Features</a>
+          <a href="/#roles">Pricing</a>
+          <a href="/tenant/login.html">For Tenants</a>
+          <a href="/admin/login.html">For Landlords</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-h">Company</div>
+        <div class="footer-col">
+          <a href="/">About Us</a>
+          <a href="/">Blog</a>
+          <a href="/">Careers</a>
+          <a href="/">Press</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-h">Support</div>
+        <div class="footer-col">
+          <a href="/">Help Center</a>
+          <a href="/">Contact Us</a>
+          <a href="/">Privacy Policy</a>
+          <a href="/">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 RentPayEZ. All rights reserved.</p>
+    <div class="footer-bottom-links">
+      <a href="/">Privacy</a>
+      <a href="/">Terms</a>
+      <a href="/">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
