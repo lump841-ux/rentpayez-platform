@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RentPayEZ — The Easiest Way to Rent</title>
+<meta name="description" content="Pay rent, request maintenance, track inspections and build your credit — all from one beautifully simple app.">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif;color:#000;background:#fff}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer}
+img{display:block;max-width:100%}
+.logo{display:inline-flex;align-items:baseline;font-family:'DM Sans',sans-serif;letter-spacing:-0.085em;line-height:0.9;white-space:nowrap}
+.logo .r{color:#dc2626}
+.logo .p{color:#dc2626}
+.logo .ez{color:#22c55e}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:68px;display:flex;align-items:center;padding:0 48px;background-color:rgba(255,255,255,.97);backdrop-filter:blur(14px);box-shadow:0 1px 20px rgba(0,0,0,.08)}
+nav .logo{font-size:34px;font-weight:900}
+nav .logo .ent-dark{color:#000}
+.nav-links{display:flex;gap:28px;flex:1;align-items:center;margin-left:40px}
+.nav-links a{font-size:14px;font-weight:500;color:#334155;transition:color .2s}
+.nav-links a.active{color:#dc2626;font-weight:700}
+.nav-signup{flex-shrink:0}
+.nav-signup button{background:#dc2626;color:#fff;padding:10px 24px;border-radius:24px;font-weight:600;font-size:14px;border:none}
+.nav-toggle{display:none;margin-left:auto;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px}
+.nav-toggle span{display:block;width:22px;height:2px;background:#334155;border-radius:2px}
+
+/* HERO */
+.pg-hero{position:relative;width:100%;height:75vh;min-height:540px;overflow:hidden}
+.pg-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%}
+.pg-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,.7) 0%, rgba(0,0,0,.4) 35%, rgba(0,0,0,0) 55%, rgba(255,255,255,0) 88%, rgba(255,255,255,.97) 96%, #fff 100%)}
+.pg-hero-content{position:absolute;bottom:18%;left:0;right:0;padding:0 24px;max-width:672px}
+.pg-eyebrow{display:inline-block;background:rgba(37,99,235,.2);backdrop-filter:blur(8px);color:#fff;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,255,255,.3)}
+.pg-hero-content h1{font-size:30px;font-weight:700;color:#fff;line-height:1.1;margin:0 0 10px;text-shadow:0 2px 16px rgba(0,0,0,.35)}
+.pg-hero-content h1 .accent{color:#22c55e}
+.pg-hero-content p{font-size:14px;color:rgba(255,255,255,.85);line-height:1.65;margin:0;text-shadow:0 1px 8px rgba(0,0,0,.3)}
+
+/* SHARED SECTION HEADERS */
+.pg-section{padding:56px 24px}
+.pg-section.white{background:#fff}
+.pg-section.gray{background:#fafafa}
+.pg-kicker{text-align:center;font-size:12px;font-weight:700;color:#dc2626;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 12px}
+.pg-h2{text-align:center;font-size:28px;font-weight:700;color:#000;margin:0 0 40px}
+
+/* HOW IT WORKS */
+.steps-grid{display:grid;grid-template-columns:1fr;gap:40px}
+.step{position:relative}
+.step-num{width:56px;height:56px;background:#dc2626;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;margin-bottom:20px}
+.step h3{font-size:18px;font-weight:700;color:#000;margin:0 0 10px}
+.step p{font-size:14px;color:#525252;line-height:1.7;margin:0}
+
+/* BENEFIT CARDS */
+.benefit-grid{display:grid;grid-template-columns:1fr;gap:20px}
+.benefit-card{background:#fff;border-radius:16px;padding:24px 20px;border:1px solid #e5e5e5;display:flex;gap:16px;align-items:flex-start}
+.benefit-icon{width:48px;height:48px;background:#dcfce7;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.benefit-title{font-weight:700;font-size:15px;color:#000;margin-bottom:6px}
+.benefit-desc{font-size:13px;color:#525252;line-height:1.6}
+
+/* TESTIMONIALS */
+.testi-grid{display:grid;grid-template-columns:1fr;gap:24px}
+.testi-card{background:#fafafa;border-radius:18px;padding:28px 24px;border:1px solid #e5e5e5}
+.testi-quote{font-size:32px;color:#dcfce7;font-weight:900;line-height:1;margin-bottom:16px}
+.testi-text{font-size:15px;color:#334155;line-height:1.75;margin-bottom:24px;font-style:italic}
+.testi-name{font-weight:700;font-size:15px;color:#000}
+.testi-loc{font-size:13px;color:#94a3b8}
+
+/* CTA */
+.pg-cta{padding:56px 24px;background:#dc2626;text-align:center}
+.pg-cta h2{font-size:28px;font-weight:700;color:#fff;margin:0 0 12px}
+.pg-cta p{font-size:16px;color:rgba(255,255,255,.8);margin:0 0 28px}
+.pg-cta-btns{display:flex;flex-direction:column;gap:14px;justify-content:center;max-width:340px;margin:0 auto}
+.btn-cta-solid{background:#fff;color:#dc2626;padding:14px 36px;border-radius:30px;font-weight:700;font-size:16px;border:none;width:100%}
+.btn-cta-outline{background:transparent;color:#fff;padding:14px 36px;border-radius:30px;font-weight:600;font-size:16px;border:1.5px solid rgba(255,255,255,.5);width:100%}
+
+/* FOOTER */
+footer{background:#000;padding:56px 80px 32px}
+.footer-top{display:flex;gap:60px;margin-bottom:48px;flex-wrap:wrap}
+.footer-brand{flex:0 0 240px}
+.footer-brand .logo{font-size:38px;margin-bottom:14px}
+.footer-brand .ent-dark{color:#fff}
+.footer-brand p{font-size:13px;color:#525252;line-height:1.7;max-width:220px;margin:0}
+.footer-cols{flex:1;display:flex;gap:48px;flex-wrap:wrap}
+.footer-col-h{font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.footer-col{display:flex;flex-direction:column;gap:10px}
+.footer-col a{font-size:14px;color:#475569}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid rgba(255,255,255,.08);padding-top:24px}
+.footer-bottom p{font-size:13px;color:#525252;margin:0}
+.footer-bottom-links{display:flex;gap:20px}
+.footer-bottom-links a{font-size:13px;color:#525252}
+
+@media (min-width: 900px){
+  .pg-hero{height:86vh;min-height:660px}
+  .pg-hero-content{padding:0 80px}
+  .pg-hero-content h1{font-size:44px}
+  .pg-hero-content p{font-size:16px}
+  .nav-links{display:flex}
+  .nav-signup{display:block}
+  .nav-toggle{display:none}
+  .pg-section{padding:80px 80px}
+  .pg-h2{font-size:34px}
+  .steps-grid{grid-template-columns:repeat(3,1fr)}
+  .step:not(:last-child)::after{content:'';position:absolute;top:28px;left:calc(100% - 20px);width:40px;height:2px;background:#dcfce7}
+  .benefit-grid{grid-template-columns:repeat(3,1fr)}
+  .testi-grid{grid-template-columns:repeat(3,1fr)}
+  .pg-cta{padding:80px 80px}
+  .pg-cta h2{font-size:32px}
+  .pg-cta-btns{flex-direction:row;max-width:none}
+  .btn-cta-solid,.btn-cta-outline{width:auto}
+}
+@media (min-width:600px) and (max-width:899px){
+  .benefit-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width: 899px){
+  .nav-links{display:none}
+  .nav-signup{display:none}
+  .nav-toggle{display:flex}
+  footer{padding:40px 24px 24px}
+}
+</style>
+</head>
+<body>
+
+<nav id="siteNav">
+  <a aria-label="RentPayEZ home" href="/">
+    <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+  </a>
+  <div class="nav-links">
+    <a href="/features.html">Features</a>
+    <a class="active" href="/for-tenants.html">For Tenants</a>
+    <a href="/admin/login.html">For Landlords</a>
+    <a href="/#roles">Pricing</a>
+    <a href="/tenant/login.html">Login</a>
+  </div>
+  <a class="nav-signup" href="/admin/login.html"><button>Sign Up Free</button></a>
+  <button class="nav-toggle" aria-label="Toggle menu" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div id="mobileMenu" style="display:none;position:fixed;top:68px;left:0;right:0;background:#fff;z-index:99;padding:20px 24px;box-shadow:0 8px 20px rgba(0,0,0,.1)">
+  <a href="/features.html" style="display:block;padding:10px 0;font-weight:600">Features</a>
+  <a href="/for-tenants.html" style="display:block;padding:10px 0;font-weight:700;color:#dc2626">For Tenants</a>
+  <a href="/admin/login.html" style="display:block;padding:10px 0;font-weight:600">For Landlords</a>
+  <a href="/tenant/login.html" style="display:block;padding:10px 0;font-weight:600">Login</a>
+  <a href="/admin/login.html" style="display:block;padding:10px 0;font-weight:700;color:#dc2626">Sign Up Free</a>
+</div>
+
+<header class="pg-hero">
+  <img alt="Couple moving into new home" src="https://images.unsplash.com/photo-1758523670960-eb5512da12e8?w=1600&h=700&fit=crop&auto=format&q=85">
+  <div class="pg-hero-overlay"></div>
+  <div class="pg-hero-content">
+    <span class="pg-eyebrow">For Tenants</span>
+    <h1>The Easiest Way<span class="accent"> to Rent.</span></h1>
+    <p>Pay rent, request maintenance, track inspections and build your credit — all from one beautifully simple app.</p>
+  </div>
+</header>
+
+<section class="pg-section white">
+  <p class="pg-kicker">Simple Setup</p>
+  <h2 class="pg-h2">How It Works</h2>
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3>Create Your Free Account</h3>
+      <p>Sign up in under 2 minutes. Verify your identity and you're ready to go — no credit card required.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3>Link Your Property</h3>
+      <p>Enter your property address and unit details. Your landlord or property manager gets a notification to connect.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3>Pay, Track &amp; Build</h3>
+      <p>Make payments, track maintenance, complete inspections and watch your credit score grow — all in one dashboard.</p>
+    </div>
+  </div>
+</section>
+
+<section class="pg-section gray">
+  <p class="pg-kicker">Why Tenants Love Us</p>
+  <h2 class="pg-h2">Everything You Need as a Renter</h2>
+  <div class="benefit-grid">
+    <div class="benefit-card">
+      <div class="benefit-icon">📱</div>
+      <div><div class="benefit-title">Pay from Anywhere</div><div class="benefit-desc">Mobile-friendly platform works on any device, any time.</div></div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon">🔔</div>
+      <div><div class="benefit-title">Never Miss a Due Date</div><div class="benefit-desc">Smart reminders and auto-pay keep you always on time.</div></div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon">📂</div>
+      <div><div class="benefit-title">All Documents in One Place</div><div class="benefit-desc">Lease agreements, inspection reports, and receipts — always accessible.</div></div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon">⭐</div>
+      <div><div class="benefit-title">Build Your Credit Score</div><div class="benefit-desc">Every on-time payment is automatically reported to major bureaus.</div></div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon">🔧</div>
+      <div><div class="benefit-title">Track Maintenance Status</div><div class="benefit-desc">Know exactly where your request stands — no more follow-up calls.</div></div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon">🔒</div>
+      <div><div class="benefit-title">Secure &amp; Encrypted</div><div class="benefit-desc">Bank-level 256-bit encryption keeps your data and payments safe.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="pg-section white">
+  <p class="pg-kicker">Real Stories</p>
+  <h2 class="pg-h2">What Our Tenants Are Saying</h2>
+  <div class="testi-grid">
+    <div class="testi-card">
+      <div class="testi-quote">&quot;</div>
+      <p class="testi-text">I no longer dread rent day. Everything is automatic — I get a confirmation text and I'm done. My credit score went up 60 points in 6 months!</p>
+      <div class="testi-name">Sarah M.</div>
+      <div class="testi-loc">Tenant, Chicago IL</div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-quote">&quot;</div>
+      <p class="testi-text">Setting up was incredibly simple. The maintenance request feature saved me from a month-long back-and-forth with my landlord.</p>
+      <div class="testi-name">James T.</div>
+      <div class="testi-loc">Tenant, Austin TX</div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-quote">&quot;</div>
+      <p class="testi-text">Finally a rent app that actually reports to credit bureaus. I used it to qualify for my first car loan. Game changer.</p>
+      <div class="testi-name">Maria L.</div>
+      <div class="testi-loc">Tenant, Miami FL</div>
+    </div>
+  </div>
+</section>
+
+<section class="pg-cta">
+  <h2>Start renting smarter today.</h2>
+  <p>Free to sign up. No credit card required.</p>
+  <div class="pg-cta-btns">
+    <a href="/tenant/login.html"><button class="btn-cta-solid">Create Free Account</button></a>
+    <a href="/features.html"><button class="btn-cta-outline">Explore Features</button></a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+      <p>The all-in-one platform for rent payments, maintenance, inspections and credit building.</p>
+    </div>
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-h">Product</div>
+        <div class="footer-col">
+          <a href="/features.html">Features</a>
+          <a href="/#roles">Pricing</a>
+          <a href="/for-tenants.html">For Tenants</a>
+          <a href="/admin/login.html">For Landlords</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-h">Company</div>
+        <div class="footer-col">
+          <a href="/">About Us</a>
+          <a href="/">Blog</a>
+          <a href="/">Careers</a>
+          <a href="/">Press</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-h">Support</div>
+        <div class="footer-col">
+          <a href="/">Help Center</a>
+          <a href="/">Contact Us</a>
+          <a href="/">Privacy Policy</a>
+          <a href="/">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 RentPayEZ. All rights reserved.</p>
+    <div class="footer-bottom-links">
+      <a href="/">Privacy</a>
+      <a href="/">Terms</a>
+      <a href="/">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
