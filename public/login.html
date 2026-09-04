@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RentPayEZ — Welcome Back</title>
+<meta name="description" content="Sign in to your RentPayEZ account.">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif;color:#000;background:#fafafa;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer}
+.logo{display:inline-flex;align-items:baseline;font-family:'DM Sans',sans-serif;letter-spacing:-0.085em;line-height:0.9;white-space:nowrap;font-size:44px;font-weight:900;margin-bottom:32px}
+.logo .r{color:#dc2626}
+.logo .ent-dark{color:#000}
+.logo .p{color:#dc2626}
+.logo .ez{color:#22c55e}
+
+.login-card{background:#fff;border-radius:20px;padding:36px 32px;border:1px solid #e5e5e5;box-shadow:0 4px 32px rgba(0,0,0,.06);width:100%;max-width:440px}
+.login-card h1{font-size:24px;font-weight:700;color:#000;margin:0 0 6px;text-align:center}
+.login-card .sub{font-size:14px;color:#525252;text-align:center;margin:0 0 28px}
+.field{margin-bottom:16px}
+.field label{font-size:13px;font-weight:600;color:#334155;display:block;margin-bottom:6px}
+.field-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.forgot{font-size:13px;color:#dc2626;cursor:pointer;font-weight:500;background:none;border:none;padding:0;font-family:inherit}
+input{width:100%;padding:12px 16px;border-radius:10px;border:1.5px solid #e5e5e5;font-size:15px;font-family:inherit;color:#000;outline:none}
+input:focus{border-color:#dc2626}
+.btn-group{display:flex;flex-direction:column;gap:10px;margin-top:24px}
+.btn-tenant{width:100%;background:#dc2626;color:#fff;padding:14px;border-radius:12px;font-weight:700;font-size:15px;border:none;box-shadow:0 4px 16px rgba(220,38,38,.3)}
+.btn-landlord{width:100%;background:#1e293b;color:#fff;padding:14px;border-radius:12px;font-weight:700;font-size:15px;border:none}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.divider .line{flex:1;height:1px;background:#e5e5e5}
+.divider span{font-size:13px;color:#94a3b8}
+.btn-google{width:100%;background:#fafafa;color:#334155;padding:12px;border-radius:12px;font-weight:600;font-size:14px;border:1.5px solid #e5e5e5;display:flex;align-items:center;justify-content:center;gap:10px}
+.foot{text-align:center;font-size:14px;color:#525252;margin-top:24px}
+.foot a{color:#dc2626;font-weight:700}
+.msg{margin-top:14px;font-size:13px;text-align:center;min-height:16px}
+.msg.err{color:#dc2626}
+</style>
+</head>
+<body>
+
+<a aria-label="RentPayEZ home" href="/">
+  <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+</a>
+
+<div class="login-card">
+  <h1>Welcome back</h1>
+  <p class="sub">Sign in to your RentPayEZ account</p>
+
+  <div class="field">
+    <label for="li-email">Email Address</label>
+    <input id="li-email" type="email" placeholder="you@example.com" />
+  </div>
+  <div class="field">
+    <div class="field-head">
+      <label for="li-password">Password</label>
+      <button type="button" class="forgot" onclick="alert('Password reset — contact your property manager or platform admin to reset your password.')">Forgot password?</button>
+    </div>
+    <input id="li-password" type="password" placeholder="Enter your password" />
+  </div>
+
+  <div class="btn-group">
+    <button class="btn-tenant" onclick="doLogin('tenant')">Sign In as Tenant</button>
+    <button class="btn-landlord" onclick="doLogin('landlord')">Sign In as Landlord</button>
+  </div>
+
+  <div id="li-msg" class="msg"></div>
+
+  <div class="divider"><div class="line"></div><span>or</span><div class="line"></div></div>
+  <button class="btn-google" onclick="alert('Google sign-in isn\'t set up yet — please sign in with email and password for now.')"><span style="font-size:18px">G</span> Continue with Google</button>
+
+  <p class="foot">Don't have an account? <a href="/admin/login.html">Sign up free</a></p>
+</div>
+
+<script>
+async function doLogin(role){
+  const email = document.getElementById('li-email').value.trim();
+  const password = document.getElementById('li-password').value;
+  const msg = document.getElementById('li-msg');
+  msg.className = 'msg';
+  msg.textContent = '';
+  if(!email || !password){
+    msg.className = 'msg err';
+    msg.textContent = 'Enter your email and password first.';
+    return;
+  }
+  const endpoint = role === 'tenant' ? '/api/tenant-auth/login' : '/api/auth/login';
+  const redirectTo = role === 'tenant' ? '/tenant/portal.html' : '/admin/console.html';
+  try {
+    const res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Login failed');
+    window.location.href = redirectTo;
+  } catch (err) {
+    msg.className = 'msg err';
+    msg.textContent = err.message;
+  }
+}
+document.getElementById('li-password').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') doLogin('tenant');
+});
+</script>
+
+</body>
+</html>
