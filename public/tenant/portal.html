@@ -571,13 +571,26 @@ function rentDueLineText(){
   if(r.daysUntilDue === 0) return t('rent_due_today', {due});
   return t('rent_due_in', {days: r.daysUntilDue, s: r.daysUntilDue===1?'':'s', due});
 }
+// lease_end_date is a DATE column but the API may serialize it as a full
+// ISO timestamp (e.g. "2027-05-15T00:00:00.000Z"). Parsing that with `new
+// Date()` and formatting in the browser's local timezone can shift the
+// displayed day backward. Pull the YYYY-MM-DD out directly and build a
+// local Date from its parts so the calendar day never moves.
+function leaseEndDateParts(){
+  if(!T.lease_end_date) return null;
+  const m = String(T.lease_end_date).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  return { y: Number(m[1]), mo: Number(m[2]), d: Number(m[3]) };
+}
 function leaseEndsVal(){
-  if(!T.lease_end_date) return t('lease_not_set_sub');
-  return fmtDate(T.lease_end_date);
+  const parts = leaseEndDateParts();
+  if(!parts) return t('lease_not_set_sub');
+  return new Date(parts.y, parts.mo-1, parts.d).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
 }
 function leaseEndsTrend(){
-  if(!T.lease_end_date) return '';
-  const end = new Date(T.lease_end_date+'T00:00:00');
+  const parts = leaseEndDateParts();
+  if(!parts) return '';
+  const end = new Date(parts.y, parts.mo-1, parts.d);
   const now = new Date();
   const months = (end.getFullYear()-now.getFullYear())*12 + (end.getMonth()-now.getMonth());
   if(months < 0) return t('lease_ended');
