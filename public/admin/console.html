@@ -60,9 +60,9 @@
 
   <div class="tabs">
     <button class="active" onclick="switchTab('overview')">Overview</button>
-    <button onclick="switchTab('branches')">Branches</button>
-    <button onclick="switchTab('properties')">Properties</button>
-    <button onclick="switchTab('buildings')">Buildings</button>
+    <button id="tab-branches" onclick="switchTab('branches')">Branches</button>
+    <button id="tab-properties" onclick="switchTab('properties')">Properties</button>
+    <button id="tab-buildings" onclick="switchTab('buildings')">Buildings</button>
     <button onclick="switchTab('units')">Units</button>
     <button onclick="switchTab('staff')">Staff</button>
     <button onclick="switchTab('tenants')">Tenants</button>
@@ -71,7 +71,6 @@
     <button onclick="switchTab('documents')">Documents</button>
     <button onclick="switchTab('payments')">Payments</button>
     <button onclick="switchTab('inspections')">Inspections</button>
-    <button onclick="switchTab('reminders')">Rent Reminders</button>
   </div>
 
   <div class="panel active" id="panel-overview">
@@ -187,6 +186,11 @@
       <div class="section-title">Tenants</div>
       <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Every tenant gets a Resident Portal login the moment they're added — hand them the temporary password shown when you add or import them (there's no email service wired up yet, so it won't be sent automatically). They sign in at <a href="/tenant/login.html" target="_blank" style="color:var(--gold)">/tenant/login.html</a>.</p>
       <table id="tn-table"><thead><tr><th>Photo</th><th>Name</th><th>Email</th><th>Unit</th><th>Status</th><th>Portal</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card mt" id="tn-detail-card" style="display:none">
+      <div class="section-title">Tenant Detail</div>
+      <div id="tn-detail"></div>
     </div>
   </div>
 
@@ -304,14 +308,6 @@
       <div id="in-detail"></div>
     </div>
   </div>
-
-  <div class="panel" id="panel-reminders">
-    <div class="card mt">
-      <div class="section-title">Rent Reminders</div>
-      <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:10px">Computed in-app from each unit's Rent Due Day (set on the Units tab) and whether a payment is on file for this calendar month. No email or SMS is sent — tenants see their own reminder banner in the Resident Portal.</p>
-      <table id="rr-table"><thead><tr><th>Tenant</th><th>Unit</th><th>Property</th><th>Rent</th><th>Due Day</th><th>Status</th></tr></thead><tbody></tbody></table>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -332,6 +328,16 @@ async function boot(){
     const me = (await meRes.json()).user;
     ME = me;
     document.getElementById('whoami').textContent = me.name + ' (' + me.role.replace('_',' ') + ')';
+    // Landlords (property_manager) manage individual properties, not the
+    // org's branch/property/building structure — that's Dorothy's (or any
+    // org_admin's) job. Hide those three tabs so a landlord's nav just goes
+    // straight to their units, tenants, maintenance, etc. This is UI polish
+    // only — the API already scopes/blocks this data server-side regardless.
+    if (me.role === 'property_manager') {
+      document.getElementById('tab-branches').style.display = 'none';
+      document.getElementById('tab-properties').style.display = 'none';
+      document.getElementById('tab-buildings').style.display = 'none';
+    }
     await refreshAll();
   }catch(err){ window.location.href = 'login.html'; }
 }
@@ -343,7 +349,8 @@ async function logout(){
 
 function switchTab(t){
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
+  const navBtn = document.querySelector(`.tabs button[onclick="switchTab('${t}')"]`);
+  if (navBtn) navBtn.classList.add('active');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-' + t).classList.add('active');
 }
@@ -355,10 +362,12 @@ async function refreshAll(){
   ]);
   BRANCHES = branches; PROPERTIES = properties; BUILDINGS = buildings; UNITS = units; TENANTS = tenants;
 
-  document.getElementById('statGrid').innerHTML = [
-    ['Branches', summary.branches], ['Properties', summary.properties], ['Buildings', summary.buildings],
-    ['Units', summary.units], ['Tenants', summary.tenants], ['Staff', summary.staff],
-  ].map(([lbl,num])=>`<div class="card stat"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join('');
+  const overviewStats = ME && ME.role === 'property_manager'
+    ? [['Units', summary.units], ['Tenants', summary.tenants]]
+    : [['Branches', summary.branches], ['Properties', summary.properties], ['Buildings', summary.buildings],
+       ['Units', summary.units], ['Tenants', summary.tenants], ['Staff', summary.staff]];
+  document.getElementById('statGrid').innerHTML = overviewStats
+    .map(([lbl,num])=>`<div class="card stat"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join('');
 
   document.getElementById('br-table').querySelector('tbody').innerHTML = branches.map(b=>
     `<tr><td>${esc(b.name)}</td><td>${new Date(b.created_at).toLocaleDateString()}</td></tr>`).join('') || emptyRow(2);
@@ -369,19 +378,26 @@ async function refreshAll(){
   document.getElementById('bl-table').querySelector('tbody').innerHTML = buildings.map(b=>
     `<tr><td>${esc(b.name)}</td><td>${propName(b.property_id)}</td></tr>`).join('') || emptyRow(2);
 
-  document.getElementById('un-table').querySelector('tbody').innerHTML = units.map(u=>
-    `<tr><td>${esc(u.unit_number)}</td><td>${propName(u.property_id)}</td><td>${u.monthly_rent ? '$'+Number(u.monthly_rent).toLocaleString() : '—'}</td>
+  document.getElementById('un-table').querySelector('tbody').innerHTML = units.map(u=>{
+    const occupant = tenants.find(t=>t.unit_id===u.id);
+    return `<tr><td>${esc(u.unit_number)}</td><td>${propName(u.property_id)}</td><td>${u.monthly_rent ? '$'+Number(u.monthly_rent).toLocaleString() : '—'}</td>
      <td>${u.rent_due_day ? 'Day '+u.rent_due_day : '—'}</td>
-     <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="editUnitDueDay('${u.id}', ${u.rent_due_day||'null'})">Edit Due Day</button></td></tr>`).join('') || emptyRow(5);
+     <td style="display:flex;gap:6px;flex-wrap:wrap">
+       <button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="editUnitDueDay('${u.id}', ${u.rent_due_day||'null'})">Edit Due Day</button>
+       ${occupant
+         ? `<button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="viewTenantForUnit('${u.id}')">View Tenant →</button>`
+         : `<span style="color:var(--ink-3);font-size:12px;padding:5px 10px">No tenant</span>`}
+     </td></tr>`;
+  }).join('') || emptyRow(5);
 
   document.getElementById('st-table').querySelector('tbody').innerHTML = staff.map(s=>
     `<tr><td>${esc(s.name)}</td><td>${esc(s.email)}</td><td>${s.role.replace('_',' ')}</td><td><span class="pill ${s.status}">${s.status}</span></td>
      <td><button class="btn btn-outline" style="padding:5px 10px;font-size:12px" onclick="assignStaff('${s.id}')">Assign</button></td></tr>`).join('') || emptyRow(5);
 
   document.getElementById('tn-table').querySelector('tbody').innerHTML = tenants.map(t=>
-    `<tr><td>
+    `<tr data-tenant-id="${t.id}"><td>
        <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;cursor:pointer;background:linear-gradient(135deg,#a32d2d,#5c1818);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"
-            onclick="uploadTenantAvatar('${t.id}')" title="Click to upload/replace photo">
+            onclick="viewTenantDetail('${t.id}')" title="Click to view full tenant info">
          ${t.has_avatar ? `<img src="/api/tenants/${t.id}/avatar" style="width:100%;height:100%;object-fit:cover"/>` : esc((t.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase())}
        </div>
      </td>
@@ -404,15 +420,98 @@ async function refreshAll(){
   await refreshDocuments();
   await refreshPayments();
   await refreshInspections();
-  await refreshRentReminders();
 }
 
 function tenantName(id){ const t = TENANTS.find(x=>x.id===id); return t ? esc(t.name) : '—'; }
+
+// Jump from a Unit row straight to that unit's tenant on the Tenants tab —
+// switches tabs, scrolls the tenant's row into view, and briefly highlights
+// it so it's obvious which row you landed on.
+function viewTenantForUnit(unitId){
+  const tenant = TENANTS.find(t=>t.unit_id===unitId);
+  if(!tenant) return;
+  switchTab('tenants');
+  requestAnimationFrame(()=>{
+    const row = document.querySelector(`#tn-table tr[data-tenant-id="${tenant.id}"]`);
+    if(!row) return;
+    row.scrollIntoView({ behavior:'smooth', block:'center' });
+    row.style.transition = 'background-color .3s';
+    row.style.backgroundColor = 'rgba(212,162,71,0.28)';
+    setTimeout(()=>{ row.style.backgroundColor = ''; }, 2200);
+  });
+}
 
 // Staff can set/replace a tenant's portal photo on their behalf — useful
 // when a tenant can't do it themselves. No dedicated file input in the
 // table markup (one per row would be messy), so this creates one on the
 // fly, same pattern as any one-off file pick.
+// Clicking a tenant's photo/icon in the Tenants table opens this — a
+// one-stop view of everything tied to that tenant: their payments,
+// maintenance requests, documents, and inspections, similar to what they
+// see themselves in the Resident Portal. Fetches the org-scoped lists (same
+// data already backing the Payments/Maintenance/Documents/Inspections tabs)
+// and filters down to just this tenant client-side.
+async function viewTenantDetail(tenantId){
+  const t = TENANTS.find(x=>x.id===tenantId);
+  if(!t) return;
+
+  const card = document.getElementById('tn-detail-card');
+  document.getElementById('tn-detail').innerHTML = '<p style="color:var(--ink-3)">Loading…</p>';
+  card.style.display = '';
+  card.scrollIntoView({ behavior:'smooth', block:'start' });
+
+  try{
+    const [maint, docs, pays, insp] = await Promise.all([
+      api('/maintenance-requests').catch(()=>[]),
+      api('/documents').catch(()=>[]),
+      api(`/payments?tenantId=${tenantId}`).catch(()=>[]),
+      api('/inspections').catch(()=>[]),
+    ]);
+    const myMaint = maint.filter(m=>m.tenant_id===tenantId);
+    const myDocs = docs.filter(d=>d.tenant_id===tenantId);
+    const myInsp = insp.filter(i=>i.tenant_id===tenantId);
+
+    document.getElementById('tn-detail').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;flex-wrap:wrap">
+        <div style="display:flex;gap:16px;align-items:center">
+          <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;cursor:pointer;background:linear-gradient(135deg,#a32d2d,#5c1818);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0"
+               onclick="uploadTenantAvatar('${t.id}')" title="Click to change photo">
+            ${t.has_avatar ? `<img src="/api/tenants/${t.id}/avatar" style="width:100%;height:100%;object-fit:cover"/>` : esc((t.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase())}
+          </div>
+          <div>
+            <div style="font-size:18px;font-weight:700;color:#fff">${esc(t.name)}</div>
+            <div style="color:var(--ink-3);font-size:13px">${esc(t.email)}${t.phone ? ' · '+esc(t.phone) : ''}</div>
+            <div style="color:var(--ink-3);font-size:13px;margin-top:2px">${unitLabel(t.unit_id)} · <span class="pill ${t.status==='active'?'active':'invited'}">${t.status}</span></div>
+          </div>
+        </div>
+        <button class="btn btn-outline" onclick="document.getElementById('tn-detail-card').style.display='none'">Close</button>
+      </div>
+
+      <div class="section-title">Payments</div>
+      <table><thead><tr><th>Receipt</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${pays.map(p=>`<tr><td>${esc(p.receipt_number)}</td><td>$${(p.amount_cents/100).toFixed(2)}</td><td>${esc(p.method)}</td><td><span class="pill ${p.status==='paid'?'active':'invited'}">${p.status}</span></td><td>${new Date(p.paid_at).toLocaleDateString()}</td></tr>`).join('') || emptyRow(5)}</tbody>
+      </table>
+
+      <div class="section-title mt">Maintenance Requests</div>
+      <table><thead><tr><th>Category</th><th>Priority</th><th>Description</th><th>Status</th></tr></thead>
+        <tbody>${myMaint.map(m=>`<tr><td>${esc(m.category)}</td><td>${esc(m.priority)}</td><td style="max-width:280px">${maintDescriptionHtml(m)}</td><td>${esc(m.status)}</td></tr>`).join('') || emptyRow(4)}</tbody>
+      </table>
+
+      <div class="section-title mt">Documents</div>
+      <table><thead><tr><th>Title</th><th>Type</th><th>Status</th><th></th></tr></thead>
+        <tbody>${myDocs.map(d=>`<tr><td>${esc(d.title)}</td><td>${esc(d.doc_type)}</td><td><span class="pill ${d.status==='signed'?'active':'invited'}">${d.status.replace('_',' ')}</span></td><td><a href="/api/documents/${d.id}/file" target="_blank" style="color:var(--gold)">View</a></td></tr>`).join('') || emptyRow(4)}</tbody>
+      </table>
+
+      <div class="section-title mt">Inspections</div>
+      <table><thead><tr><th>Type</th><th>Date</th><th>Notes</th></tr></thead>
+        <tbody>${myInsp.map(i=>`<tr><td>${esc(i.inspection_type)}</td><td>${new Date(i.created_at).toLocaleDateString()}</td><td style="max-width:300px">${esc(i.overall_notes||'—')}</td></tr>`).join('') || emptyRow(3)}</tbody>
+      </table>
+    `;
+  }catch(err){
+    document.getElementById('tn-detail').innerHTML = `<p style="color:#e76d6d">Could not load tenant details: ${esc(err.message)}</p>`;
+  }
+}
+
 function uploadTenantAvatar(tenantId){
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*';
@@ -849,20 +948,6 @@ async function viewInspection(id){
     card.style.display = '';
     card.scrollIntoView({ behavior: 'smooth' });
   }catch(err){ alert(err.message); }
-}
-
-// ═══════════════════════════════ RENT REMINDERS ═══════════════════════════════
-async function refreshRentReminders(){
-  const rows = await api('/rent-reminders').catch(()=>[]);
-  document.getElementById('rr-table').querySelector('tbody').innerHTML = rows.map(r=>`
-    <tr>
-      <td>${esc(r.tenantName)}</td>
-      <td>${esc(r.unitNumber||'—')}</td>
-      <td>${esc(r.propertyName||'—')}</td>
-      <td>${r.monthlyRent ? '$'+Number(r.monthlyRent).toLocaleString() : '—'}</td>
-      <td>Day ${r.dueDay}</td>
-      <td><span class="pill ${r.status==='overdue'?'invited':'active'}">${r.status==='overdue' ? `Overdue ${Math.abs(r.daysUntilDue)}d` : `Due in ${r.daysUntilDue}d`}</span></td>
-    </tr>`).join('') || emptyRow(6);
 }
 
 boot();

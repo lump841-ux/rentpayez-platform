@@ -18,11 +18,10 @@
 // even when the layout viewport is faked — so a small screen.width paired
 // with a large window.innerWidth is a reliable signal that a phone is
 // rendering the page as if it were a desktop. When that mismatch is
-// detected we add .force-mobile to <html>, and every mobile layout rule
-// below has a matching html.force-mobile selector (higher specificity
-// than the unscoped desktop rules) so the compact drawer-based mobile
-// layout applies regardless of what the browser claims its viewport
-// width is.
+// detected we add .force-mobile to <html>, and mobile layout rules below
+// have a matching html.force-mobile selector (higher specificity than the
+// unscoped desktop rules) so the compact layout applies regardless of what
+// the browser claims its viewport width is.
 (function () {
   function applyForceMobile() {
     try {
@@ -39,220 +38,190 @@
 </script>
 <style>
 :root{
-  --brick:#8b2424; --brick-2:#a32d2d; --brick-3:#c93e3e;
-  --green:#2d7d2d; --green-2:#3a9c3a; --green-3:#5bc05b;
-  --gold:#d4a247; --gold-2:#e8c074;
-  --navy-0:#06101c; --navy-1:#0b1a2a; --navy-2:#102540; --navy-3:#16334f;
-  --ink:#e9eef5; --ink-2:#b8c4d4; --ink-3:#7c8a9d;
-  --line:rgba(255,255,255,0.08); --line-2:rgba(255,255,255,0.14);
-  --card:rgba(255,255,255,0.04); --card-2:rgba(255,255,255,0.06);
-  --good:#3a9c3a; --bad:#a32d2d; --warn:#d4a247; --pending:#3e8ab4;
+  --red:#c93326; --red-dk:#a32d2d; --red-lt:#fbeceb;
+  --green:#2d7d2d; --green-2:#3a9c3a; --green-lt:#e9f6e9;
+  --gold:#b9822c; --gold-2:#d4a247; --gold-lt:#faf1e0;
+  --blue:#2f7aa8; --blue-lt:#e8f3f9;
+  --navy:#0f1626;
+  --ink:#14161c; --ink-2:#5c6270; --ink-3:#9096a3;
+  --line:#e8e9f0; --line-2:#d9dbe6;
+  --bg:#f5f6fa; --card:#ffffff;
+  --sh-sm:0 1px 2px rgba(20,22,28,.04), 0 1px 1px rgba(20,22,28,.03);
+  --sh-md:0 8px 24px rgba(20,22,28,.06), 0 2px 6px rgba(20,22,28,.04);
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:24px; --r-full:999px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;min-height:100vh;width:100%;max-width:100%;overflow-x:hidden}
 body{
-  background:
-    radial-gradient(1200px 800px at 12% -10%, rgba(139,36,36,0.14), transparent 60%),
-    radial-gradient(1200px 800px at 95% 5%, rgba(45,125,45,0.10), transparent 60%),
-    linear-gradient(180deg, #07121f 0%, #0a1a2c 35%, #07121f 100%);
+  background:var(--bg);
   color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  -webkit-font-smoothing:antialiased;display:flex;min-height:100vh
+  -webkit-font-smoothing:antialiased;
 }
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input,select,textarea{font-family:inherit}
 
-/* sidebar */
-.sidebar{width:250px;background:linear-gradient(180deg,#08131f,#06101a);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:20;transition:transform .25s ease}
-.sb-close{display:none;margin-left:auto;width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);color:#fff;font-size:15px;align-items:center;justify-content:center;flex-shrink:0}
-.sb-close:hover{background:rgba(255,255,255,0.12)}
-/* mobile top bar (logo + hamburger) — hidden on desktop, shown only inside
-   the @media(max-width:768px) / html.force-mobile blocks below */
-.mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;height:72px;padding:0 16px;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#08131f,#06101a);border-bottom:1px solid var(--line);z-index:950}
-.mobile-topbar .mt-brand{display:flex;align-items:center;gap:2px;min-width:0}
-.mobile-topbar .mt-brand svg{transform:translateY(-3px)}
-.mobile-topbar .brand-word{font-size:15px;white-space:nowrap}
-.mt-hamburger{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.06);color:#fff;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.mt-hamburger:hover{background:rgba(255,255,255,0.12)}
-/* dark overlay behind the slide-out drawer — hidden on desktop */
-.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:900}
-.drawer-overlay.open{opacity:1;pointer-events:auto}
-.sb-brand{display:flex;align-items:center;gap:2px;padding:6px 6px 20px;margin-bottom:6px;border-bottom:1px solid var(--line)}
-.brand-mark{display:flex;align-items:center;justify-content:center;flex-shrink:0;transform:translateY(-3px)}
-.brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.4px}
-.brand-word .b1{color:var(--ink-2)}
-.brand-word .b2{color:#0b0b0b;background:#fff;border-radius:5px;padding:0 4px;margin-right:1px}
-.brand-word .b3{color:#a8341c}
+/* ── Top nav ─────────────────────────────────────────────────────── */
+.topnav{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.92);backdrop-filter:blur(14px) saturate(160%);border-bottom:1px solid var(--line)}
+.topnav-inner{max-width:1180px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.brand svg{transform:translateY(-2px)}
+.brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:19px;font-weight:800;letter-spacing:-.4px}
+.brand-word .b1{color:var(--navy)}
+.brand-word .b3{color:var(--red)}
 .brand-word .b4{color:var(--green)}
-.sb-nav{display:flex;flex-direction:column;gap:3px;margin-top:14px;flex:1}
-.sb-nav button{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:10px;color:var(--ink-2);font-size:13.5px;font-weight:500;text-align:left;width:100%;transition:all .15s}
-.sb-nav button:hover{background:rgba(255,255,255,0.04);color:#fff}
-.sb-nav button.active{background:linear-gradient(180deg, rgba(139,36,36,0.2), rgba(139,36,36,0.08));color:#fff;border:1px solid rgba(139,36,36,0.28)}
-.sb-nav button .ic{width:20px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}
-.sb-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--line)}
-.sb-user{display:flex;align-items:center;gap:9px;padding:8px}
-.sb-user-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a32d2d,#5c1818);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:12px;flex-shrink:0}
-.sb-user-info{flex:1;min-width:0}
-.sb-user-info .n{color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sb-user-info .r{color:var(--ink-3);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sb-logout{margin-top:6px;width:100%;padding:9px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid var(--line);color:var(--ink-2);font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px}
-.sb-logout:hover{background:rgba(255,255,255,0.06);color:#fff}
-.lang-toggle{display:flex;border-radius:9px;overflow:hidden;border:1px solid var(--line-2);margin-top:2px}
-.lang-toggle button{flex:1;padding:7px 0;font-size:11.5px;font-weight:700;color:var(--ink-3);background:rgba(255,255,255,0.02)}
+.topnav-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.unit-badge{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.unit-badge .u{font-size:12.5px;font-weight:700;color:var(--ink)}
+.unit-badge .a{font-size:11px;color:var(--ink-3)}
+.user-menu{position:relative}
+.user-avatar-btn{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--red-dk));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:13px;overflow:hidden;border:2px solid #fff;box-shadow:var(--sh-sm)}
+.user-avatar-btn img{width:100%;height:100%;object-fit:cover}
+.user-dropdown{position:absolute;top:calc(100% + 10px);right:0;width:220px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--sh-md);padding:10px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:.15s ease;z-index:60}
+.user-dropdown.open{opacity:1;visibility:visible;transform:translateY(0)}
+.ud-head{padding:6px 8px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.ud-head .n{font-weight:700;font-size:13.5px;color:var(--ink)}
+.ud-head .r{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.lang-toggle{display:flex;border-radius:9px;overflow:hidden;border:1px solid var(--line-2);margin:4px 0 8px}
+.lang-toggle button{flex:1;padding:7px 0;font-size:11.5px;font-weight:700;color:var(--ink-3);background:var(--bg)}
 .lang-toggle button.active{background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff}
-.lang-toggle button:not(.active):hover{background:rgba(255,255,255,0.06);color:#fff}
+.lang-toggle button:not(.active):hover{background:var(--line)}
+.ud-logout{width:100%;padding:9px 10px;border-radius:9px;background:var(--bg);color:var(--ink-2);font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px}
+.ud-logout:hover{background:var(--line)}
 
-/* ── Mobile layout (<=768px): the sidebar becomes a fixed, off-canvas
-   slide-out drawer (position:fixed + transform:translateX) instead of a
-   squeezed-down column. Being position:fixed takes it completely out of
-   #appShell's flex flow, so .app-main (the only remaining flow child)
-   naturally gets the full phone width — no separate width/margin hacks
-   needed for the main content. The drawer keeps the exact same vertical
-   nav-list styling it already has on desktop; only its position, width,
-   and open/close transform change. A mobile-only top bar (logo +
-   hamburger) replaces the sidebar's old always-visible role, and a dark
-   overlay sits behind the open drawer. See toggleDrawer()/closeDrawer()
-   in the script below. */
-@media (max-width:768px){
-  .mobile-topbar{display:flex}
-  .drawer-overlay{display:block}
-  .sidebar{
-    position:fixed;top:0;left:0;height:100vh;width:280px;max-width:85vw;
-    transform:translateX(-100%);z-index:1000;
-    box-shadow:0 0 40px rgba(0,0,0,0.55)
-  }
-  .sidebar.open{transform:translateX(0)}
-  .sb-close{display:flex}
-  .sb-nav button{min-height:44px}
-  .btn{min-height:44px}
-  .app-main{padding:16px;padding-top:88px}
-  .app-head h1{font-size:21px}
-}
-/* Mirror of the @media(max-width:768px) block above, scoped to the
-   .force-mobile class set by the head script when it detects a phone
-   spoofing a desktop viewport (see comment there). Class selectors beat
-   the unscoped desktop rules on specificity, so these apply even though
-   the real @media query never matches in that scenario. */
-html.force-mobile .mobile-topbar{display:flex}
-html.force-mobile .drawer-overlay{display:block}
-html.force-mobile .sidebar{
-  position:fixed;top:0;left:0;height:100vh;width:280px;max-width:85vw;
-  transform:translateX(-100%);z-index:1000;
-  box-shadow:0 0 40px rgba(0,0,0,0.55)
-}
-html.force-mobile .sidebar.open{transform:translateX(0)}
-html.force-mobile .sb-close{display:flex}
-html.force-mobile .sb-nav button{min-height:44px}
-html.force-mobile .btn{min-height:44px}
-html.force-mobile .app-main{padding:16px;padding-top:88px}
-html.force-mobile .app-head h1{font-size:21px}
+.tabbar-wrap{border-top:1px solid var(--line)}
+.tabbar{max-width:1180px;margin:0 auto;padding:0 22px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tabbar button{display:flex;align-items:center;gap:7px;padding:12px 14px;font-size:13.5px;font-weight:700;color:var(--ink-3);white-space:nowrap;border-bottom:2.5px solid transparent;flex-shrink:0}
+.tabbar button .ic{font-size:14px}
+.tabbar button:hover{color:var(--ink)}
+.tabbar button.active{color:var(--red);border-bottom-color:var(--red)}
 
-/* main */
-.app-main{flex:1;min-width:0;width:100%;padding:26px 30px 60px;max-width:100%}
-.app-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;gap:16px;flex-wrap:wrap}
-.app-head h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:25px;font-weight:800;letter-spacing:-0.5px;color:#fff;margin:0}
+@media (max-width:640px){
+  .topnav-inner{padding:12px 16px}
+  .unit-badge{display:none}
+  .brand-word{font-size:17px}
+  .tabbar{padding:0 12px}
+  .tabbar button{padding:11px 10px;font-size:12.5px}
+}
+
+/* ── Main ────────────────────────────────────────────────────────── */
+.app-main{max-width:1180px;margin:0 auto;padding:26px 22px 70px;width:100%}
+.app-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;gap:16px;flex-wrap:wrap}
+.app-head h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--ink);margin:0}
 .app-head .sub{color:var(--ink-3);font-size:13.5px;margin-top:3px}
+@media (max-width:640px){ .app-main{padding:18px 16px 56px} .app-head h1{font-size:20px} }
 
-.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}
-@media (max-width:992px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:360px){.kpi-grid{grid-template-columns:minmax(0,1fr)}}
-html.force-mobile .kpi-grid{grid-template-columns:minmax(0,1fr)}
-.kpi{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden;min-width:0;width:100%}
-.kpi .label{color:var(--ink-3);font-size:11px;letter-spacing:0.7px;text-transform:uppercase;font-weight:700}
-.kpi .val{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.6px;color:#fff;margin:6px 0 3px;line-height:1}
-.kpi .trend{color:var(--green-3);font-size:11.5px;font-weight:600}
-.kpi .ic{position:absolute;top:13px;right:15px;width:32px;height:32px;border-radius:9px;background:rgba(139,36,36,0.15);color:var(--brick-3);display:flex;align-items:center;justify-content:center;font-size:15px}
-.kpi.green .ic{background:rgba(45,125,45,0.15);color:var(--green-3)}
-.kpi.gold .ic{background:rgba(212,162,71,0.15);color:var(--gold-2)}
-.kpi.blue .ic{background:rgba(62,138,180,0.15);color:#76b8e0}
-
-.dash-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
-@media (max-width:992px){.dash-grid{grid-template-columns:minmax(0,1fr)}}
-html.force-mobile .dash-grid{grid-template-columns:minmax(0,1fr)}
-.panel{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid var(--line);border-radius:18px;padding:20px;min-width:0}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;min-width:0;box-shadow:var(--sh-sm)}
 .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap}
-.panel-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;color:#fff;margin:0}
+.panel-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:15.5px;font-weight:700;color:var(--ink);margin:0}
 .panel-sub{color:var(--ink-3);font-size:12px;margin-top:2px}
 
+.two-col{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){ .two-col{grid-template-columns:minmax(0,1fr)} }
+
+/* Rent hero */
+.rent-hero{background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);padding:26px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+.rent-hero .label{font-size:11px;letter-spacing:.7px;text-transform:uppercase;font-weight:700;color:var(--ink-3)}
+.rent-hero .amt{font-family:'Plus Jakarta Sans',sans-serif;font-size:40px;font-weight:800;letter-spacing:-1px;color:var(--ink);margin:6px 0 4px;line-height:1}
+.rent-hero .amt small{font-size:15px;color:var(--ink-3);font-weight:600;margin-left:3px}
+.rent-hero .due{font-size:12.5px;font-weight:700}
+.rent-hero .due.overdue{color:var(--red)}
+.rent-hero .due.ok{color:var(--ink-2)}
+
+/* Stat grid */
+.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+@media (max-width:900px){ .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:400px){ .stat-grid{grid-template-columns:minmax(0,1fr)} }
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 17px;box-shadow:var(--sh-sm)}
+.stat-card .label{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;font-weight:700;color:var(--ink-3)}
+.stat-card .val{font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--ink);margin:5px 0 3px;line-height:1}
+.stat-card .val.red{color:var(--red)}
+.stat-card .val.green{color:var(--green)}
+.stat-card .val.gold{color:var(--gold)}
+.stat-card .val.blue{color:var(--blue)}
+.stat-card .trend{font-size:11px;font-weight:600;color:var(--ink-3)}
+
 .table{width:100%;border-collapse:collapse}
-.table th{text-align:left;color:var(--ink-3);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:9px 12px;border-bottom:1px solid var(--line)}
-.table td{padding:12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink)}
+.table th{text-align:left;color:var(--ink-3);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.table td{padding:13px 14px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink)}
 .table tr:last-child td{border-bottom:none}
-.table tr:hover td{background:rgba(255,255,255,0.02)}
+.table tr:hover td{background:var(--bg)}
 
-.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px}
-.pill.paid,.pill.resolved,.pill.reported,.pill.done,.pill.signed{background:rgba(45,125,45,0.18);color:var(--green-3);border:1px solid rgba(45,125,45,0.28)}
-.pill.pending,.pill.pending_signature,.pill.open,.pill.active{background:rgba(62,138,180,0.18);color:#76b8e0;border:1px solid rgba(62,138,180,0.28)}
-.pill.processing,.pill.in_progress{background:rgba(212,162,71,0.18);color:var(--gold-2);border:1px solid rgba(212,162,71,0.28)}
-.pill.failed,.pill.overdue,.pill.emergency{background:rgba(139,36,36,0.18);color:#e76d6d;border:1px solid rgba(139,36,36,0.28)}
-.pill.closed{background:rgba(255,255,255,0.06);color:var(--ink-2);border:1px solid var(--line-2)}
-.pill.preview{background:rgba(212,162,71,0.22);color:var(--gold-2);border:1px solid rgba(212,162,71,0.4);letter-spacing:0.8px}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.pill.paid,.pill.resolved,.pill.reported,.pill.done,.pill.signed{background:var(--green-lt);color:var(--green);border:1px solid #cdeacd}
+.pill.pending,.pill.pending_signature,.pill.open,.pill.active{background:var(--blue-lt);color:var(--blue);border:1px solid #cfe6f2}
+.pill.processing,.pill.in_progress{background:var(--gold-lt);color:var(--gold);border:1px solid #f0dcb4}
+.pill.failed,.pill.overdue,.pill.emergency{background:var(--red-lt);color:var(--red);border:1px solid #f3cfcc}
+.pill.closed{background:var(--bg);color:var(--ink-2);border:1px solid var(--line-2)}
+.pill.preview{background:var(--gold-lt);color:var(--gold);border:1px solid #f0dcb4;letter-spacing:.8px}
 
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 16px;border-radius:11px;font-weight:600;font-size:13.5px;transition:all .15s;border:1px solid transparent;white-space:nowrap}
-.btn-primary{background:linear-gradient(180deg, var(--brick-2), var(--brick));color:#fff;box-shadow:0 6px 18px rgba(139,36,36,0.38)}
-.btn-primary:hover{transform:translateY(-1px)}
-.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-.btn-secondary{background:rgba(255,255,255,0.04);border:1px solid var(--line-2);color:#fff}
-.btn-secondary:hover{background:rgba(255,255,255,0.08)}
-.btn-green{background:linear-gradient(180deg, var(--green-2), var(--green));color:#fff;box-shadow:0 6px 18px rgba(45,125,45,0.32)}
-.btn-lg{padding:13px 20px;font-size:14.5px;border-radius:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 18px;border-radius:var(--r-full);font-weight:700;font-size:13.5px;transition:all .15s;border:1px solid transparent;white-space:nowrap}
+.btn-primary{background:linear-gradient(180deg,var(--red),var(--red-dk));color:#fff;box-shadow:0 8px 20px rgba(201,51,38,.28)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(201,51,38,.34)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-secondary{background:var(--bg);border:1px solid var(--line-2);color:var(--ink)}
+.btn-secondary:hover{background:var(--line)}
+.btn-green{background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff;box-shadow:0 8px 20px rgba(45,125,45,.24)}
+.btn-lg{padding:14px 22px;font-size:14.5px;border-radius:var(--r-full)}
 .btn-block{width:100%}
-.btn-sm{padding:7px 11px;font-size:12px;border-radius:9px}
+.btn-sm{padding:7px 12px;font-size:12px;border-radius:9px}
 
 .field{margin-bottom:14px}
-.field label{display:block;color:var(--ink-3);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
-.field input,.field select,.field textarea{width:100%;background:rgba(0,0,0,0.22);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;color:#fff;font-size:13.5px;outline:none}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brick-3)}
-.field input:disabled{color:var(--ink-2);opacity:0.75}
+.field label{display:block;color:var(--ink-3);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;color:var(--ink);font-size:13.5px;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--red)}
+.field input:disabled{color:var(--ink-2);opacity:.85;background:#f0f1f5}
 
 .msg{margin-top:10px;font-size:13px}
-.msg.ok{color:var(--green-3)}
-.msg.err{color:#e76d6d}
+.msg.ok{color:var(--green)}
+.msg.err{color:var(--red)}
 
-/* score preview card */
-.score-hero{background:
-  radial-gradient(400px 200px at 100% 0%, rgba(91,192,91,0.18), transparent 60%),
-  radial-gradient(300px 200px at 0% 100%, rgba(212,162,71,0.1), transparent 60%),
-  linear-gradient(160deg,#0f2922,#0a1726 60%);
-  border:1px solid rgba(91,192,91,0.22);position:relative;overflow:hidden
-}
-.preview-ribbon{position:absolute;top:14px;right:-32px;background:linear-gradient(180deg,var(--gold-2),var(--gold));color:#1a1200;font-size:10.5px;font-weight:800;letter-spacing:1px;padding:5px 40px;transform:rotate(35deg);box-shadow:0 4px 10px rgba(0,0,0,0.3)}
+/* Credit score card */
+.score-hero{background:linear-gradient(160deg,#fff 0%,var(--gold-lt) 130%);border:1px solid #f0dcb4;position:relative;overflow:hidden}
+.preview-ribbon{position:absolute;top:14px;right:-32px;background:linear-gradient(180deg,var(--gold-2),var(--gold));color:#2a1c00;font-size:10.5px;font-weight:800;letter-spacing:1px;padding:5px 40px;transform:rotate(35deg);box-shadow:0 4px 10px rgba(0,0,0,.15)}
 
-/* streak */
+/* Streak */
 .streak{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
-.streak div{flex:1;min-width:22px;height:34px;border-radius:8px;background:rgba(45,125,45,0.18);border:1px solid rgba(45,125,45,0.3);color:var(--green-3);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700}
-.streak div.miss{background:rgba(139,36,36,0.18);border-color:rgba(139,36,36,0.3);color:#e76d6d}
+.streak div{flex:1;min-width:22px;height:34px;border-radius:8px;background:var(--green-lt);border:1px solid #cdeacd;color:var(--green);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700}
+.streak div.miss{background:var(--red-lt);border-color:#f3cfcc;color:var(--red)}
 
-/* coach */
-.coach-panel{background:linear-gradient(160deg,#0e1f33,#0a1726);border:1px solid var(--line-2);border-radius:18px;padding:0;overflow:hidden}
-.coach-head-bar{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;background:rgba(45,125,45,0.04)}
-.chat-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3a9c3a,#1e5b1e);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.coach-feed{height:360px;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+/* Coach */
+.coach-panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:0;overflow:hidden;box-shadow:var(--sh-sm)}
+.coach-head-bar{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;background:var(--bg)}
+.chat-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--green-2),var(--green));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.coach-feed{height:340px;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
 .coach-foot{padding:14px 20px;border-top:1px solid var(--line)}
 .bubble{padding:11px 14px;border-radius:16px;font-size:14px;line-height:1.5;max-width:88%;margin-bottom:6px;white-space:pre-wrap}
-.bubble.user{background:linear-gradient(180deg,var(--brick-2),var(--brick));color:#fff;margin-left:auto;border-bottom-right-radius:5px}
-.bubble.ai{background:rgba(255,255,255,0.05);border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:5px}
-.bubble.sys{background:rgba(212,162,71,0.08);border:1px solid rgba(212,162,71,0.22);color:var(--ink-2);font-size:12.5px;text-align:center;max-width:100%;margin:0 auto 6px}
-.chat-input{display:flex;gap:8px;background:rgba(0,0,0,0.25);border:1px solid var(--line);border-radius:13px;padding:5px 5px 5px 12px;align-items:center}
-.chat-input input{flex:1;background:transparent;border:none;color:#fff;font-size:13.5px;outline:none;padding:8px 0}
+.bubble.user{background:linear-gradient(180deg,var(--red),var(--red-dk));color:#fff;margin-left:auto;border-bottom-right-radius:5px}
+.bubble.ai{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:5px}
+.bubble.sys{background:var(--gold-lt);border:1px solid #f0dcb4;color:var(--ink-2);font-size:12.5px;text-align:center;max-width:100%;margin:0 auto 6px}
+.chat-input{display:flex;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:13px;padding:5px 5px 5px 12px;align-items:center}
+.chat-input input{flex:1;background:transparent;border:none;color:var(--ink);font-size:13.5px;outline:none;padding:8px 0}
 .chat-input button{width:36px;height:36px;border-radius:9px;background:linear-gradient(180deg,var(--green-2),var(--green));color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
-.chat-input button:disabled{opacity:0.5}
+.chat-input button:disabled{opacity:.5}
 
-/* goals */
-.goal-card{padding:14px;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:13px;margin-bottom:10px}
-.goal-card.done{background:rgba(45,125,45,0.08);border-color:rgba(45,125,45,0.22)}
-.goal-bar{height:8px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;margin:8px 0}
+/* Goals */
+.goal-card{padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:13px;margin-bottom:10px}
+.goal-card.done{background:var(--green-lt);border-color:#cdeacd}
+.goal-bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 0}
 .goal-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--green-2));border-radius:99px}
 
-/* maintenance photo */
+/* Maintenance photo */
 .thumb{width:52px;height:52px;border-radius:9px;object-fit:cover;border:1px solid var(--line-2);cursor:pointer}
-.upload-box{border:1.5px dashed var(--line-2);border-radius:12px;padding:14px;text-align:center;color:var(--ink-3);font-size:12.5px;cursor:pointer}
-.upload-box:hover{border-color:var(--brick-3);color:var(--ink-2)}
+.upload-box{border:1.5px dashed var(--line-2);border-radius:12px;padding:14px;text-align:center;color:var(--ink-3);font-size:12.5px;cursor:pointer;display:block}
+.upload-box:hover{border-color:var(--red);color:var(--ink-2)}
 .upload-preview{margin-top:10px;display:flex;align-items:center;gap:10px}
 .upload-preview img{width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid var(--line-2)}
 
+/* Office hub */
+.office-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.office-tab{padding:9px 16px;border-radius:var(--r-full);font-size:12.5px;font-weight:700;background:var(--card);color:var(--ink-2);border:1px solid var(--line);display:flex;align-items:center;gap:6px}
+.office-tab:hover{background:var(--bg)}
+.office-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
 .empty{color:var(--ink-3);text-align:center;padding:22px;font-size:13px}
-.loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--ink-3);width:100%}
+.loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--ink-3);width:100%;background:var(--bg)}
 </style>
 </head>
 <body>
@@ -260,38 +229,10 @@ html.force-mobile .dash-grid{grid-template-columns:minmax(0,1fr)}
 <div id="loadingScreen" class="loading-screen">Loading your account…</div>
 
 <div id="appShell" style="display:none;width:100%">
-  <header class="mobile-topbar" id="mobileTopbar">
-    <div class="mt-brand">
-      <svg viewBox="-7 -10 106 106" width="52" height="52" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;display:block">
-        <defs>
-          <linearGradient id="mt-r1" x1="10" y1="5" x2="95" y2="95" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8453a"/><stop offset="0.42" stop-color="#a81f18"/><stop offset="1" stop-color="#2a0503"/></linearGradient>
-          <linearGradient id="mt-g1" x1="0" y1="0" x2="18" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f9530"/><stop offset="1" stop-color="#2c5719"/></linearGradient>
-        </defs>
-        <path d="M18,26 C17.3,22 18.7,19 18,16 C12,12 24,9 18,5 C12,2 22,0 18,-3" stroke="url(#mt-g1)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-        <path d="M22,26 C21.3,22 22.7,19 22,16 C16,12 28,9 22,5 C16,2 26,0 22,-3" stroke="url(#mt-g1)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-        <path d="M8,60 L43,29 Q49,24 55,29 L82,53 Q86,57 82,61 Q72,71 59,66 Q50,62 49,53" fill="none" stroke="url(#mt-r1)" stroke-width="9.5" stroke-linecap="butt" stroke-linejoin="round"/>
-        <circle cx="8" cy="60" r="4.7" fill="url(#mt-r1)"/>
-        <path d="M10,44 L10,23 L16,19 L24,19 L24,44 Z" fill="url(#mt-r1)"/>
-        <rect x="31" y="45" width="14" height="42" rx="2" fill="url(#mt-r1)"/>
-        <path d="M44,60 L86,85 L79,90 L38,66 Z" fill="url(#mt-r1)"/>
-        <g fill="url(#mt-g1)">
-          <rect x="50.9" y="42.4" width="4.2" height="4.2" rx="0.8"/>
-          <rect x="55.9" y="42.4" width="4.2" height="4.2" rx="0.8"/>
-          <rect x="50.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
-          <rect x="55.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
-        </g>
-      </svg>
-      <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
-    </div>
-    <button class="mt-hamburger" onclick="toggleDrawer()" aria-label="Open menu">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-    </button>
-  </header>
-  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
-  <aside class="sidebar" id="sidebar">
-    <div class="sb-brand">
-      <span class="brand-mark">
-        <svg viewBox="-7 -10 106 106" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="#" onclick="setView('overview');return false;">
+        <svg viewBox="-7 -10 106 106" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="pf-r1" x1="10" y1="5" x2="95" y2="95" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8453a"/><stop offset="0.42" stop-color="#a81f18"/><stop offset="1" stop-color="#2a0503"/></linearGradient>
             <linearGradient id="pf-g1" x1="0" y1="0" x2="18" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f9530"/><stop offset="1" stop-color="#2c5719"/></linearGradient>
@@ -310,23 +251,28 @@ html.force-mobile .dash-grid{grid-template-columns:minmax(0,1fr)}
             <rect x="55.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
           </g>
         </svg>
-      </span>
-      <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
-      <button class="sb-close" onclick="closeDrawer()" aria-label="Close menu">✕</button>
-    </div>
-    <nav class="sb-nav" id="sbNav"></nav>
-    <div class="sb-foot">
-      <div class="sb-user" id="sbUser"></div>
-      <div class="lang-toggle" id="langToggle">
-        <button id="langBtnEn" onclick="setLang('en')">EN</button>
-        <button id="langBtnEs" onclick="setLang('es')">ES</button>
+        <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
+      </a>
+      <div class="topnav-right">
+        <div class="unit-badge" id="unitBadge"></div>
+        <div class="user-menu" id="userMenu">
+          <button class="user-avatar-btn" id="userAvatarBtn" aria-label="Account menu"></button>
+          <div class="user-dropdown" id="userDropdown">
+            <div class="ud-head"><div class="n" id="udName">—</div><div class="r" id="udRole">—</div></div>
+            <div class="lang-toggle" id="langToggle">
+              <button id="langBtnEn" onclick="setLang('en')">EN</button>
+              <button id="langBtnEs" onclick="setLang('es')">ES</button>
+            </div>
+            <button class="ud-logout" onclick="logout()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              <span id="signOutLabel">Sign out</span>
+            </button>
+          </div>
+        </div>
       </div>
-      <button class="sb-logout" onclick="logout()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-        <span id="signOutLabel">Sign out</span>
-      </button>
     </div>
-  </aside>
+    <div class="tabbar-wrap"><nav class="tabbar" id="tabbar"></nav></div>
+  </header>
   <main class="app-main" id="appMain"></main>
 </div>
 
@@ -334,17 +280,17 @@ html.force-mobile .dash-grid{grid-template-columns:minmax(0,1fr)}
 /* ═══════════════════════════ i18n (English / Español) ═══════════════════════════ */
 const I18N = {
   en: {
-    nav_dash:'Dashboard', nav_pay:'Pay Rent', nav_history:'Payment History', nav_maintenance:'Maintenance',
-    nav_inspections:'Inspections', nav_documents:'Documents', nav_coach:'AI Coach', nav_goals:'My Goals', nav_settings:'Settings',
+    nav_overview:'Overview', nav_payments:'Payments', nav_maintenance:'Maintenance',
+    nav_inspections:'Inspections', nav_credit:'Credit', nav_office:'Office',
+    office_documents:'Documents', office_coach:'AI Coach', office_goals:'My Goals', office_settings:'Settings',
     sign_out:'Sign out', resident:'Resident', unit_n:'Unit {{n}}',
     loading_account:'Loading your account…', loading:'Loading…',
     welcome_back:'Welcome back, {{name}} 👋', your_resident_portal:'Your resident portal',
     credit_score:'Credit Score', preview:'Preview', not_connected_yet:'Not connected yet',
-    payment_streak:'Payment Streak', mo_n:'{{n}} mo', based_on_real_payments:'Based on your real payments',
+    on_time_payments:'On-Time Payments', of_last_12:'{{n}}/12 this year', pct_this_year:'{{pct}}% this year',
     total_paid_on_record:'Total Paid on Record', payment_n:'{{n}} payment', payments_n:'{{n}} payments',
     open_requests:'Open Requests', total_filed_n:'{{n}} total filed',
-    pay_rent_panel:'Pay Rent', due_monthly:'Due monthly', no_rent_on_file:'No rent amount on file yet',
-    go_to_pay_rent:'Go to Pay Rent →',
+    rent_due_title:'Rent Due', no_rent_on_file:'No rent amount on file yet',
     last_12_months:'Last 12 months', months_with_payment:'Months with a recorded payment',
     recent_maintenance:'Recent maintenance', request_n_filed:'{{n}} request filed', requests_n_filed:'{{n}} requests filed',
     view_all:'View All →', no_maintenance_yet:'No maintenance requests yet.',
@@ -353,7 +299,7 @@ const I18N = {
     sample_good_range:'Sample · Good range', sample_card_desc:'This is what your score card will look like once your organization turns on rent-payment credit reporting.',
     poor:'Poor', fair:'Fair', good:'Good', very_good:'Very Good', excellent:'Excellent',
     pay_rent_title:'Pay Rent', monthly_rent:'Monthly Rent', pay_online:'Pay {{amt}} Online', secured_by_stripe:'🔒 Secured by Stripe',
-    prefer_another_way:'Prefer another way to pay?', online_payment_text:"Online payment goes through your property manager's Stripe account. If it isn't set up yet, or you'd rather pay another way, contact your property manager directly — payments they record manually will still show up in your Payment History.",
+    prefer_another_way:'Prefer another way to pay?', online_payment_text:"Online payment goes through your property manager's Stripe account. If it isn't set up yet, or you'd rather pay another way, contact your property manager directly — payments they record manually will still show up below.",
     payment_history_title:'Payment History', total_on_record:'total on record',
     receipt_num:'Receipt #', date:'Date', amount:'Amount', method:'Method', no_payments_yet:'No payments on record yet.',
     payment_received:'Payment received — thank you!', payment_status:'Payment status: {{status}}', could_not_confirm:'Could not confirm payment', payment_cancelled:'Payment was cancelled.',
@@ -388,6 +334,7 @@ const I18N = {
     rent_overdue:'Rent is <strong>{{days}} day{{s}} overdue</strong> (due on the {{due}}).',
     rent_due_today:'Rent is <strong>due today</strong> (the {{due}}).',
     rent_due_in:'Rent is <strong>due in {{days}} day{{s}}</strong> (the {{due}}).',
+    rent_paid_this_month:'This month’s rent is on file. You’re all set.',
     pay_now:'Pay Now', could_not_load_account:'Could not load your account',
     status_reported:'reported', status_in_progress:'in progress', status_resolved:'resolved', status_open:'open',
     status_pending:'pending', status_pending_signature:'pending signature', status_signed:'signed', status_closed:'closed',
@@ -395,17 +342,17 @@ const I18N = {
     type_move_in:'move in', type_move_out:'move out', type_routine:'routine',
   },
   es: {
-    nav_dash:'Panel', nav_pay:'Pagar Renta', nav_history:'Historial de Pagos', nav_maintenance:'Mantenimiento',
-    nav_inspections:'Inspecciones', nav_documents:'Documentos', nav_coach:'Asistente IA', nav_goals:'Mis Metas', nav_settings:'Configuración',
+    nav_overview:'Resumen', nav_payments:'Pagos', nav_maintenance:'Mantenimiento',
+    nav_inspections:'Inspecciones', nav_credit:'Crédito', nav_office:'Oficina',
+    office_documents:'Documentos', office_coach:'Asistente IA', office_goals:'Mis Metas', office_settings:'Configuración',
     sign_out:'Cerrar sesión', resident:'Residente', unit_n:'Unidad {{n}}',
     loading_account:'Cargando tu cuenta…', loading:'Cargando…',
     welcome_back:'Bienvenido de nuevo, {{name}} 👋', your_resident_portal:'Tu portal de residente',
     credit_score:'Puntaje de Crédito', preview:'Vista previa', not_connected_yet:'Aún no conectado',
-    payment_streak:'Racha de Pagos', mo_n:'{{n}} mes(es)', based_on_real_payments:'Basado en tus pagos reales',
+    on_time_payments:'Pagos a Tiempo', of_last_12:'{{n}}/12 este año', pct_this_year:'{{pct}}% este año',
     total_paid_on_record:'Total Pagado Registrado', payment_n:'{{n}} pago', payments_n:'{{n}} pagos',
     open_requests:'Solicitudes Abiertas', total_filed_n:'{{n}} en total',
-    pay_rent_panel:'Pagar Renta', due_monthly:'Vence mensualmente', no_rent_on_file:'Aún no hay monto de renta registrado',
-    go_to_pay_rent:'Ir a Pagar Renta →',
+    rent_due_title:'Renta Pendiente', no_rent_on_file:'Aún no hay monto de renta registrado',
     last_12_months:'Últimos 12 meses', months_with_payment:'Meses con un pago registrado',
     recent_maintenance:'Mantenimiento reciente', request_n_filed:'{{n}} solicitud presentada', requests_n_filed:'{{n}} solicitudes presentadas',
     view_all:'Ver Todo →', no_maintenance_yet:'Aún no hay solicitudes de mantenimiento.',
@@ -414,7 +361,7 @@ const I18N = {
     sample_good_range:'Muestra · Rango bueno', sample_card_desc:'Así se verá tu puntaje una vez que tu organización active el reporte de crédito por pago de renta.',
     poor:'Malo', fair:'Regular', good:'Bueno', very_good:'Muy bueno', excellent:'Excelente',
     pay_rent_title:'Pagar Renta', monthly_rent:'Renta Mensual', pay_online:'Pagar {{amt}} en línea', secured_by_stripe:'🔒 Protegido por Stripe',
-    prefer_another_way:'¿Prefieres otra forma de pago?', online_payment_text:'El pago en línea se procesa a través de la cuenta de Stripe de tu administrador de propiedad. Si aún no está configurada, o prefieres pagar de otra manera, contacta directamente a tu administrador — los pagos que registre manualmente aparecerán igualmente en tu Historial de Pagos.',
+    prefer_another_way:'¿Prefieres otra forma de pago?', online_payment_text:'El pago en línea se procesa a través de la cuenta de Stripe de tu administrador de propiedad. Si aún no está configurada, o prefieres pagar de otra manera, contacta directamente a tu administrador — los pagos que registre manualmente aparecerán igualmente abajo.',
     payment_history_title:'Historial de Pagos', total_on_record:'total registrado',
     receipt_num:'Recibo #', date:'Fecha', amount:'Monto', method:'Método', no_payments_yet:'Aún no hay pagos registrados.',
     payment_received:'Pago recibido — ¡gracias!', payment_status:'Estado del pago: {{status}}', could_not_confirm:'No se pudo confirmar el pago', payment_cancelled:'El pago fue cancelado.',
@@ -449,6 +396,7 @@ const I18N = {
     rent_overdue:'La renta está <strong>vencida hace {{days}} día{{s}}</strong> (vence el {{due}}).',
     rent_due_today:'La renta <strong>vence hoy</strong> (el {{due}}).',
     rent_due_in:'La renta <strong>vence en {{days}} día{{s}}</strong> (el {{due}}).',
+    rent_paid_this_month:'La renta de este mes ya está registrada. Todo en orden.',
     pay_now:'Pagar Ahora', could_not_load_account:'No se pudo cargar tu cuenta',
     status_reported:'reportado', status_in_progress:'en progreso', status_resolved:'resuelto', status_open:'abierto',
     status_pending:'pendiente', status_pending_signature:'pendiente de firma', status_signed:'firmado', status_closed:'cerrado',
@@ -467,24 +415,28 @@ function setLang(lang){
   LANG = lang;
   localStorage.setItem('rpz_lang', lang);
   document.getElementById('loadingScreen').textContent = t('loading_account');
-  renderSidebar();
+  renderNav();
   setView(VIEW);
 }
 
 const NAV = [
-  {id:'dash', key:'nav_dash', ic:'🏠'},
-  {id:'pay', key:'nav_pay', ic:'💳'},
-  {id:'history', key:'nav_history', ic:'📋'},
+  {id:'overview', key:'nav_overview', ic:'🏠'},
+  {id:'payments', key:'nav_payments', ic:'💳'},
   {id:'maintenance', key:'nav_maintenance', ic:'🔧'},
   {id:'inspections', key:'nav_inspections', ic:'📝'},
-  {id:'documents', key:'nav_documents', ic:'📄'},
-  {id:'coach', key:'nav_coach', ic:'🤖'},
-  {id:'goals', key:'nav_goals', ic:'🎯'},
-  {id:'settings', key:'nav_settings', ic:'⚙️'}
+  {id:'credit', key:'nav_credit', ic:'📈'},
+  {id:'office', key:'nav_office', ic:'🏢'}
+];
+const OFFICE_TABS = [
+  {id:'documents', key:'office_documents', ic:'📄'},
+  {id:'coach', key:'office_coach', ic:'🤖'},
+  {id:'goals', key:'office_goals', ic:'🎯'},
+  {id:'settings', key:'office_settings', ic:'⚙️'}
 ];
 let ME = null;      // { tenant: {...} } from /api/tenant-auth/me
 let T = null;       // full profile from /api/tenant/me
-let VIEW = 'dash';
+let VIEW = 'overview';
+let OFFICE_SUB = 'documents';
 let COACH_HISTORY = [];
 let PENDING_PHOTO = null; // { base64, mime }
 let PENDING_AVATAR = null; // { base64, mime }
@@ -508,56 +460,59 @@ async function boot(){
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('appShell').style.display = 'flex';
 
-    renderSidebar();
+    renderNav();
     await handleStripeReturn();
-    setView('dash');
+    setView('overview');
   }catch(err){
     document.getElementById('loadingScreen').textContent = err.message;
   }
 }
 
-// ── Mobile slide-out nav drawer ──────────────────────────────────────
-// The sidebar is reused as the drawer's content (see CSS: @media(max-width:768px)
-// and html.force-mobile turn .sidebar into a position:fixed off-canvas panel).
-// These two functions just toggle the .open class on the drawer + its overlay;
-// they're harmless no-ops visually at desktop widths since .sidebar isn't
-// position:fixed there and .drawer-overlay stays display:none.
-function toggleDrawer(){
-  const isOpen = document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('drawerOverlay').classList.toggle('open', isOpen);
-  document.body.style.overflow = isOpen ? 'hidden' : '';
-}
-function closeDrawer(){
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('drawerOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function renderSidebar(){
-  document.getElementById('sbNav').innerHTML = NAV.map(n =>
-    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}');closeDrawer()"><span class="ic">${n.ic}</span><span>${esc(t(n.key))}</span></button>`
+function renderNav(){
+  document.getElementById('tabbar').innerHTML = NAV.map(n =>
+    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}')"><span class="ic">${n.ic}</span><span>${esc(t(n.key))}</span></button>`
   ).join('');
+
   const initials = (T.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
   const av = T.has_avatar
-    ? `<img src="/api/tenant/me/avatar?v=${AVATAR_V}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
+    ? `<img src="/api/tenant/me/avatar?v=${AVATAR_V}" alt=""/>`
     : esc(initials);
-  document.getElementById('sbUser').innerHTML = `
-    <div class="sb-user-av">${av}</div>
-    <div class="sb-user-info"><div class="n">${esc(T.name)}</div><div class="r">${esc(T.unit_number ? t('unit_n',{n:T.unit_number}) : t('resident'))}</div></div>
-  `;
+  document.getElementById('userAvatarBtn').innerHTML = av;
+  document.getElementById('udName').textContent = T.name;
+  document.getElementById('udRole').textContent = T.unit_number ? t('unit_n',{n:T.unit_number}) : t('resident');
+  document.getElementById('unitBadge').innerHTML =
+    `<span class="u">${esc(T.unit_number ? t('unit_n',{n:T.unit_number}) : t('resident'))}</span>
+     <span class="a">${esc(T.property_address || T.property_name || '')}</span>`;
   document.getElementById('langBtnEn').classList.toggle('active', LANG==='en');
   document.getElementById('langBtnEs').classList.toggle('active', LANG==='es');
   document.getElementById('signOutLabel').textContent = t('sign_out');
 }
 
+// ── Account dropdown ────────────────────────────────────────────────
+function wireUserMenu(){
+  const btn = document.getElementById('userAvatarBtn');
+  const dd = document.getElementById('userDropdown');
+  if(btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    dd.classList.toggle('open');
+  });
+  document.addEventListener('click', function(){ dd.classList.remove('open'); });
+}
+
 async function setView(id){
   VIEW = id;
-  renderSidebar();
+  renderNav();
+  wireUserMenu();
   const m = document.getElementById('appMain');
   m.innerHTML = `<div class="empty">${t('loading')}</div>`;
-  const renderers = { dash: renderDash, pay: renderPay, history: renderHistory, maintenance: renderMaintenance, inspections: renderInspections, documents: renderDocuments, coach: renderCoach, goals: renderGoals, settings: renderSettings };
+  const renderers = {
+    overview: renderOverview, payments: renderPayments, maintenance: renderMaintenance,
+    inspections: renderInspections, credit: renderCredit, office: () => renderOffice(OFFICE_SUB)
+  };
   await renderers[id]();
-  m.scrollTo?.({top:0});
+  window.scrollTo?.({top:0});
 }
 
 /* ═══════════════════════════ RENT REMINDER (in-app only) ═══════════════════════════ */
@@ -577,25 +532,26 @@ function reminderBannerHtml(){
       : t('rent_due_in', {days: r.daysUntilDue, s: r.daysUntilDue===1?'':'s', due});
   return `
     <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:13px;margin-bottom:18px;
-      background:${overdue?'rgba(139,36,36,0.12)':'rgba(212,162,71,0.1)'};
-      border:1px solid ${overdue?'rgba(139,36,36,0.3)':'rgba(212,162,71,0.28)'}">
+      background:${overdue?'var(--red-lt)':'var(--gold-lt)'};
+      border:1px solid ${overdue?'#f3cfcc':'#f0dcb4'}">
       <div style="font-size:18px">${overdue?'⚠️':'⏰'}</div>
       <div style="flex:1;color:var(--ink);font-size:13.5px">${text}</div>
-      <button class="btn btn-sm ${overdue?'btn-primary':'btn-secondary'}" onclick="setView('pay')">${esc(t('pay_now'))}</button>
+      <button class="btn btn-sm ${overdue?'btn-primary':'btn-secondary'}" onclick="setView('payments')">${esc(t('pay_now'))}</button>
     </div>
   `;
 }
 function ordinal(n){ if(!n) return ''; const s=['th','st','nd','rd'], v=n%100; return s[(v-20)%10]||s[v]||s[0]; }
 
-/* ═══════════════════════════ DASHBOARD ═══════════════════════════ */
-async function renderDash(){
+/* ═══════════════════════════ OVERVIEW ═══════════════════════════ */
+async function renderOverview(){
   const [payments, mrList] = await Promise.all([
     fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]),
     fetch('/api/tenant/maintenance-requests').then(r=>r.ok?r.json():[]),
   ]);
   const reportedTotal = payments.reduce((s,p)=>s+p.amount_cents,0);
-  const streak = computeStreak(payments);
+  const onTime = computeOnTime(payments);
   const openRequests = mrList.filter(r=>r.status!=='resolved').length;
+  const paidThisMonth = T.rent_reminder && T.rent_reminder.status === 'paid';
 
   document.getElementById('appMain').innerHTML = `
     <div class="app-head">
@@ -604,23 +560,25 @@ async function renderDash(){
 
     ${reminderBannerHtml()}
 
-    <div class="kpi-grid">
-      <div class="kpi gold"><div class="ic">📈</div><div class="label">${esc(t('credit_score'))}</div><div class="val">${esc(t('preview'))}</div><div class="trend" style="color:var(--gold-2)">${esc(t('not_connected_yet'))}</div></div>
-      <div class="kpi"><div class="ic">🔥</div><div class="label">${esc(t('payment_streak'))}</div><div class="val">${t('mo_n',{n:streak})}</div><div class="trend">${esc(t('based_on_real_payments'))}</div></div>
-      <div class="kpi green"><div class="ic">💰</div><div class="label">${esc(t('total_paid_on_record'))}</div><div class="val">${money(reportedTotal)}</div><div class="trend">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))}</div></div>
-      <div class="kpi blue"><div class="ic">🔧</div><div class="label">${esc(t('open_requests'))}</div><div class="val">${openRequests}</div><div class="trend">${esc(t('total_filed_n',{n:mrList.length}))}</div></div>
-    </div>
-
-    <div class="dash-grid">
-      ${scoreCardHtml()}
-      <div class="panel" style="background:linear-gradient(180deg,rgba(139,36,36,0.08),rgba(139,36,36,0.02));border-color:rgba(139,36,36,0.2)">
-        <div class="panel-head"><div><h3 class="panel-title">${esc(t('pay_rent_panel'))}</h3><div class="panel-sub">${esc(T.monthly_rent ? t('due_monthly') : t('no_rent_on_file'))}</div></div></div>
-        ${T.monthly_rent ? `<div style="font-family:'Plus Jakarta Sans';font-size:42px;font-weight:800;letter-spacing:-1px;color:#fff;line-height:1;margin:4px 0 14px">$${Number(T.monthly_rent).toLocaleString()}<small style="font-size:16px;color:var(--ink-3);font-weight:600;margin-left:3px">/mo</small></div>` : ''}
-        <button class="btn btn-primary btn-block btn-lg" onclick="setView('pay')">${esc(t('go_to_pay_rent'))}</button>
+    <div class="rent-hero">
+      <div>
+        <div class="label">${esc(t('rent_due_title'))}</div>
+        <div class="amt">${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}${T.monthly_rent?'<small>/mo</small>':''}</div>
+        <div class="due ${paidThisMonth?'ok':(T.rent_reminder&&T.rent_reminder.status==='overdue'?'overdue':'ok')}">
+          ${T.monthly_rent ? (paidThisMonth ? esc(t('rent_paid_this_month')) : '') : esc(t('no_rent_on_file'))}
+        </div>
       </div>
+      <button class="btn btn-primary btn-lg" onclick="setView('payments')" ${T.monthly_rent?'':'disabled'}>${esc(t('pay_now'))}</button>
     </div>
 
-    <div class="dash-grid" style="margin-top:16px">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">${esc(t('credit_score'))}</div><div class="val gold">${esc(t('preview'))}</div><div class="trend">${esc(t('not_connected_yet'))}</div></div>
+      <div class="stat-card"><div class="label">${esc(t('on_time_payments'))}</div><div class="val green">${esc(t('of_last_12',{n:onTime.count}))}</div><div class="trend">${esc(t('pct_this_year',{pct:onTime.pct}))}</div></div>
+      <div class="stat-card"><div class="label">${esc(t('open_requests'))}</div><div class="val blue">${openRequests}</div><div class="trend">${esc(t('total_filed_n',{n:mrList.length}))}</div></div>
+      <div class="stat-card"><div class="label">${esc(t('total_paid_on_record'))}</div><div class="val">${money(reportedTotal)}</div><div class="trend">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))}</div></div>
+    </div>
+
+    <div class="two-col">
       <div class="panel">
         <div class="panel-head"><div><h3 class="panel-title">${esc(t('last_12_months'))}</h3><div class="panel-sub">${esc(t('months_with_payment'))}</div></div></div>
         ${streakStripHtml(payments)}
@@ -631,7 +589,7 @@ async function renderDash(){
         </div>
         ${mrList.length ? mrList.slice(0,3).map(r=>`
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line)">
-            <div><div style="color:#fff;font-size:13px;font-weight:600">${esc(catLabel(r.category))}</div><div style="color:var(--ink-3);font-size:11.5px">${fmtDate(r.created_at)}</div></div>
+            <div><div style="color:var(--ink);font-size:13px;font-weight:600">${esc(catLabel(r.category))}</div><div style="color:var(--ink-3);font-size:11.5px">${fmtDate(r.created_at)}</div></div>
             <span class="pill ${esc(r.status)}">${esc(statusLabel(r.status))}</span>
           </div>`).join('') : `<div class="empty">${esc(t('no_maintenance_yet'))}</div>`}
       </div>
@@ -640,44 +598,44 @@ async function renderDash(){
 }
 function catLabel(c){ return t('cat_' + String(c||'').toLowerCase()) !== 'cat_' + String(c||'').toLowerCase() ? t('cat_' + String(c||'').toLowerCase()) : c; }
 
-function scoreCardHtml(){
+function computeOnTime(payments){
+  const months = new Set(payments.map(p => new Date(p.paid_at).toISOString().slice(0,7)));
+  const cursor = new Date();
+  cursor.setDate(1);
+  cursor.setMonth(cursor.getMonth()-11);
+  let count = 0;
+  for(let i=0;i<12;i++){
+    const key = cursor.toISOString().slice(0,7);
+    if(months.has(key)) count++;
+    cursor.setMonth(cursor.getMonth()+1);
+  }
+  return { count, pct: Math.round((count/12)*100) };
+}
+
+function scoreCardHtml(full){
   // Sample/demo numbers only — no real credit-bureau connection exists yet.
   // Clearly labeled PREVIEW per explicit product decision, never presented as real.
   return `
-    <div class="panel score-hero">
+    <div class="panel score-hero" style="${full?'padding:28px':''}">
       <div class="preview-ribbon">${esc(t('preview').toUpperCase())}</div>
       <div class="panel-head">
         <div><h3 class="panel-title">${esc(t('credit_score_title'))}</h3><div class="panel-sub">${esc(t('sample_data_sub'))}</div></div>
       </div>
       <div style="display:flex;align-items:flex-end;gap:14px;margin:10px 0 8px">
-        <div style="font-family:'Plus Jakarta Sans';font-size:58px;line-height:0.95;font-weight:800;letter-spacing:-1.5px;color:#fff;opacity:0.55">689</div>
+        <div style="font-family:'Plus Jakarta Sans';font-size:${full?'70px':'58px'};line-height:0.95;font-weight:800;letter-spacing:-1.5px;color:var(--ink);opacity:0.4">689</div>
         <div style="margin-bottom:8px">
-          <div style="font-size:12px;color:var(--gold-2);font-weight:700;margin-bottom:2px">${esc(t('sample_good_range'))}</div>
+          <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:2px">${esc(t('sample_good_range'))}</div>
           <div style="font-size:11.5px;color:var(--ink-3)">${esc(t('sample_card_desc'))}</div>
         </div>
       </div>
-      <div style="height:9px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;margin-top:6px;opacity:0.55">
-        <div style="height:100%;width:62%;border-radius:99px;background:linear-gradient(90deg, var(--brick-2) 0%, var(--gold) 35%, var(--green-2) 70%, var(--green-3) 100%)"></div>
+      <div style="height:9px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px;opacity:0.6">
+        <div style="height:100%;width:62%;border-radius:99px;background:linear-gradient(90deg, var(--red) 0%, var(--gold) 35%, var(--green-2) 70%, var(--green) 100%)"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.5px;text-transform:uppercase">
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--ink-3);letter-spacing:0.5px;text-transform:uppercase">
         <span>${esc(t('poor'))}</span><span>${esc(t('fair'))}</span><span>${esc(t('good'))}</span><span>${esc(t('very_good'))}</span><span>${esc(t('excellent'))}</span>
       </div>
     </div>
   `;
-}
-
-function computeStreak(payments){
-  if(!payments.length) return 0;
-  const months = new Set(payments.map(p => new Date(p.paid_at).toISOString().slice(0,7)));
-  let streak = 0;
-  let cursor = new Date();
-  for(let i=0;i<60;i++){
-    const key = cursor.toISOString().slice(0,7);
-    if(months.has(key)){ streak++; cursor.setMonth(cursor.getMonth()-1); }
-    else if(i===0){ cursor.setMonth(cursor.getMonth()-1); } // allow current month to still be open
-    else break;
-  }
-  return streak;
 }
 
 function streakStripHtml(payments){
@@ -695,15 +653,32 @@ function streakStripHtml(payments){
   return `<div class="streak">${cells.join('')}</div><div style="color:var(--ink-3);font-size:11.5px;margin-top:10px">${esc(t('streak_legend'))}</div>`;
 }
 
-/* ═══════════════════════════ PAY RENT ═══════════════════════════ */
-async function renderPay(){
+/* ═══════════════════════════ CREDIT ═══════════════════════════ */
+async function renderCredit(){
+  const payments = await fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]);
+  const onTime = computeOnTime(payments);
+  const reportedTotal = payments.reduce((s,p)=>s+p.amount_cents,0);
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>${esc(t('nav_credit'))}</h1><div class="sub">${esc(t('sample_data_sub'))}</div></div></div>
+    ${scoreCardHtml(true)}
+    <div class="stat-grid" style="margin-top:16px">
+      <div class="stat-card"><div class="label">${esc(t('on_time_payments'))}</div><div class="val green">${esc(t('of_last_12',{n:onTime.count}))}</div><div class="trend">${esc(t('pct_this_year',{pct:onTime.pct}))}</div></div>
+      <div class="stat-card"><div class="label">${esc(t('total_paid_on_record'))}</div><div class="val">${money(reportedTotal)}</div><div class="trend">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))}</div></div>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════ PAYMENTS (pay + history) ═══════════════════════════ */
+async function renderPayments(){
+  const payments = await fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]);
+  const total = payments.reduce((s,p)=>s+p.amount_cents,0);
   document.getElementById('appMain').innerHTML = `
     <div class="app-head"><div><h1>${esc(t('pay_rent_title'))}</h1><div class="sub">${esc(T.property_name||'')}${T.unit_number?' · '+esc(t('unit_n',{n:T.unit_number})):''}</div></div></div>
     ${reminderBannerHtml()}
-    <div class="dash-grid">
-      <div class="panel" style="background:linear-gradient(180deg,rgba(139,36,36,0.1),rgba(139,36,36,0.02));border-color:rgba(139,36,36,0.22)">
+    <div class="two-col">
+      <div class="panel" style="background:var(--red-lt);border-color:#f3cfcc">
         <div class="panel-head"><h3 class="panel-title">${esc(t('monthly_rent'))}</h3><span class="pill pending">${esc(statusLabel(T.status))}</span></div>
-        <div style="font-family:'Plus Jakarta Sans';font-size:52px;font-weight:800;letter-spacing:-1.5px;color:#fff;line-height:1;margin:4px 0">${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}<small style="font-size:18px;color:var(--ink-3);font-weight:600;margin-left:4px">${T.monthly_rent?'.00':''}</small></div>
+        <div style="font-family:'Plus Jakarta Sans';font-size:44px;font-weight:800;letter-spacing:-1.5px;color:var(--ink);line-height:1;margin:4px 0">${T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : '—'}<small style="font-size:16px;color:var(--ink-3);font-weight:600;margin-left:4px">${T.monthly_rent?'.00':''}</small></div>
         <div style="color:var(--ink-2);font-size:13.5px;margin-bottom:20px">${esc(T.property_address||'')}</div>
         <button class="btn btn-primary btn-block btn-lg" id="payBtn" onclick="payRent()" ${T.monthly_rent?'':'disabled'}>${esc(t('pay_online',{amt: T.monthly_rent ? '$'+Number(T.monthly_rent).toLocaleString() : ''}))}</button>
         <div id="pay-msg" class="msg"></div>
@@ -714,7 +689,31 @@ async function renderPay(){
         <p style="color:var(--ink-2);font-size:13.5px;line-height:1.6">${esc(t('online_payment_text'))}</p>
       </div>
     </div>
+
+    <div class="panel" style="padding:0;margin-top:16px" id="historyPanel">
+      <div style="padding:18px 18px 0"><h3 class="panel-title">${esc(t('payment_history_title'))}</h3><div class="panel-sub">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))} · ${money(total)} ${esc(t('total_on_record'))}</div></div>
+      <table class="table" style="margin-top:8px">
+        <thead><tr><th>${esc(t('receipt_num'))}</th><th>${esc(t('date'))}</th><th>${esc(t('amount'))}</th><th>${esc(t('method'))}</th></tr></thead>
+        <tbody>
+          ${payments.length ? payments.map(p=>`
+            <tr>
+              <td style="color:var(--ink);font-weight:600">${esc(p.receipt_number)}</td>
+              <td>${fmtDate(p.paid_at)}</td>
+              <td style="font-weight:600;color:var(--ink)">${money(p.amount_cents)}</td>
+              <td><span class="pill paid">${esc(p.method)}</span></td>
+            </tr>`).join('') : `<tr><td colspan="4"><div class="empty">${esc(t('no_payments_yet'))}</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
   `;
+  if(window.__payReturnMsg){
+    const banner = document.createElement('div');
+    banner.className = 'msg ' + window.__payReturnMsg.cls;
+    banner.style.marginBottom = '14px';
+    banner.textContent = window.__payReturnMsg.text;
+    document.querySelector('.app-head').after(banner);
+    window.__payReturnMsg = null;
+  }
 }
 async function handleStripeReturn(){
   const params = new URLSearchParams(window.location.search);
@@ -744,44 +743,13 @@ async function payRent(){
   }catch(err){ msg.className='msg err'; msg.textContent=err.message; btn.disabled=false; }
 }
 
-/* ═══════════════════════════ PAYMENT HISTORY ═══════════════════════════ */
-async function renderHistory(){
-  const payments = await fetch('/api/tenant/payments').then(r=>r.ok?r.json():[]);
-  const total = payments.reduce((s,p)=>s+p.amount_cents,0);
-  document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>${esc(t('payment_history_title'))}</h1><div class="sub">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))} · ${money(total)} ${esc(t('total_on_record'))}</div></div></div>
-    <div class="panel" style="padding:0">
-      <table class="table">
-        <thead><tr><th>${esc(t('receipt_num'))}</th><th>${esc(t('date'))}</th><th>${esc(t('amount'))}</th><th>${esc(t('method'))}</th></tr></thead>
-        <tbody>
-          ${payments.length ? payments.map(p=>`
-            <tr>
-              <td style="color:#fff;font-weight:600">${esc(p.receipt_number)}</td>
-              <td>${fmtDate(p.paid_at)}</td>
-              <td style="font-weight:600;color:#fff">${money(p.amount_cents)}</td>
-              <td><span class="pill paid">${esc(p.method)}</span></td>
-            </tr>`).join('') : `<tr><td colspan="4"><div class="empty">${esc(t('no_payments_yet'))}</div></td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `;
-  if(window.__payReturnMsg){
-    const banner = document.createElement('div');
-    banner.className = 'msg ' + window.__payReturnMsg.cls;
-    banner.style.marginBottom = '14px';
-    banner.textContent = window.__payReturnMsg.text;
-    document.querySelector('.app-head').after(banner);
-    window.__payReturnMsg = null;
-  }
-}
-
 /* ═══════════════════════════ MAINTENANCE ═══════════════════════════ */
 async function renderMaintenance(){
   const rows = await fetch('/api/tenant/maintenance-requests').then(r=>r.ok?r.json():[]);
   PENDING_PHOTO = null;
   document.getElementById('appMain').innerHTML = `
     <div class="app-head"><div><h1>${esc(t('maintenance_title'))}</h1><div class="sub">${esc(t('maintenance_sub'))}</div></div></div>
-    <div class="dash-grid">
+    <div class="two-col">
       <div class="panel">
         <h3 class="panel-title" style="margin-bottom:14px">${esc(t('report_new_issue'))}</h3>
         <div class="field"><label>${esc(t('category'))}</label>
@@ -826,10 +794,10 @@ function renderMrList(rows){
   if(!rows.length) return `<div class="empty">${esc(t('no_requests_yet'))}</div>`;
   return rows.map(r => `
     <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)">
-      ${r.has_photo ? `<img class="thumb" src="/api/tenant/maintenance-requests/${r.id}/photo" onclick="window.open(this.src,'_blank')"/>` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);color:var(--ink-3);font-size:18px">🔧</div>`}
+      ${r.has_photo ? `<img class="thumb" src="/api/tenant/maintenance-requests/${r.id}/photo" onclick="window.open(this.src,'_blank')"/>` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink-3);font-size:18px">🔧</div>`}
       <div style="flex:1;min-width:0">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
-          <div style="color:#fff;font-weight:600;font-size:13.5px">${esc(catLabel(r.category))} · <span style="color:var(--ink-3);font-weight:500">${esc(priLabel(r.priority))}</span></div>
+          <div style="color:var(--ink);font-weight:600;font-size:13.5px">${esc(catLabel(r.category))} · <span style="color:var(--ink-3);font-weight:500">${esc(priLabel(r.priority))}</span></div>
           <span class="pill ${esc(r.status)}">${esc(statusLabel(r.status))}</span>
         </div>
         <div style="color:var(--ink-2);font-size:12.5px;margin-top:3px">${esc(r.description)}</div>
@@ -882,7 +850,7 @@ async function renderInspections(){
         <tbody>
           ${rows.length ? rows.map(i=>`
             <tr>
-              <td style="color:#fff;font-weight:600">${fmtDate(i.created_at)}</td>
+              <td style="color:var(--ink);font-weight:600">${fmtDate(i.created_at)}</td>
               <td>${esc(inspTypeLabel(i.inspection_type))}</td>
               <td>${i.item_count}</td>
               <td><button class="btn btn-sm btn-secondary" onclick="viewInspection('${i.id}')">${esc(t('view'))}</button></td>
@@ -890,14 +858,14 @@ async function renderInspections(){
         </tbody>
       </table>
     </div>
-    <div class="panel mt" id="insp-detail" style="display:none;margin-top:16px"></div>
+    <div class="panel" id="insp-detail" style="display:none;margin-top:16px"></div>
   `;
 }
 function inspTypeLabel(ty){ const k='type_'+String(ty||'').toLowerCase(); return t(k)!==k ? t(k) : String(ty||'').replace('_',' '); }
 async function viewInspection(id){
   try{
     const insp = await fetch(`/api/tenant/inspections/${id}`).then(r=>r.json());
-    const conditionColor = c => c==='good' ? 'var(--green-3)' : c==='fair' ? 'var(--gold-2)' : '#e76d6d';
+    const conditionColor = c => c==='good' ? 'var(--green)' : c==='fair' ? 'var(--gold)' : 'var(--red)';
     const card = document.getElementById('insp-detail');
     card.innerHTML = `
       <h3 class="panel-title" style="margin-bottom:4px">${esc(inspTypeLabel(insp.inspection_type))} ${esc(t('inspection_suffix'))}</h3>
@@ -905,9 +873,9 @@ async function viewInspection(id){
       ${insp.overall_notes ? `<p style="color:var(--ink-2);font-size:13.5px;margin-bottom:14px">${esc(insp.overall_notes)}</p>` : ''}
       ${insp.items.map(it=>`
         <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)">
-          ${it.has_photo ? `<img class="thumb" src="/api/tenant/inspections/${insp.id}/items/${it.id}/photo" onclick="window.open(this.src,'_blank')"/>` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);color:var(--ink-3);font-size:18px">📝</div>`}
+          ${it.has_photo ? `<img class="thumb" src="/api/tenant/inspections/${insp.id}/items/${it.id}/photo" onclick="window.open(this.src,'_blank')"/>` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink-3);font-size:18px">📝</div>`}
           <div style="flex:1">
-            <div style="color:#fff;font-weight:600;font-size:13.5px">${esc(it.room)} — <span style="color:${conditionColor(it.condition)}">${esc(it.condition)}</span></div>
+            <div style="color:var(--ink);font-weight:600;font-size:13.5px">${esc(it.room)} — <span style="color:${conditionColor(it.condition)}">${esc(it.condition)}</span></div>
             ${it.notes ? `<div style="color:var(--ink-3);font-size:12.5px;margin-top:3px">${esc(it.notes)}</div>` : ''}
           </div>
         </div>`).join('')}
@@ -917,11 +885,28 @@ async function viewInspection(id){
   }catch(err){ alert('Could not load inspection.'); }
 }
 
-/* ═══════════════════════════ DOCUMENTS ═══════════════════════════ */
+/* ═══════════════════════════ OFFICE (hub: Documents / AI Coach / My Goals / Settings) ═══════════════════════════ */
+function renderOffice(sub){
+  OFFICE_SUB = sub || 'documents';
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>${esc(t('nav_office'))}</h1></div></div>
+    <div class="office-tabs" id="officeTabs">
+      ${OFFICE_TABS.map(o=>`<button class="office-tab ${o.id===OFFICE_SUB?'active':''}" onclick="setOfficeSub('${o.id}')"><span>${o.ic}</span><span>${esc(t(o.key))}</span></button>`).join('')}
+    </div>
+    <div id="officeBody"></div>
+  `;
+  const runners = { documents: renderDocuments, coach: renderCoach, goals: renderGoals, settings: renderSettings };
+  runners[OFFICE_SUB]();
+}
+function setOfficeSub(id){
+  renderOffice(id);
+}
+
+/* ── Documents ── */
 async function renderDocuments(){
   const rows = await fetch('/api/tenant/documents').then(r=>r.ok?r.json():[]);
-  document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>${esc(t('documents_title'))}</h1><div class="sub">${esc(t('documents_sub'))}</div></div></div>
+  document.getElementById('officeBody').innerHTML = `
+    <div class="panel" style="margin-bottom:14px"><div class="panel-sub">${esc(t('documents_sub'))}</div></div>
     <div class="panel" style="padding:0">
       <table class="table">
         <thead><tr><th>${esc(t('doc_title'))}</th><th>${esc(t('type'))}</th><th>${esc(t('status'))}</th><th></th></tr></thead>
@@ -931,7 +916,7 @@ async function renderDocuments(){
               ? `<button class="btn btn-sm btn-primary" onclick="signDocument('${d.id}')">${esc(t('sign'))}</button>`
               : `<a class="btn btn-sm btn-secondary" href="/api/tenant/documents/${d.id}/file" target="_blank">${esc(t('view'))}</a>`;
             return `<tr>
-              <td style="color:#fff;font-weight:600">${esc(d.title)}</td>
+              <td style="color:var(--ink);font-weight:600">${esc(d.title)}</td>
               <td style="text-transform:capitalize">${esc(d.doc_type)}</td>
               <td><span class="pill ${esc(d.status)}">${esc(statusLabel(d.status))}</span>${d.signed_name?`<div style="color:var(--ink-3);font-size:11px;margin-top:2px">${esc(t('signed_by',{name:d.signed_name}))}</div>`:''}</td>
               <td>${action}</td>
@@ -953,14 +938,14 @@ async function signDocument(id){
   }catch(err){ alert(err.message); }
 }
 
-/* ═══════════════════════════ AI COACH ═══════════════════════════ */
+/* ── AI Coach ── */
 async function renderCoach(){
-  document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>${esc(t('coach_title'))}</h1><div class="sub">${esc(t('coach_sub'))}</div></div></div>
+  document.getElementById('officeBody').innerHTML = `
+    <div class="panel" style="margin-bottom:14px"><div class="panel-sub">${esc(t('coach_sub'))}</div></div>
     <div class="coach-panel">
       <div class="coach-head-bar">
         <div class="chat-avatar">🤖</div>
-        <div style="flex:1"><div style="color:#fff;font-weight:700;font-size:14.5px">${esc(t('coach_name'))}</div><div style="color:var(--ink-3);font-size:11.5px">${esc(t('grounded_in'))}</div></div>
+        <div style="flex:1"><div style="color:var(--ink);font-weight:700;font-size:14.5px">${esc(t('coach_name'))}</div><div style="color:var(--ink-3);font-size:11.5px">${esc(t('grounded_in'))}</div></div>
       </div>
       <div class="coach-feed" id="coachFeed"></div>
       <div class="coach-foot">
@@ -1013,12 +998,12 @@ async function sendCoach(){
   renderCoachFeed();
 }
 
-/* ═══════════════════════════ MY GOALS ═══════════════════════════ */
+/* ── My Goals ── */
 async function renderGoals(){
   const goals = await fetch('/api/tenant/goals').then(r=>r.ok?r.json():[]);
-  document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>${esc(t('goals_title'))}</h1><div class="sub">${esc(t('goals_sub'))}</div></div></div>
-    <div class="dash-grid">
+  document.getElementById('officeBody').innerHTML = `
+    <div class="panel" style="margin-bottom:14px"><div class="panel-sub">${esc(t('goals_sub'))}</div></div>
+    <div class="two-col">
       <div class="panel">
         <h3 class="panel-title" style="margin-bottom:14px">${esc(t('add_goal'))}</h3>
         <div class="field"><label>${esc(t('title_label'))}</label><input id="goal-title" placeholder="${esc(t('goal_title_ph'))}"/></div>
@@ -1038,7 +1023,7 @@ function renderGoalList(goals){
   return goals.map(g => `
     <div class="goal-card ${g.status==='done'?'done':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div><div style="color:#fff;font-weight:600;font-size:14px">${esc(g.title)}</div>${g.target_note?`<div style="color:var(--ink-3);font-size:12px;margin-top:2px">${esc(g.target_note)}</div>`:''}</div>
+        <div><div style="color:var(--ink);font-weight:600;font-size:14px">${esc(g.title)}</div>${g.target_note?`<div style="color:var(--ink-3);font-size:12px;margin-top:2px">${esc(g.target_note)}</div>`:''}</div>
         <span class="pill ${g.status==='done'?'done':'in_progress'}">${g.status==='done'?esc(t('done')):g.progress_pct+'%'}</span>
       </div>
       <div class="goal-bar"><i style="width:${g.progress_pct}%"></i></div>
@@ -1078,15 +1063,14 @@ async function deleteGoal(id){
   await renderGoals();
 }
 
-/* ═══════════════════════════ SETTINGS ═══════════════════════════ */
+/* ── Settings ── */
 async function renderSettings(){
-  document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>${esc(t('settings_title'))}</h1><div class="sub">${esc(t('settings_sub'))}</div></div></div>
-    <div class="dash-grid">
+  document.getElementById('officeBody').innerHTML = `
+    <div class="two-col">
       <div class="panel">
         <h3 class="panel-title" style="margin-bottom:14px">${esc(t('profile_photo'))}</h3>
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-          <div id="avatar-preview" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#a32d2d,#5c1818);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:20px;flex-shrink:0;overflow:hidden">
+          <div id="avatar-preview" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--red-dk));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:20px;flex-shrink:0;overflow:hidden">
             ${T.has_avatar ? `<img src="/api/tenant/me/avatar?v=${AVATAR_V}" alt="" style="width:100%;height:100%;object-fit:cover"/>` : esc((T.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase())}
           </div>
           <div style="flex:1">
@@ -1142,7 +1126,7 @@ async function saveAvatar(){
     if(!res.ok) throw new Error(data.error || t('could_not_save_photo'));
     T.has_avatar = true; PENDING_AVATAR = null; AVATAR_V++;
     msg.className = 'msg ok'; msg.textContent = t('photo_updated');
-    renderSidebar(); renderSettings();
+    renderNav(); renderSettings();
   }catch(err){ msg.className = 'msg err'; msg.textContent = err.message; }
 }
 async function removeAvatar(){
@@ -1152,7 +1136,7 @@ async function removeAvatar(){
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || t('could_not_remove_photo'));
     T.has_avatar = false; AVATAR_V++;
-    renderSidebar(); renderSettings();
+    renderNav(); renderSettings();
   }catch(err){ msg.className = 'msg err'; msg.textContent = err.message; }
 }
 async function saveProfile(){

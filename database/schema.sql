@@ -13,11 +13,23 @@ CREATE TABLE IF NOT EXISTS organizations (
   name          TEXT NOT NULL,
   slug          TEXT UNIQUE NOT NULL,
   plan          TEXT NOT NULL DEFAULT 'starter',      -- starter | standard | premium
+  -- Self-reported portfolio size, captured at signup/onboarding. Purely
+  -- informational + used to route very large portfolios to a sales-assisted
+  -- setup flow (see routes/auth.js) — it does NOT gate any feature access.
+  -- '1-4' | '5-20' | '21-50' | '51-100' | '101-250' | '251-500' | '501-1000' | '1000+'
+  portfolio_size_tier     TEXT,
   emergency_contact_name  TEXT,
   emergency_contact_phone TEXT,
   emergency_instructions  TEXT,                        -- org-configurable, NOT a 911 replacement
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Backfill for deployments where organizations already existed before
+-- portfolio_size_tier was added above — same CREATE TABLE IF NOT EXISTS
+-- migration gap explained next to the rent_due_day/avatar/language
+-- backfills further down this file. ADD COLUMN IF NOT EXISTS is idempotent
+-- and safe to re-run on every boot.
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS portfolio_size_tier TEXT;
 
 -- ── Organization users (staff) ─────────────────────────────────────────
 -- Roles: super_admin | org_admin | branch_manager | property_manager |
