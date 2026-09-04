@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RentPayEZ — Simple, Transparent Pricing</title>
+<meta name="description" content="Start free. Upgrade as you grow. No hidden fees, no contracts.">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif;color:#000;background:#fff}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer}
+img{display:block;max-width:100%}
+.logo{display:inline-flex;align-items:baseline;font-family:'DM Sans',sans-serif;letter-spacing:-0.085em;line-height:0.9;white-space:nowrap}
+.logo .r{color:#dc2626}
+.logo .p{color:#dc2626}
+.logo .ez{color:#22c55e}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:68px;display:flex;align-items:center;padding:0 48px;background-color:rgba(255,255,255,.97);backdrop-filter:blur(14px);box-shadow:0 1px 20px rgba(0,0,0,.08)}
+nav .logo{font-size:34px;font-weight:900}
+nav .logo .ent-dark{color:#000}
+.nav-links{display:flex;gap:28px;flex:1;align-items:center;margin-left:40px}
+.nav-links a{font-size:14px;font-weight:500;color:#334155;transition:color .2s}
+.nav-links a.active{color:#dc2626;font-weight:700}
+.nav-signup{flex-shrink:0}
+.nav-signup button{background:#dc2626;color:#fff;padding:10px 24px;border-radius:24px;font-weight:600;font-size:14px;border:none}
+.nav-toggle{display:none;margin-left:auto;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px}
+.nav-toggle span{display:block;width:22px;height:2px;background:#334155;border-radius:2px}
+
+body{padding-top:68px}
+
+/* HERO (no image) */
+.price-hero{padding:56px 24px;text-align:center;background:#fafafa;border-bottom:1px solid #e5e5e5}
+.pg-kicker{font-size:12px;font-weight:700;color:#dc2626;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 12px}
+.price-hero h1{font-size:32px;font-weight:700;color:#000;margin:0 0 16px}
+.price-hero p{font-size:16px;color:#525252;margin:0 auto 32px;max-width:480px}
+.billing-toggle{display:inline-flex;align-items:center;gap:14px;background:#fff;border-radius:30px;padding:6px;border:1.5px solid #e5e5e5}
+.billing-toggle button{padding:8px 20px;border-radius:24px;font-weight:600;font-size:14px;border:none;transition:.2s}
+.billing-toggle button.active{background:#dc2626;color:#fff}
+.billing-toggle button:not(.active){background:transparent;color:#525252}
+.save-badge{font-size:11px;color:#22c55e;font-weight:700}
+
+/* PRICING CARDS */
+.pricing-section{padding:48px 24px;background:#fafafa}
+.pricing-grid{display:grid;grid-template-columns:1fr;gap:24px;max-width:1080px;margin:0 auto}
+.price-card{background:#fff;border-radius:20px;padding:32px 28px;border:1.5px solid #e5e5e5;box-shadow:0 2px 16px rgba(0,0,0,.04);position:relative}
+.price-card.featured{background:#dc2626;border:none;box-shadow:0 16px 60px rgba(37,99,235,.25);transform:scale(1.02)}
+.popular-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;font-size:12px;font-weight:700;padding:4px 16px;border-radius:20px;white-space:nowrap}
+.plan-name{font-size:20px;font-weight:700;color:#000;margin-bottom:6px}
+.price-card.featured .plan-name{color:#fff}
+.plan-desc{font-size:14px;color:#525252;margin-bottom:28px}
+.price-card.featured .plan-desc{color:rgba(255,255,255,.75)}
+.plan-price{margin-bottom:28px}
+.plan-price .amount{font-size:40px;font-weight:800;color:#000}
+.price-card.featured .plan-price .amount{color:#fff}
+.plan-price .period{font-size:15px;color:#94a3b8}
+.price-card.featured .plan-price .period{color:rgba(255,255,255,.7)}
+.plan-list{list-style:none;padding:0;margin:0 0 28px;display:flex;flex-direction:column;gap:12px}
+.plan-list li{display:flex;align-items:center;gap:10px;font-size:14px;color:#334155}
+.price-card.featured .plan-list li{color:rgba(255,255,255,.9)}
+.plan-check{width:18px;height:18px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:10px;color:#dc2626;font-weight:700;flex-shrink:0}
+.price-card.featured .plan-check{background:rgba(255,255,255,.25);color:#fff}
+.plan-btn{width:100%;padding:14px;border-radius:12px;font-weight:700;font-size:15px;border:none;background:#dc2626;color:#fff}
+.price-card.featured .plan-btn{background:#fff;color:#dc2626}
+
+/* FAQ */
+.faq-section{padding:56px 24px;background:#fff}
+.pg-h2{text-align:center;font-size:28px;font-weight:700;color:#000;margin:0 0 40px}
+.faq-list{max-width:740px;margin:0 auto}
+.faq-item{padding:20px 0;border-bottom:1px solid #e5e5e5}
+.faq-q{font-weight:700;font-size:15px;color:#000;margin-bottom:8px}
+.faq-a{font-size:14px;color:#525252;line-height:1.75}
+
+/* CTA */
+.pg-cta{padding:56px 24px;background:#dc2626;text-align:center}
+.pg-cta h2{font-size:28px;font-weight:700;color:#fff;margin:0 0 12px}
+.pg-cta p{font-size:16px;color:rgba(255,255,255,.8);margin:0 0 28px}
+.pg-cta-btns{display:flex;flex-direction:column;gap:14px;justify-content:center;max-width:340px;margin:0 auto}
+.btn-cta-solid{background:#fff;color:#dc2626;padding:14px 36px;border-radius:30px;font-weight:700;font-size:16px;border:none;width:100%}
+.btn-cta-outline{background:transparent;color:#fff;padding:14px 36px;border-radius:30px;font-weight:600;font-size:16px;border:1.5px solid rgba(255,255,255,.5);width:100%}
+
+/* FOOTER */
+footer{background:#000;padding:56px 80px 32px}
+.footer-top{display:flex;gap:60px;margin-bottom:48px;flex-wrap:wrap}
+.footer-brand{flex:0 0 240px}
+.footer-brand .logo{font-size:38px;margin-bottom:14px}
+.footer-brand .ent-dark{color:#fff}
+.footer-brand p{font-size:13px;color:#525252;line-height:1.7;max-width:220px;margin:0}
+.footer-cols{flex:1;display:flex;gap:48px;flex-wrap:wrap}
+.footer-col-h{font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.footer-col{display:flex;flex-direction:column;gap:10px}
+.footer-col a{font-size:14px;color:#475569}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid rgba(255,255,255,.08);padding-top:24px}
+.footer-bottom p{font-size:13px;color:#525252;margin:0}
+.footer-bottom-links{display:flex;gap:20px}
+.footer-bottom-links a{font-size:13px;color:#525252}
+
+@media (min-width: 900px){
+  .price-hero{padding:80px 80px}
+  .price-hero h1{font-size:46px}
+  .price-hero p{font-size:18px}
+  .nav-links{display:flex}
+  .nav-signup{display:block}
+  .nav-toggle{display:none}
+  .pricing-section{padding:48px 80px 64px}
+  .pricing-grid{grid-template-columns:repeat(3,1fr)}
+  .faq-section{padding:80px 80px}
+  .pg-h2{font-size:34px}
+  .pg-cta{padding:80px 80px}
+  .pg-cta h2{font-size:32px}
+  .pg-cta-btns{flex-direction:row;max-width:none}
+  .btn-cta-solid,.btn-cta-outline{width:auto}
+}
+@media (max-width: 899px){
+  .nav-links{display:none}
+  .nav-signup{display:none}
+  .nav-toggle{display:flex}
+  footer{padding:40px 24px 24px}
+}
+</style>
+</head>
+<body>
+
+<nav id="siteNav">
+  <a aria-label="RentPayEZ home" href="/">
+    <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+  </a>
+  <div class="nav-links">
+    <a href="/features.html">Features</a>
+    <a href="/for-tenants.html">For Tenants</a>
+    <a href="/for-landlords.html">For Landlords</a>
+    <a class="active" href="/pricing.html">Pricing</a>
+    <a href="/tenant/login.html">Login</a>
+  </div>
+  <a class="nav-signup" href="/admin/login.html"><button>Sign Up Free</button></a>
+  <button class="nav-toggle" aria-label="Toggle menu" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div id="mobileMenu" style="display:none;position:fixed;top:68px;left:0;right:0;background:#fff;z-index:99;padding:20px 24px;box-shadow:0 8px 20px rgba(0,0,0,.1)">
+  <a href="/features.html" style="display:block;padding:10px 0;font-weight:600">Features</a>
+  <a href="/for-tenants.html" style="display:block;padding:10px 0;font-weight:600">For Tenants</a>
+  <a href="/for-landlords.html" style="display:block;padding:10px 0;font-weight:600">For Landlords</a>
+  <a href="/pricing.html" style="display:block;padding:10px 0;font-weight:700;color:#dc2626">Pricing</a>
+  <a href="/tenant/login.html" style="display:block;padding:10px 0;font-weight:600">Login</a>
+  <a href="/admin/login.html" style="display:block;padding:10px 0;font-weight:700;color:#dc2626">Sign Up Free</a>
+</div>
+
+<section class="price-hero">
+  <p class="pg-kicker">Pricing</p>
+  <h1>Simple, Transparent Pricing</h1>
+  <p>Start free. Upgrade as you grow. No hidden fees, no contracts.</p>
+  <div class="billing-toggle">
+    <button class="active">Monthly</button>
+    <button>Annual <span class="save-badge">Save 20%</span></button>
+  </div>
+</section>
+
+<section class="pricing-section">
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="plan-name">Starter</div>
+      <div class="plan-desc">Perfect for individual tenants getting started.</div>
+      <div class="plan-price"><span class="amount">Free</span></div>
+      <ul class="plan-list">
+        <li><span class="plan-check">✓</span>1 linked property</li>
+        <li><span class="plan-check">✓</span>Online rent payments</li>
+        <li><span class="plan-check">✓</span>Basic maintenance requests</li>
+        <li><span class="plan-check">✓</span>Mobile app access</li>
+        <li><span class="plan-check">✓</span>Email support</li>
+        <li><span class="plan-check">✓</span>Payment receipts</li>
+      </ul>
+      <a href="/tenant/login.html"><button class="plan-btn">Get Started Free</button></a>
+    </div>
+    <div class="price-card featured">
+      <div class="popular-badge">Most Popular</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-desc">For tenants who want every advantage.</div>
+      <div class="plan-price"><span class="amount">$9.99</span><span class="period">/mo</span></div>
+      <ul class="plan-list">
+        <li><span class="plan-check">✓</span>Up to 5 properties</li>
+        <li><span class="plan-check">✓</span>Everything in Starter</li>
+        <li><span class="plan-check">✓</span>Credit building &amp; reporting</li>
+        <li><span class="plan-check">✓</span>Digital move-in inspections</li>
+        <li><span class="plan-check">✓</span>Maintenance photo uploads</li>
+        <li><span class="plan-check">✓</span>Priority support</li>
+        <li><span class="plan-check">✓</span>Payment history export</li>
+      </ul>
+      <a href="/tenant/login.html"><button class="plan-btn">Start Free Trial</button></a>
+    </div>
+    <div class="price-card">
+      <div class="plan-name">Business</div>
+      <div class="plan-desc">For landlords and property management companies.</div>
+      <div class="plan-price"><span class="amount">$24.99</span><span class="period">/mo</span></div>
+      <ul class="plan-list">
+        <li><span class="plan-check">✓</span>Unlimited properties</li>
+        <li><span class="plan-check">✓</span>Everything in Pro</li>
+        <li><span class="plan-check">✓</span>Team member access</li>
+        <li><span class="plan-check">✓</span>Advanced analytics dashboard</li>
+        <li><span class="plan-check">✓</span>Bulk tenant invites</li>
+        <li><span class="plan-check">✓</span>API access</li>
+        <li><span class="plan-check">✓</span>Dedicated account manager</li>
+      </ul>
+      <a href="/admin/login.html"><button class="plan-btn">Contact Sales</button></a>
+    </div>
+  </div>
+</section>
+
+<section class="faq-section">
+  <p class="pg-kicker" style="text-align:center">FAQ</p>
+  <h2 class="pg-h2">Frequently Asked Questions</h2>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q">Is there a setup fee?</div>
+      <div class="faq-a">No. RentPayEZ is free to set up. The Starter plan is completely free forever. Pro and Business plans include a 14-day free trial with no credit card required.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can I cancel my subscription at any time?</div>
+      <div class="faq-a">Yes, absolutely. You can cancel your plan at any time from your account settings. Your account will remain active until the end of your current billing period.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What payment methods are accepted for rent?</div>
+      <div class="faq-a">We accept ACH bank transfers, Visa, Mastercard, American Express, and Discover. Your landlord or property manager may restrict certain methods.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">How does credit reporting work?</div>
+      <div class="faq-a">RentPayEZ reports your on-time rent payments to Equifax and TransUnion automatically each month at no extra cost on Pro and Business plans. You'll see your score reflected within 30–60 days.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Is my data and payment information secure?</div>
+      <div class="faq-a">Yes. We use 256-bit SSL encryption for all transactions and are PCI-DSS compliant. We never store your full card or bank details on our servers.</div>
+    </div>
+    <div class="faq-item" style="border-bottom:none">
+      <div class="faq-q">Do landlords pay to use RentPayEZ?</div>
+      <div class="faq-a">Landlords and property managers use the Business plan. Tenants can use the Starter plan for free, making it easy to get your whole portfolio onboarded at no cost to your tenants.</div>
+    </div>
+  </div>
+</section>
+
+<section class="pg-cta">
+  <h2>Still have questions?</h2>
+  <p>Our team is here to help. Reach out and we'll get back to you within 24 hours.</p>
+  <div class="pg-cta-btns">
+    <a href="/admin/login.html"><button class="btn-cta-solid">Get Started Free</button></a>
+    <a href="mailto:support@rentpayez.com"><button class="btn-cta-outline">Contact Us</button></a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <span class="logo"><span class="r">R</span><span class="ent-dark">ent</span><span class="p">Pay</span><span class="ez">EZ</span></span>
+      <p>The all-in-one platform for rent payments, maintenance, inspections and credit building.</p>
+    </div>
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-h">Product</div>
+        <div class="footer-col">
+          <a href="/features.html">Features</a>
+          <a href="/pricing.html">Pricing</a>
+          <a href="/for-tenants.html">For Tenants</a>
+          <a href="/for-landlords.html">For Landlords</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-h">Company</div>
+        <div class="footer-col">
+          <a href="/">About Us</a>
+          <a href="/">Blog</a>
+          <a href="/">Careers</a>
+          <a href="/">Press</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-h">Support</div>
+        <div class="footer-col">
+          <a href="/">Help Center</a>
+          <a href="/">Contact Us</a>
+          <a href="/">Privacy Policy</a>
+          <a href="/">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 RentPayEZ. All rights reserved.</p>
+    <div class="footer-bottom-links">
+      <a href="/">Privacy</a>
+      <a href="/">Terms</a>
+      <a href="/">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
