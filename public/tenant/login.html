@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800&family=DM+Sans:wght@900&display=swap" rel="stylesheet">
 <style>
 :root{
   --red:#c93326; --red-dk:#a32d2d;
@@ -28,12 +28,11 @@ body{
 }
 a{color:inherit}
 .wrap{width:100%;max-width:400px;padding:24px}
-.brand-row{display:flex;align-items:center;justify-content:center;gap:2px;margin-bottom:22px}
-.brand-mark{display:flex;align-items:center;justify-content:center;transform:translateY(-4px)}
-.brand-word{font-family:'Plus Jakarta Sans',sans-serif;font-size:21px;font-weight:800;letter-spacing:-0.4px}
-.brand-word .b1{color:var(--navy)}
-.brand-word .b3{color:var(--red)}
-.brand-word .b4{color:var(--green)}
+.brand-row{display:flex;align-items:baseline;justify-content:center;margin-bottom:32px}
+.brand-word{font-family:'DM Sans','Inter',sans-serif;font-size:40px;font-weight:900;letter-spacing:-0.085em;line-height:0.9;white-space:nowrap}
+.brand-word .b1{color:#000}
+.brand-word .b3{color:#dc2626}
+.brand-word .b4{color:#22c55e}
 .sub{color:var(--ink-3);font-size:13.5px;text-align:center;margin-bottom:26px;line-height:1.5}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px 24px;box-shadow:var(--sh-md)}
 .card-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:var(--ink);text-align:center;margin:0 0 6px;letter-spacing:-.3px}
@@ -64,28 +63,7 @@ a{color:inherit}
 <body>
 <div class="wrap">
   <div class="brand-row">
-    <span class="brand-mark">
-      <svg viewBox="-7 -10 106 106" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="lg-r1" x1="10" y1="5" x2="95" y2="95" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8453a"/><stop offset="0.42" stop-color="#a81f18"/><stop offset="1" stop-color="#2a0503"/></linearGradient>
-          <linearGradient id="lg-g1" x1="0" y1="0" x2="18" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4f9530"/><stop offset="1" stop-color="#2c5719"/></linearGradient>
-        </defs>
-        <path d="M18,26 C17.3,22 18.7,19 18,16 C12,12 24,9 18,5 C12,2 22,0 18,-3" stroke="url(#lg-g1)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-        <path d="M22,26 C21.3,22 22.7,19 22,16 C16,12 28,9 22,5 C16,2 26,0 22,-3" stroke="url(#lg-g1)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-        <path d="M8,60 L43,29 Q49,24 55,29 L82,53 Q86,57 82,61 Q72,71 59,66 Q50,62 49,53" fill="none" stroke="url(#lg-r1)" stroke-width="9.5" stroke-linecap="butt" stroke-linejoin="round"/>
-        <circle cx="8" cy="60" r="4.7" fill="url(#lg-r1)"/>
-        <path d="M10,44 L10,23 L16,19 L24,19 L24,44 Z" fill="url(#lg-r1)"/>
-        <rect x="31" y="45" width="14" height="42" rx="2" fill="url(#lg-r1)"/>
-        <path d="M44,60 L86,85 L79,90 L38,66 Z" fill="url(#lg-r1)"/>
-        <g fill="url(#lg-g1)">
-          <rect x="50.9" y="42.4" width="4.2" height="4.2" rx="0.8"/>
-          <rect x="55.9" y="42.4" width="4.2" height="4.2" rx="0.8"/>
-          <rect x="50.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
-          <rect x="55.9" y="47.4" width="4.2" height="4.2" rx="0.8"/>
-        </g>
-      </svg>
-    </span>
-    <span class="brand-word"><span class="b1">ent</span><span class="b3">pay</span><span class="b4">ez</span></span>
+    <span class="brand-word"><span class="b3">R</span><span class="b1">ent</span><span class="b3">Pay</span><span class="b4">EZ</span></span>
   </div>
   <div class="lang-toggle" id="langToggle">
     <button id="langBtnEn" onclick="setLang('en')">EN</button>
