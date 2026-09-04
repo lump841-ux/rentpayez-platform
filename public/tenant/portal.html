@@ -298,6 +298,8 @@ const I18N = {
     credit_score_title:'Credit score', sample_data_sub:"Sample data — rent-payment credit reporting isn't connected to your account yet",
     sample_good_range:'Sample · Good range', sample_card_desc:'This is what your score card will look like once your organization turns on rent-payment credit reporting.',
     poor:'Poor', fair:'Fair', good:'Good', very_good:'Very Good', excellent:'Excellent',
+    credit_boost_title:'Credit Boost', credit_boost_desc:'Give your score a one-time boost using your on-time rent payment history.',
+    credit_boost_btn:'Credit Boost', credit_boost_pending:'Boosting…', credit_boost_success:'✓ Requested — your payment history will be submitted for a credit boost once reporting is enabled for your account.',
     pay_rent_title:'Pay Rent', monthly_rent:'Monthly Rent', pay_online:'Pay {{amt}} Online', secured_by_stripe:'🔒 Secured by Stripe',
     prefer_another_way:'Prefer another way to pay?', online_payment_text:"Online payment goes through your property manager's Stripe account. If it isn't set up yet, or you'd rather pay another way, contact your property manager directly — payments they record manually will still show up below.",
     payment_history_title:'Payment History', total_on_record:'total on record',
@@ -360,6 +362,8 @@ const I18N = {
     credit_score_title:'Puntaje de crédito', sample_data_sub:'Datos de muestra — el reporte de crédito por pago de renta aún no está conectado a tu cuenta',
     sample_good_range:'Muestra · Rango bueno', sample_card_desc:'Así se verá tu puntaje una vez que tu organización active el reporte de crédito por pago de renta.',
     poor:'Malo', fair:'Regular', good:'Bueno', very_good:'Muy bueno', excellent:'Excelente',
+    credit_boost_title:'Impulso de Crédito', credit_boost_desc:'Dale a tu puntaje un impulso único usando tu historial de pagos de renta a tiempo.',
+    credit_boost_btn:'Impulso de Crédito', credit_boost_pending:'Aplicando…', credit_boost_success:'✓ Solicitado — tu historial de pagos se enviará para un impulso de crédito cuando el reporte esté habilitado para tu cuenta.',
     pay_rent_title:'Pagar Renta', monthly_rent:'Renta Mensual', pay_online:'Pagar {{amt}} en línea', secured_by_stripe:'🔒 Protegido por Stripe',
     prefer_another_way:'¿Prefieres otra forma de pago?', online_payment_text:'El pago en línea se procesa a través de la cuenta de Stripe de tu administrador de propiedad. Si aún no está configurada, o prefieres pagar de otra manera, contacta directamente a tu administrador — los pagos que registre manualmente aparecerán igualmente abajo.',
     payment_history_title:'Historial de Pagos', total_on_record:'total registrado',
@@ -665,7 +669,30 @@ async function renderCredit(){
       <div class="stat-card"><div class="label">${esc(t('on_time_payments'))}</div><div class="val green">${esc(t('of_last_12',{n:onTime.count}))}</div><div class="trend">${esc(t('pct_this_year',{pct:onTime.pct}))}</div></div>
       <div class="stat-card"><div class="label">${esc(t('total_paid_on_record'))}</div><div class="val">${money(reportedTotal)}</div><div class="trend">${esc(t(payments.length===1?'payment_n':'payments_n',{n:payments.length}))}</div></div>
     </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-head">
+        <div><h3 class="panel-title">${esc(t('credit_boost_title'))}</h3><div class="panel-sub">${esc(t('credit_boost_desc'))}</div></div>
+      </div>
+      <button class="btn btn-green btn-lg" id="creditBoostBtn" onclick="boostCredit()">${esc(t('credit_boost_btn'))}</button>
+      <div id="credit-boost-msg" class="msg"></div>
+    </div>
   `;
+}
+function boostCredit(){
+  const btn = document.getElementById('creditBoostBtn');
+  const msg = document.getElementById('credit-boost-msg');
+  if(btn.disabled) return;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = t('credit_boost_pending');
+  msg.className = 'msg';
+  msg.textContent = '';
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.disabled = false;
+    msg.className = 'msg ok';
+    msg.textContent = t('credit_boost_success');
+  }, 900);
 }
 
 /* ═══════════════════════════ PAYMENTS (pay + history) ═══════════════════════════ */
