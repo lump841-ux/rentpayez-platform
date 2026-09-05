@@ -5,8 +5,13 @@
   "private": true,
   "main": "server.js",
   "scripts": {
+    "dev": "NODE_ENV=development node server.js",
+    "build": "echo 'No build step required — server.js serves public/ directly'",
     "start": "node server.js",
     "test": "node test/smoke.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
