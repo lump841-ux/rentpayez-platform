@@ -484,7 +484,7 @@ async function boot(){
   document.getElementById('loadingScreen').textContent = t('loading_account');
   try{
     const meRes = await fetch('/api/tenant-auth/me');
-    if(!meRes.ok){ window.location.href = 'login.html'; return; }
+    if(!meRes.ok){ window.location.href = '/tenant/login.html'; return; }
     ME = (await meRes.json()).tenant;
 
     const res = await fetch('/api/tenant/me');
@@ -1288,7 +1288,7 @@ async function saveProfile(){
 
 async function logout(){
   await fetch('/api/tenant-auth/logout', { method:'POST' });
-  window.location.href = 'login.html';
+  window.location.href = '/tenant/login.html';
 }
 
 boot();

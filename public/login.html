@@ -92,7 +92,7 @@ async function doLogin(role){
     return;
   }
   const endpoint = role === 'tenant' ? '/api/tenant-auth/login' : '/api/auth/login';
-  const redirectTo = role === 'tenant' ? '/tenant/portal.html' : '/admin/console.html';
+  const redirectTo = role === 'tenant' ? '/dashboard/tenant' : '/admin/console.html';
   try {
     const res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
     const data = await res.json();

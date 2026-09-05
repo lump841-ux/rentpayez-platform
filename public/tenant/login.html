@@ -118,7 +118,7 @@ async function doLogin(){
     const res = await fetch('/api/tenant-auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password}) });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || I18N_LOGIN[LANG].login_failed);
-    window.location.href = 'portal.html';
+    window.location.href = '/dashboard/tenant';
   }catch(err){ msg.className='msg err'; msg.textContent = err.message; }
 }
 document.getElementById('li-password').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });

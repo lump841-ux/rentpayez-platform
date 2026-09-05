@@ -25,7 +25,7 @@ function ok(cond, label) {
 // ── Tiny cookie-jar session helper ──────────────────────────────────
 function makeSession(base) {
   let cookie = '';
-  return async function req(method, path, body) {
+  const req = async function (method, path, body) {
     const res = await fetch(base + path, {
       method,
       headers: Object.assign(
@@ -40,6 +40,8 @@ function makeSession(base) {
     try { data = await res.json(); } catch {}
     return { status: res.status, data };
   };
+  req.getCookie = () => cookie; // exposes the session cookie for raw (non-JSON) requests below
+  return req;
 }
 
 async function main() {
@@ -166,6 +168,20 @@ async function main() {
 
   const updatePhone = await residentSession('PATCH', '/api/tenant/me', { phone: '555-9999' });
   ok(updatePhone.status === 200 && updatePhone.data.phone === '555-9999', 'Tenant can update their own phone number');
+
+  console.log('\n── /dashboard/tenant route (production URL for the Figma tenant dashboard) ──');
+  const anonDash = await fetch(base + '/dashboard/tenant', { redirect: 'manual' });
+  ok(anonDash.status === 302 && anonDash.headers.get('location') === '/tenant/login.html', 'Unauthenticated visit to /dashboard/tenant redirects to tenant login — not a blank page, 404, or the wrong dashboard');
+
+  const dashRes = await fetch(base + '/dashboard/tenant', { headers: { Cookie: residentSession.getCookie() } });
+  const dashBody = await dashRes.text();
+  ok(dashRes.status === 200, 'Authenticated tenant gets a real 200 from /dashboard/tenant');
+  ok(dashBody.includes('id="appShell"') && dashBody.includes('renderCredit'), '/dashboard/tenant serves the actual existing tenant portal.html (same markup/JS), not a substitute or blank page');
+  ok(dashBody.includes('Credit Boost') && dashBody.includes('Credit Booster'), '/dashboard/tenant carries the Credit Boost / Credit Booster wording');
+  ok(!dashBody.includes('Metro'), 'No user-facing "Metro" wording leaked into the served dashboard');
+
+  const dashRefresh = await fetch(base + '/dashboard/tenant', { headers: { Cookie: residentSession.getCookie() } });
+  ok(dashRefresh.status === 200, 'Refreshing /dashboard/tenant still loads the dashboard — this is a real server route, so there is no client-router refresh/404 problem, on Railway or anywhere else');
 
   console.log('\n── Resident Portal: logging in as a tenant in a browser that was staff (or vice versa) fully switches identity ──');
   // Regression test for a real bug caught against production: a session

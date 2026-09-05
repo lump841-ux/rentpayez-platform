@@ -52,6 +52,22 @@ app.use('/api', require('./routes/orgs'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
+// The tenant dashboard's production URL is /dashboard/tenant (matching the
+// Figma Make prototype's route naming) rather than the on-disk file path
+// public/tenant/portal.html. This route serves that exact same file — no
+// separate copy, no rebuild — so there is exactly one implementation of the
+// tenant dashboard. Because this is a real server-side route (not a
+// client-side SPA path), a direct hit or a browser refresh on
+// /dashboard/tenant always reaches this handler and gets the dashboard —
+// there's no client-router/deep-link problem to solve here.
+// Unauthenticated visits redirect to tenant login rather than serving the
+// shell (which would just immediately bounce itself once its own boot()
+// fetch to /api/tenant-auth/me came back 401 anyway).
+app.get('/dashboard/tenant', (req, res) => {
+  if (!req.session || !req.session.tenant) return res.redirect('/tenant/login.html');
+  res.sendFile(path.join(__dirname, 'public', 'tenant', 'portal.html'));
+});
+
 // public/index.html (marketing homepage) is served automatically by
 // express.static above for '/' — no redirect needed here anymore.
 
