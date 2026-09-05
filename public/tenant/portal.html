@@ -228,11 +228,13 @@ input,select,textarea{font-family:inherit}
 .upload-preview{margin-top:10px;display:flex;align-items:center;gap:10px}
 .upload-preview img{width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid var(--line-2)}
 
-/* Office hub */
-.office-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
-.office-tab{padding:9px 16px;border-radius:var(--r-full);font-size:12.5px;font-weight:700;background:var(--card);color:var(--ink-2);border:1px solid var(--line);display:flex;align-items:center;gap:6px}
-.office-tab:hover{background:var(--bg)}
-.office-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+/* Edit Profile modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,22,38,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:var(--card);border-radius:var(--r-md);max-width:640px;width:100%;max-height:88vh;overflow-y:auto;padding:24px;box-shadow:var(--sh-md)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-head h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:19px;font-weight:800;color:var(--ink);margin:0}
+.modal-close{background:none;border:none;font-size:18px;color:var(--ink-3);cursor:pointer;padding:4px 8px;border-radius:8px}
+.modal-close:hover{background:var(--bg)}
 
 .empty{color:var(--ink-3);text-align:center;padding:22px;font-size:13px}
 .loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--ink-3);width:100%;background:var(--bg)}
@@ -259,6 +261,10 @@ input,select,textarea{font-family:inherit}
               <button id="langBtnEn" onclick="setLang('en')">EN</button>
               <button id="langBtnEs" onclick="setLang('es')">ES</button>
             </div>
+            <button class="ud-logout" onclick="openEditProfileModal()" style="margin-bottom:6px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span id="editProfileLabel">Edit Profile</span>
+            </button>
             <button class="ud-logout" onclick="logout()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
               <span id="signOutLabel">Sign out</span>
@@ -272,14 +278,28 @@ input,select,textarea{font-family:inherit}
   <main class="app-main" id="appMain"></main>
 </div>
 
+<div class="modal-overlay" id="editProfileModal" onclick="if(event.target===this)closeEditProfileModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="editProfileTitle"></h3>
+      <button class="modal-close" onclick="closeEditProfileModal()">✕</button>
+    </div>
+    <div id="editProfileBody"></div>
+  </div>
+</div>
+
 <script>
 /* ═══════════════════════════ i18n (English / Español) ═══════════════════════════ */
 const I18N = {
   en: {
     nav_overview:'Overview', nav_payments:'Payments', nav_maintenance:'Maintenance',
-    nav_inspections:'Inspections', nav_credit:'Credit', nav_office:'Office',
+    nav_inspections:'Inspections', nav_credit:'Credit', nav_office:'Office', nav_landlord:'Landlord',
     type_apartment:'Apartment', type_property:'Property',
-    office_documents:'Documents', office_coach:'AI Coach', office_goals:'My Goals', office_settings:'Settings',
+    office_sub:'Your lease, documents, and anything that needs your signature.',
+    needs_signature_title:'Needs Your Signature', your_lease_title:'Your Lease Agreement', signed_documents_title:'Signed Documents',
+    view_lease:'View Lease', download:'Download', review_sign:'Review & Sign',
+    nothing_needs_signature:'Nothing needs your signature right now.', no_lease_on_file:'No lease on file yet.', no_signed_documents_yet:'No signed documents yet.',
+    signed_on:'Signed {{date}}', edit_profile:'Edit Profile', close:'Close',
     sign_out:'Sign out', resident:'Resident', unit_n:'Unit {{n}}',
     loading_account:'Loading your account…', loading:'Loading…',
     welcome_back:'Welcome back, {{name}} 👋', your_resident_portal:'Your resident portal',
@@ -358,9 +378,13 @@ const I18N = {
   },
   es: {
     nav_overview:'Resumen', nav_payments:'Pagos', nav_maintenance:'Mantenimiento',
-    nav_inspections:'Inspecciones', nav_credit:'Crédito', nav_office:'Oficina',
+    nav_inspections:'Inspecciones', nav_credit:'Crédito', nav_office:'Oficina', nav_landlord:'Propietario',
     type_apartment:'Apartamento', type_property:'Propiedad',
-    office_documents:'Documentos', office_coach:'Asistente IA', office_goals:'Mis Metas', office_settings:'Configuración',
+    office_sub:'Tu contrato, documentos y cualquier cosa que necesite tu firma.',
+    needs_signature_title:'Requiere tu firma', your_lease_title:'Tu Contrato de Arrendamiento', signed_documents_title:'Documentos Firmados',
+    view_lease:'Ver Contrato', download:'Descargar', review_sign:'Revisar y Firmar',
+    nothing_needs_signature:'No hay nada que requiera tu firma por ahora.', no_lease_on_file:'Aún no hay contrato registrado.', no_signed_documents_yet:'Aún no hay documentos firmados.',
+    signed_on:'Firmado el {{date}}', edit_profile:'Editar Perfil', close:'Cerrar',
     sign_out:'Cerrar sesión', resident:'Residente', unit_n:'Unidad {{n}}',
     loading_account:'Cargando tu cuenta…', loading:'Cargando…',
     welcome_back:'Bienvenido de nuevo, {{name}} 👋', your_resident_portal:'Tu portal de residente',
@@ -461,16 +485,9 @@ const NAV = [
   {id:'credit', key:'nav_credit', ic:'📈'},
   {id:'office', key:'nav_office', ic:'🏢'}
 ];
-const OFFICE_TABS = [
-  {id:'documents', key:'office_documents', ic:'📄'},
-  {id:'coach', key:'office_coach', ic:'🤖'},
-  {id:'goals', key:'office_goals', ic:'🎯'},
-  {id:'settings', key:'office_settings', ic:'⚙️'}
-];
 let ME = null;      // { tenant: {...} } from /api/tenant-auth/me
 let T = null;       // full profile from /api/tenant/me
 let VIEW = 'overview';
-let OFFICE_SUB = 'documents';
 let COACH_HISTORY = [];
 let PENDING_PHOTO = null; // { base64, mime }
 let PENDING_AVATAR = null; // { base64, mime }
@@ -503,8 +520,14 @@ async function boot(){
 }
 
 function renderNav(){
+  // Honest, data-driven label — not a functional switcher. A unit tied to a
+  // building record is classified "Apartment"; a standalone unit is
+  // classified "Property". Reflects real data, never toggled by a click.
+  // The last nav tab mirrors this: Office for apartment residents, Landlord
+  // for standalone-property residents (real, confirmed Figma behavior).
+  const isApartment = !!T.building_id;
   document.getElementById('tabbar').innerHTML = NAV.map(n =>
-    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}')"><span class="ic">${n.ic}</span><span>${esc(t(n.key))}</span></button>`
+    `<button class="${n.id===VIEW?'active':''}" onclick="setView('${n.id}')"><span class="ic">${n.ic}</span><span>${esc(n.id==='office' ? (isApartment ? t('nav_office') : t('nav_landlord')) : t(n.key))}</span></button>`
   ).join('');
 
   const initials = (T.name||'?').split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
@@ -517,16 +540,13 @@ function renderNav(){
   document.getElementById('unitBadge').innerHTML =
     `<span class="u">${esc(T.unit_number ? t('unit_n',{n:T.unit_number}) : t('resident'))}</span>
      <span class="a">${esc(T.property_address || T.property_name || '')}</span>`;
-  // Honest, data-driven label — not a functional switcher. A unit tied to a
-  // building record is classified "Apartment"; a standalone unit is
-  // classified "Property". Reflects real data, never toggled by a click.
-  const isApartment = !!T.building_id;
   document.getElementById('propToggle').innerHTML =
     `<span class="${isApartment?'active':''}">${esc(t('type_apartment'))}</span>
      <span class="${isApartment?'':'active'}">${esc(t('type_property'))}</span>`;
   document.getElementById('langBtnEn').classList.toggle('active', LANG==='en');
   document.getElementById('langBtnEs').classList.toggle('active', LANG==='es');
   document.getElementById('signOutLabel').textContent = t('sign_out');
+  document.getElementById('editProfileLabel').textContent = t('edit_profile');
 }
 
 // ── Account dropdown ────────────────────────────────────────────────
@@ -550,7 +570,7 @@ async function setView(id){
   m.innerHTML = `<div class="empty">${t('loading')}</div>`;
   const renderers = {
     overview: renderOverview, payments: renderPayments, maintenance: renderMaintenance,
-    inspections: renderInspections, credit: renderCredit, office: () => renderOffice(OFFICE_SUB)
+    inspections: renderInspections, credit: renderCredit, office: renderOffice
   };
   await renderers[id]();
   window.scrollTo?.({top:0});
@@ -1020,45 +1040,58 @@ async function viewInspection(id){
   }catch(err){ alert('Could not load inspection.'); }
 }
 
-/* ═══════════════════════════ OFFICE (hub: Documents / AI Coach / My Goals / Settings) ═══════════════════════════ */
-function renderOffice(sub){
-  OFFICE_SUB = sub || 'documents';
-  document.getElementById('appMain').innerHTML = `
-    <div class="app-head"><div><h1>${esc(t('nav_office'))}</h1></div></div>
-    <div class="office-tabs" id="officeTabs">
-      ${OFFICE_TABS.map(o=>`<button class="office-tab ${o.id===OFFICE_SUB?'active':''}" onclick="setOfficeSub('${o.id}')"><span>${o.ic}</span><span>${esc(t(o.key))}</span></button>`).join('')}
-    </div>
-    <div id="officeBody"></div>
-  `;
-  const runners = { documents: renderDocuments, coach: renderCoach, goals: renderGoals, settings: renderSettings };
-  runners[OFFICE_SUB]();
-}
-function setOfficeSub(id){
-  renderOffice(id);
-}
-
-/* ── Documents ── */
-async function renderDocuments(){
+/* ═══════════════════════════ OFFICE / LANDLORD (single-page: Needs Signature / Lease / Signed Documents) ═══════════════════════════ */
+// Matches the real Figma Make structure exactly — no sub-tabs. The heading
+// and nav label swap to "Landlord" for standalone-property residents (same
+// isApartment data already driving the Apartment/Property toggle above).
+async function renderOffice(){
+  const isApartment = !!T.building_id;
+  const officeLabel = isApartment ? t('nav_office') : t('nav_landlord');
   const rows = await fetch('/api/tenant/documents').then(r=>r.ok?r.json():[]);
-  document.getElementById('officeBody').innerHTML = `
-    <div class="panel" style="margin-bottom:14px"><div class="panel-sub">${esc(t('documents_sub'))}</div></div>
-    <div class="panel" style="padding:0">
-      <table class="table">
-        <thead><tr><th>${esc(t('doc_title'))}</th><th>${esc(t('type'))}</th><th>${esc(t('status'))}</th><th></th></tr></thead>
-        <tbody>
-          ${rows.length ? rows.map(d=>{
-            const action = d.status === 'pending_signature'
-              ? `<button class="btn btn-sm btn-primary" onclick="signDocument('${d.id}')">${esc(t('sign'))}</button>`
-              : `<a class="btn btn-sm btn-secondary" href="/api/tenant/documents/${d.id}/file" target="_blank">${esc(t('view'))}</a>`;
-            return `<tr>
-              <td style="color:var(--ink);font-weight:600">${esc(d.title)}</td>
-              <td style="text-transform:capitalize">${esc(d.doc_type)}</td>
-              <td><span class="pill ${esc(d.status)}">${esc(statusLabel(d.status))}</span>${d.signed_name?`<div style="color:var(--ink-3);font-size:11px;margin-top:2px">${esc(t('signed_by',{name:d.signed_name}))}</div>`:''}</td>
-              <td>${action}</td>
-            </tr>`;
-          }).join('') : `<tr><td colspan="4"><div class="empty">${esc(t('nothing_here_yet'))}</div></td></tr>`}
-        </tbody>
-      </table>
+  const needsSignature = rows.filter(d => d.status === 'pending_signature');
+  const lease = rows.find(d => d.doc_type === 'lease');
+  const signed = rows.filter(d => d.status === 'signed');
+
+  document.getElementById('appMain').innerHTML = `
+    <div class="app-head"><div><h1>${esc(officeLabel)}</h1><div class="sub">${esc(t('office_sub'))}</div></div></div>
+
+    <div class="panel" style="margin-bottom:16px">
+      <h3 class="panel-title" style="margin-bottom:14px">${esc(t('needs_signature_title'))}</h3>
+      ${needsSignature.length ? needsSignature.map(d => `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)">
+          <div>
+            <div style="color:var(--ink);font-weight:600;font-size:14px">${esc(d.title)}</div>
+            <div style="color:var(--ink-3);font-size:12px;text-transform:capitalize">${esc(d.doc_type)}</div>
+          </div>
+          <button class="btn btn-sm btn-primary" onclick="signDocument('${d.id}')">${esc(t('review_sign'))}</button>
+        </div>
+      `).join('') : `<div class="empty">${esc(t('nothing_needs_signature'))}</div>`}
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+      <h3 class="panel-title" style="margin-bottom:14px">${esc(t('your_lease_title'))}</h3>
+      ${lease ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div style="color:var(--ink);font-weight:600;font-size:14px">${esc(lease.title)}</div>
+          <div style="display:flex;gap:8px">
+            <a class="btn btn-sm btn-secondary" href="/api/tenant/documents/${lease.id}/file" target="_blank">${esc(t('view_lease'))}</a>
+            <a class="btn btn-sm btn-secondary" href="/api/tenant/documents/${lease.id}/file" download>${esc(t('download'))}</a>
+          </div>
+        </div>
+      ` : `<div class="empty">${esc(t('no_lease_on_file'))}</div>`}
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title" style="margin-bottom:14px">${esc(t('signed_documents_title'))}</h3>
+      ${signed.length ? signed.map(d => `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)">
+          <div>
+            <div style="color:var(--ink);font-weight:600;font-size:14px">${esc(d.title)}</div>
+            ${d.signed_at ? `<div style="color:var(--ink-3);font-size:12px">${esc(t('signed_on',{date:new Date(d.signed_at).toLocaleDateString()}))}</div>` : ''}
+          </div>
+          <a class="btn btn-sm btn-secondary" href="/api/tenant/documents/${d.id}/file" download>${esc(t('download'))}</a>
+        </div>
+      `).join('') : `<div class="empty">${esc(t('no_signed_documents_yet'))}</div>`}
     </div>
   `;
 }
@@ -1069,138 +1102,25 @@ async function signDocument(id){
     const res = await fetch(`/api/tenant/documents/${id}/sign`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({signedName:name}) });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || t('could_not_sign'));
-    await renderDocuments();
+    await renderOffice();
   }catch(err){ alert(err.message); }
 }
 
-/* ── AI Coach ── */
-async function renderCoach(){
-  document.getElementById('officeBody').innerHTML = `
-    <div class="panel" style="margin-bottom:14px"><div class="panel-sub">${esc(t('coach_sub'))}</div></div>
-    <div class="coach-panel">
-      <div class="coach-head-bar">
-        <div class="chat-avatar">🤖</div>
-        <div style="flex:1"><div style="color:var(--ink);font-weight:700;font-size:14.5px">${esc(t('coach_name'))}</div><div style="color:var(--ink-3);font-size:11.5px">${esc(t('grounded_in'))}</div></div>
-      </div>
-      <div class="coach-feed" id="coachFeed"></div>
-      <div class="coach-foot">
-        <div class="chat-input">
-          <input id="coachIn" placeholder="${esc(t('ask_anything'))}" onkeydown="if(event.key==='Enter')sendCoach()"/>
-          <button id="coachSendBtn" onclick="sendCoach()">→</button>
-        </div>
-      </div>
-    </div>
-  `;
-  COACH_HISTORY = [];
-  renderCoachFeed();
-  appendCoachSystemGreeting();
+/* ── Edit Profile (header dropdown modal) ── */
+// Not part of the Figma Office/Landlord page — this is real, working
+// avatar-upload and phone-edit functionality relocated here so it isn't
+// lost, since Figma's Office tab has no equivalent of it.
+function openEditProfileModal(){
+  document.getElementById('editProfileTitle').textContent = t('edit_profile');
+  document.getElementById('editProfileModal').style.display = 'flex';
+  document.getElementById('userDropdown').classList.remove('open');
+  renderSettings();
 }
-function renderCoachFeed(){
-  const feed = document.getElementById('coachFeed');
-  if(!feed) return;
-  feed.innerHTML = COACH_HISTORY.map(m => m.role === 'sys'
-    ? `<div class="bubble sys">${esc(m.content)}</div>`
-    : `<div class="bubble ${m.role==='user'?'user':'ai'}">${esc(m.content)}</div>`
-  ).join('');
-  feed.scrollTop = feed.scrollHeight;
+function closeEditProfileModal(){
+  document.getElementById('editProfileModal').style.display = 'none';
 }
-function appendCoachSystemGreeting(){
-  COACH_HISTORY.push({role:'sys', content: t('coach_greeting', {name:(T.name||'').split(' ')[0]})});
-  renderCoachFeed();
-}
-async function sendCoach(){
-  const input = document.getElementById('coachIn');
-  const btn = document.getElementById('coachSendBtn');
-  const text = input.value.trim();
-  if(!text) return;
-  COACH_HISTORY.push({role:'user', content:text});
-  renderCoachFeed();
-  input.value = '';
-  btn.disabled = true;
-  try{
-    const historyForApi = COACH_HISTORY.filter(m=>m.role==='user'||m.role==='assistant').slice(-10);
-    const res = await fetch('/api/tenant/coach/message', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message:text, history: historyForApi.slice(0,-1), language: LANG }) });
-    const data = await res.json();
-    if(!res.ok){
-      COACH_HISTORY.push({role:'sys', content: data.error || t('coach_unavailable')});
-    } else {
-      COACH_HISTORY.push({role:'assistant', content: data.reply});
-    }
-  }catch(err){
-    COACH_HISTORY.push({role:'sys', content: t('coach_error')});
-  }
-  btn.disabled = false;
-  renderCoachFeed();
-}
-
-/* ── My Goals ── */
-async function renderGoals(){
-  const goals = await fetch('/api/tenant/goals').then(r=>r.ok?r.json():[]);
-  document.getElementById('officeBody').innerHTML = `
-    <div class="panel" style="margin-bottom:14px"><div class="panel-sub">${esc(t('goals_sub'))}</div></div>
-    <div class="two-col">
-      <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('add_goal'))}</h3>
-        <div class="field"><label>${esc(t('title_label'))}</label><input id="goal-title" placeholder="${esc(t('goal_title_ph'))}"/></div>
-        <div class="field"><label>${esc(t('notes_optional'))}</label><input id="goal-note" placeholder="${esc(t('goal_note_ph'))}"/></div>
-        <button class="btn btn-primary btn-block" onclick="addGoal()">${esc(t('add_goal_btn'))}</button>
-        <div id="goal-msg" class="msg"></div>
-      </div>
-      <div class="panel">
-        <h3 class="panel-title" style="margin-bottom:14px">${esc(t('your_goals'))}</h3>
-        <div id="goal-list">${renderGoalList(goals)}</div>
-      </div>
-    </div>
-  `;
-}
-function renderGoalList(goals){
-  if(!goals.length) return `<div class="empty">${esc(t('no_goals_yet'))}</div>`;
-  return goals.map(g => `
-    <div class="goal-card ${g.status==='done'?'done':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div><div style="color:var(--ink);font-weight:600;font-size:14px">${esc(g.title)}</div>${g.target_note?`<div style="color:var(--ink-3);font-size:12px;margin-top:2px">${esc(g.target_note)}</div>`:''}</div>
-        <span class="pill ${g.status==='done'?'done':'in_progress'}">${g.status==='done'?esc(t('done')):g.progress_pct+'%'}</span>
-      </div>
-      <div class="goal-bar"><i style="width:${g.progress_pct}%"></i></div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        ${g.status!=='done' ? `
-          <button class="btn btn-sm btn-secondary" onclick="bumpGoal('${g.id}', ${Math.min(100,g.progress_pct+10)})">+10%</button>
-          <button class="btn btn-sm btn-secondary" onclick="completeGoal('${g.id}')">${esc(t('mark_done'))}</button>
-        ` : ''}
-        <button class="btn btn-sm btn-secondary" onclick="deleteGoal('${g.id}')">${esc(t('delete'))}</button>
-      </div>
-    </div>
-  `).join('');
-}
-async function addGoal(){
-  const title = document.getElementById('goal-title').value.trim();
-  const targetNote = document.getElementById('goal-note').value.trim();
-  const msg = document.getElementById('goal-msg');
-  try{
-    if(!title) throw new Error(t('give_goal_title'));
-    const res = await fetch('/api/tenant/goals', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title, targetNote}) });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error || t('could_not_add_goal'));
-    await renderGoals();
-  }catch(err){ msg.className='msg err'; msg.textContent = err.message; }
-}
-async function bumpGoal(id, pct){
-  await fetch(`/api/tenant/goals/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({progressPct: pct}) });
-  await renderGoals();
-}
-async function completeGoal(id){
-  await fetch(`/api/tenant/goals/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({progressPct: 100, status: 'done'}) });
-  await renderGoals();
-}
-async function deleteGoal(id){
-  if(!confirm(t('delete_goal_confirm'))) return;
-  await fetch(`/api/tenant/goals/${id}`, { method:'DELETE' });
-  await renderGoals();
-}
-
-/* ── Settings ── */
 async function renderSettings(){
-  document.getElementById('officeBody').innerHTML = `
+  document.getElementById('editProfileBody').innerHTML = `
     <div class="two-col">
       <div class="panel">
         <h3 class="panel-title" style="margin-bottom:14px">${esc(t('profile_photo'))}</h3>
